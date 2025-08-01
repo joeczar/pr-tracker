@@ -36,7 +36,7 @@ export class RepositoryService {
   async addRepository(owner: string, name: string): Promise<Repository> {
     // First, fetch repository info from GitHub
     const githubRepo = await this.githubService.getRepository(owner, name)
-    
+
     // Check if repository already exists
     const existing = await this.getRepositoryByGitHubId(githubRepo.id)
     if (existing) {
@@ -48,11 +48,15 @@ export class RepositoryService {
       INSERT INTO repositories (github_id, name, full_name)
       VALUES (?, ?, ?)
     `)
-    
+
     const result = stmt.run(githubRepo.id, githubRepo.name, githubRepo.full_name)
-    
+
     // Return the created repository
-    return this.getRepositoryById(result.lastInsertRowid as number)!
+    const createdRepo = await this.getRepositoryById(result.lastInsertRowid as number)
+    if (!createdRepo) {
+      throw new Error('Failed to create repository')
+    }
+    return createdRepo
   }
 
   async deleteRepository(id: number): Promise<void> {
@@ -70,19 +74,23 @@ export class RepositoryService {
   async updateRepository(id: number, updates: Partial<Pick<Repository, 'name' | 'full_name'>>): Promise<Repository> {
     const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ')
     const values = Object.values(updates)
-    
+
     const stmt = this.db.prepare(`
-      UPDATE repositories 
+      UPDATE repositories
       SET ${setClause}
       WHERE id = ?
     `)
-    
+
     const result = stmt.run(...values, id)
-    
+
     if (result.changes === 0) {
       throw new Error('Repository not found')
     }
-    
-    return this.getRepositoryById(id)!
+
+    const updatedRepo = await this.getRepositoryById(id)
+    if (!updatedRepo) {
+      throw new Error('Failed to update repository')
+    }
+    return updatedRepo
   }
 }

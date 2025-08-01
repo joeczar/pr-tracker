@@ -202,21 +202,29 @@ export class ReviewService {
       data.comments_count
     )
     
-    return this.getReviewById(result.lastInsertRowid as number)!
+    const createdReview = await this.getReviewById(result.lastInsertRowid as number)
+    if (!createdReview) {
+      throw new Error('Failed to create review')
+    }
+    return createdReview
   }
 
   private async updateReview(id: number, updates: Partial<Review>): Promise<Review> {
     const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ')
     const values = Object.values(updates)
-    
+
     const stmt = this.db.prepare(`
-      UPDATE reviews 
+      UPDATE reviews
       SET ${setClause}
       WHERE id = ?
     `)
-    
+
     stmt.run(...values, id)
-    return this.getReviewById(id)!
+    const updatedReview = await this.getReviewById(id)
+    if (!updatedReview) {
+      throw new Error('Failed to update review')
+    }
+    return updatedReview
   }
 
   private async getReviewCommentsCount(

@@ -1,14 +1,12 @@
 import { DatabaseManager } from '../db/database.js'
 import { GitHubService } from './github.js'
 import { RepositoryService } from './repository.js'
-import { ReviewService } from './review.js'
 import type { PullRequest, PullRequestFilters, RepositoryMetrics, SyncResult } from '@shared/types/index.js'
 
 export class PullRequestService {
   private db = DatabaseManager.getInstance().getDatabase()
   private githubService = new GitHubService()
   private repositoryService = new RepositoryService()
-  private reviewService = new ReviewService()
 
   async getPullRequestsByRepository(
     repositoryId: number, 
@@ -131,19 +129,23 @@ export class PullRequestService {
       for (const githubPR of githubPRs) {
         try {
           result.processed++
-          
+
           // Check if PR already exists
           const existingPR = await this.getPullRequestByGitHubId(githubPR.id)
-          
+
+          // Determine the correct state
+          const prState: 'open' | 'closed' | 'merged' =
+            githubPR.state === 'closed' && githubPR.merged_at ? 'merged' : githubPR.state as 'open' | 'closed'
+
           if (existingPR) {
             // Update existing PR
             await this.updatePullRequest(existingPR.id, {
-              state: githubPR.state === 'closed' && githubPR.merged_at ? 'merged' : githubPR.state,
+              state: prState,
               merged_at: githubPR.merged_at,
-              lines_added: githubPR.additions || 0,
-              lines_deleted: githubPR.deletions || 0,
-              files_changed: githubPR.changed_files || 0,
-              commits_count: githubPR.commits || 0,
+              lines_added: (githubPR as any).additions || 0,
+              lines_deleted: (githubPR as any).deletions || 0,
+              files_changed: (githubPR as any).changed_files || 0,
+              commits_count: (githubPR as any).commits || 0,
             })
             result.updated++
           } else {
@@ -153,13 +155,13 @@ export class PullRequestService {
               repository_id: repositoryId,
               number: githubPR.number,
               title: githubPR.title,
-              state: githubPR.state === 'closed' && githubPR.merged_at ? 'merged' : githubPR.state,
+              state: prState,
               created_at: githubPR.created_at,
               merged_at: githubPR.merged_at,
-              lines_added: githubPR.additions || 0,
-              lines_deleted: githubPR.deletions || 0,
-              files_changed: githubPR.changed_files || 0,
-              commits_count: githubPR.commits || 0,
+              lines_added: (githubPR as any).additions || 0,
+              lines_deleted: (githubPR as any).deletions || 0,
+              files_changed: (githubPR as any).changed_files || 0,
+              commits_count: (githubPR as any).commits || 0,
             })
             result.created++
           }
@@ -187,12 +189,12 @@ export class PullRequestService {
   private async createPullRequest(data: Omit<PullRequest, 'id'>): Promise<PullRequest> {
     const stmt = this.db.prepare(`
       INSERT INTO pull_requests (
-        github_id, repository_id, number, title, state, 
-        created_at, merged_at, lines_added, lines_deleted, 
+        github_id, repository_id, number, title, state,
+        created_at, merged_at, lines_added, lines_deleted,
         files_changed, commits_count
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
-    
+
     const result = stmt.run(
       data.github_id,
       data.repository_id,
@@ -206,21 +208,29 @@ export class PullRequestService {
       data.files_changed,
       data.commits_count
     )
-    
-    return this.getPullRequestById(result.lastInsertRowid as number)!
+
+    const createdPR = await this.getPullRequestById(result.lastInsertRowid as number)
+    if (!createdPR) {
+      throw new Error('Failed to create pull request')
+    }
+    return createdPR
   }
 
   private async updatePullRequest(id: number, updates: Partial<PullRequest>): Promise<PullRequest> {
     const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ')
     const values = Object.values(updates)
-    
+
     const stmt = this.db.prepare(`
-      UPDATE pull_requests 
+      UPDATE pull_requests
       SET ${setClause}
       WHERE id = ?
     `)
-    
+
     stmt.run(...values, id)
-    return this.getPullRequestById(id)!
+    const updatedPR = await this.getPullRequestById(id)
+    if (!updatedPR) {
+      throw new Error('Failed to update pull request')
+    }
+    return updatedPR
   }
 }

@@ -1,4 +1,4 @@
-import { ref, computed, watch, readonly } from 'vue'
+import { ref, computed, readonly } from 'vue'
 
 export type Theme = 'light' | 'dark'
 

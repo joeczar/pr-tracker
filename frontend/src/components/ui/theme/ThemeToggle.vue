@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useTheme } from '@/composables/useTheme'
 import { Button } from '@/components/ui/button'
 
-const { theme, isDark, toggleTheme } = useTheme()
+const { theme, toggleTheme } = useTheme()
 
 // Debug function to handle theme toggle
 const handleToggle = () => {

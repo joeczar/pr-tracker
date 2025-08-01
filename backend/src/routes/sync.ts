@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { SyncService } from '../services/sync.js'
-import { z } from 'zod'
 
 const syncRoutes = new Hono()
 

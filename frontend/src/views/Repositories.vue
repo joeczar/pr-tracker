@@ -172,7 +172,7 @@ import { Terminal } from '@/components/ui/terminal'
 import { StatusLED } from '@/components/ui/status'
 
 const repositoryStore = useRepositoryStore()
-const { repositories, error: storeError, loading: storeLoading } = repositoryStore
+const { repositories, error: storeError } = repositoryStore
 
 const newRepo = ref({
   owner: '',

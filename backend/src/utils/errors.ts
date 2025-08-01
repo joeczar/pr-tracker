@@ -65,7 +65,7 @@ export function formatErrorResponse(error: Error, c: Context) {
       error: error.message,
       ...(error.details && { details: error.details }),
       ...(isDevelopment && { stack: error.stack })
-    }, error.statusCode)
+    }, error.statusCode as any)
   }
 
   // Handle Zod validation errors
@@ -113,7 +113,7 @@ export function successResponse(c: Context, data: any, statusCode: number = 200)
     success: true,
     data,
     timestamp: new Date().toISOString()
-  }, statusCode)
+  }, statusCode as any)
 }
 
 // Paginated response formatter
