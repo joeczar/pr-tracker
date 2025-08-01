@@ -1,54 +1,44 @@
 <template>
   <div class="space-y-6">
-    <div class="bg-white overflow-hidden shadow rounded-lg">
-      <div class="px-4 py-5 sm:p-6">
-        <h1 class="text-2xl font-bold text-gray-900 mb-4">
-          PR Progress Dashboard
-        </h1>
-        <p class="text-gray-600">
+    <Card>
+      <CardHeader>
+        <CardTitle class="text-2xl">PR Progress Dashboard</CardTitle>
+        <CardDescription>
           Track your pull request metrics and improve your code review process.
-        </p>
-      </div>
-    </div>
+        </CardDescription>
+      </CardHeader>
+    </Card>
 
-    <div v-if="repositories.length === 0" class="bg-white overflow-hidden shadow rounded-lg">
-      <div class="px-4 py-5 sm:p-6 text-center">
-        <h3 class="text-lg font-medium text-gray-900 mb-2">
-          No repositories tracked yet
-        </h3>
-        <p class="text-gray-600 mb-4">
+    <Card v-if="repositories.length === 0">
+      <CardContent class="text-center pt-6">
+        <CardTitle class="text-lg mb-2">No repositories tracked yet</CardTitle>
+        <CardDescription class="mb-4">
           Add a repository to start tracking your PR metrics.
-        </p>
-        <router-link 
-          to="/repositories"
-          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          Add Repository
-        </router-link>
-      </div>
-    </div>
+        </CardDescription>
+        <Button as-child>
+          <router-link to="/repositories">
+            Add Repository
+          </router-link>
+        </Button>
+      </CardContent>
+    </Card>
 
     <div v-else class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      <div 
-        v-for="repo in repositories" 
-        :key="repo.id"
-        class="bg-white overflow-hidden shadow rounded-lg"
-      >
-        <div class="px-4 py-5 sm:p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-2">
-            {{ repo.full_name }}
-          </h3>
-          <p class="text-sm text-gray-600 mb-4">
+      <Card v-for="repo in repositories" :key="repo.id">
+        <CardHeader>
+          <CardTitle class="text-lg">{{ repo.full_name }}</CardTitle>
+          <CardDescription>
             Added {{ formatDate(repo.created_at) }}
-          </p>
-          <router-link 
-            :to="`/repositories/${repo.id}`"
-            class="text-blue-600 hover:text-blue-500 text-sm font-medium"
-          >
-            View Details →
-          </router-link>
-        </div>
-      </div>
+          </CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <Button variant="outline" as-child>
+            <router-link :to="`/repositories/${repo.id}`">
+              View Details →
+            </router-link>
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   </div>
 </template>
@@ -57,6 +47,8 @@
 import { onMounted } from 'vue'
 import { useRepositoryStore } from '../stores/repository'
 import { format } from 'date-fns'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 const repositoryStore = useRepositoryStore()
 const { repositories } = repositoryStore
