@@ -47,19 +47,78 @@ githubRoutes.get('/repos/:owner/:repo/pulls', async (c) => {
     const state = c.req.query('state') || 'all'
     const page = parseInt(c.req.query('page') || '1')
     const per_page = parseInt(c.req.query('per_page') || '30')
-    
+
     const githubService = new GitHubService()
     const pullRequests = await githubService.getPullRequests(owner, repo, {
       state: state as 'open' | 'closed' | 'all',
       page,
       per_page
     })
-    
+
     return c.json(pullRequests)
   } catch (error) {
     console.error('Failed to fetch pull requests:', error)
-    return c.json({ 
+    return c.json({
       error: error instanceof Error ? error.message : 'Failed to fetch pull requests'
+    }, 500)
+  }
+})
+
+// Get detailed pull request information
+githubRoutes.get('/repos/:owner/:repo/pulls/:pull_number', async (c) => {
+  try {
+    const { owner, repo, pull_number } = c.req.param()
+    const pullNumber = parseInt(pull_number)
+
+    if (isNaN(pullNumber)) {
+      return c.json({ error: 'Invalid pull request number' }, 400)
+    }
+
+    const githubService = new GitHubService()
+    const prDetails = await githubService.getPullRequestDetails(owner, repo, pullNumber)
+
+    return c.json(prDetails)
+  } catch (error) {
+    console.error('Failed to fetch pull request details:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to fetch pull request details'
+    }, 500)
+  }
+})
+
+// Get pull request files
+githubRoutes.get('/repos/:owner/:repo/pulls/:pull_number/files', async (c) => {
+  try {
+    const { owner, repo, pull_number } = c.req.param()
+    const pullNumber = parseInt(pull_number)
+
+    if (isNaN(pullNumber)) {
+      return c.json({ error: 'Invalid pull request number' }, 400)
+    }
+
+    const githubService = new GitHubService()
+    const files = await githubService.getPullRequestFiles(owner, repo, pullNumber)
+
+    return c.json(files)
+  } catch (error) {
+    console.error('Failed to fetch pull request files:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to fetch pull request files'
+    }, 500)
+  }
+})
+
+// Get rate limit information
+githubRoutes.get('/rate-limit', async (c) => {
+  try {
+    const githubService = new GitHubService()
+    const rateLimit = await githubService.getRateLimit()
+
+    return c.json(rateLimit)
+  } catch (error) {
+    console.error('Failed to fetch rate limit:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to fetch rate limit'
     }, 500)
   }
 })

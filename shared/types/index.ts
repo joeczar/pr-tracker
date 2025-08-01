@@ -62,6 +62,20 @@ export interface PullRequestTrend {
   count: number
   avg_size: number
   avg_merge_time: number
+  avg_reviews: number
+  avg_comments: number
+}
+
+export interface TrendAnalysis {
+  repository_id: number
+  period_days: number
+  trends: PullRequestTrend[]
+  summary: {
+    total_prs: number
+    size_trend: 'increasing' | 'decreasing' | 'stable'
+    merge_time_trend: 'increasing' | 'decreasing' | 'stable'
+    review_engagement_trend: 'increasing' | 'decreasing' | 'stable'
+  }
 }
 
 export interface ReviewMetrics {

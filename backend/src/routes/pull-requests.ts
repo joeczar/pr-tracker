@@ -83,15 +83,46 @@ pullRequestRoutes.post('/repository/:repositoryId/sync', async (c) => {
     if (isNaN(repositoryId)) {
       return c.json({ error: 'Invalid repository ID' }, 400)
     }
-    
+
     const pullRequestService = new PullRequestService()
     const result = await pullRequestService.syncPullRequests(repositoryId)
-    
+
     return c.json(result)
   } catch (error) {
     console.error('Failed to sync pull requests:', error)
-    return c.json({ 
+    return c.json({
       error: error instanceof Error ? error.message : 'Failed to sync pull requests'
+    }, 500)
+  }
+})
+
+// Get pull request statistics summary
+pullRequestRoutes.get('/repository/:repositoryId/stats', async (c) => {
+  try {
+    const repositoryId = parseInt(c.req.param('repositoryId'))
+    if (isNaN(repositoryId)) {
+      return c.json({ error: 'Invalid repository ID' }, 400)
+    }
+
+    const pullRequestService = new PullRequestService()
+    const [totalPRs, openPRs, mergedPRs, closedPRs] = await Promise.all([
+      pullRequestService.getPullRequestsByRepository(repositoryId, {}),
+      pullRequestService.getPullRequestsByRepository(repositoryId, { state: 'open' }),
+      pullRequestService.getPullRequestsByRepository(repositoryId, { state: 'merged' }),
+      pullRequestService.getPullRequestsByRepository(repositoryId, { state: 'closed' })
+    ])
+
+    return c.json({
+      total: totalPRs.length,
+      open: openPRs.length,
+      merged: mergedPRs.length,
+      closed: closedPRs.length,
+      merge_rate: totalPRs.length > 0 ? (mergedPRs.length / totalPRs.length) * 100 : 0
+    })
+  } catch (error) {
+    console.error('Failed to fetch PR statistics:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to fetch PR statistics'
     }, 500)
   }
 })

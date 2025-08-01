@@ -1,12 +1,14 @@
 import { DatabaseManager } from '../db/database.js'
 import { GitHubService } from './github.js'
 import { RepositoryService } from './repository.js'
+import { ReviewService } from './review.js'
 import type { PullRequest, PullRequestFilters, RepositoryMetrics, SyncResult } from '@shared/types/index.js'
 
 export class PullRequestService {
   private db = DatabaseManager.getInstance().getDatabase()
   private githubService = new GitHubService()
   private repositoryService = new RepositoryService()
+  private reviewService = new ReviewService()
 
   async getPullRequestsByRepository(
     repositoryId: number, 
@@ -69,7 +71,27 @@ export class PullRequestService {
     `)
     
     const result = stmt.get(repositoryId, cutoffDate.toISOString()) as any
-    
+
+    // Get review metrics
+    const reviewStmt = this.db.prepare(`
+      SELECT
+        AVG(review_count) as avg_reviews_per_pr,
+        AVG(comments_count) as avg_comments_per_pr
+      FROM (
+        SELECT
+          pr.id,
+          COUNT(r.id) as review_count,
+          COALESCE(SUM(r.comments_count), 0) as comments_count
+        FROM pull_requests pr
+        LEFT JOIN reviews r ON pr.id = r.pull_request_id
+        WHERE pr.repository_id = ?
+          AND pr.created_at >= ?
+        GROUP BY pr.id
+      )
+    `)
+
+    const reviewResult = reviewStmt.get(repositoryId, cutoffDate.toISOString()) as any
+
     return {
       repository_id: repositoryId,
       total_prs: result.total_prs || 0,
@@ -78,8 +100,8 @@ export class PullRequestService {
       avg_lines_deleted: result.avg_lines_deleted || 0,
       avg_files_changed: result.avg_files_changed || 0,
       avg_commits_per_pr: result.avg_commits_per_pr || 0,
-      avg_reviews_per_pr: 0, // TODO: Calculate from reviews table
-      avg_comments_per_pr: 0, // TODO: Calculate from reviews table
+      avg_reviews_per_pr: reviewResult.avg_reviews_per_pr || 0,
+      avg_comments_per_pr: reviewResult.avg_comments_per_pr || 0,
       period_days: days,
     }
   }

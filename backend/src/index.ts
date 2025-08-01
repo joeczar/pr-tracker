@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
+import { formatErrorResponse } from './utils/errors.js';
 
 // Initialize database
 import { DatabaseManager } from './db/database.js';
@@ -11,6 +12,9 @@ dbManager.runMigrations();
 import { githubRoutes } from './routes/github.js';
 import { repositoryRoutes } from './routes/repositories.js';
 import { pullRequestRoutes } from './routes/pull-requests.js';
+import { reviewRoutes } from './routes/reviews.js';
+import { analyticsRoutes } from './routes/analytics.js';
+import { syncRoutes } from './routes/sync.js';
 
 const app = new Hono();
 
@@ -39,6 +43,9 @@ app.get('/health', (c) => {
 app.route('/api/github', githubRoutes);
 app.route('/api/repositories', repositoryRoutes);
 app.route('/api/pull-requests', pullRequestRoutes);
+app.route('/api/reviews', reviewRoutes);
+app.route('/api/analytics', analyticsRoutes);
+app.route('/api/sync', syncRoutes);
 
 // 404 handler
 app.notFound((c) => {
@@ -48,13 +55,7 @@ app.notFound((c) => {
 // Error handler
 app.onError((err, c) => {
   console.error('Server error:', err);
-  return c.json(
-    {
-      error: 'Internal Server Error',
-      message: process.env.NODE_ENV === 'development' ? err.message : undefined,
-    },
-    500
-  );
+  return formatErrorResponse(err, c);
 });
 
 const port = parseInt(process.env.PORT || '3000');
