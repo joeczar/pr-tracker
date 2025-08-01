@@ -58,6 +58,26 @@ export default {
   				'Inter',
   				'system-ui',
   				'sans-serif'
+  			],
+  			mono: [
+  				'Fira Code',
+  				'Monaco',
+  				'Cascadia Code',
+  				'SF Mono',
+  				'Consolas',
+  				'Liberation Mono',
+  				'Menlo',
+  				'monospace'
+  			],
+  			terminal: [
+  				'Fira Code',
+  				'Monaco',
+  				'Cascadia Code',
+  				'SF Mono',
+  				'Consolas',
+  				'Liberation Mono',
+  				'Menlo',
+  				'monospace'
   			]
   		},
   		borderRadius: {
