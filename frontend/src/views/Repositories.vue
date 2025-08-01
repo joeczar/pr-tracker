@@ -1,7 +1,7 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-4">
     <!-- Terminal Header -->
-    <Terminal title="pr-tracker@repositories:~$" class="min-h-[700px]">
+    <Terminal title="pr-tracker@repositories:~$" class="min-h-[500px]">
       <div class="space-y-6">
         <!-- Command Prompt Header -->
         <div class="border-l-2 border-primary pl-4 py-2 bg-primary/5">
@@ -72,6 +72,16 @@
               <div class="flex items-center gap-2">
                 <StatusLED status="error" size="sm" />
                 <p class="text-sm font-terminal text-destructive">ERROR: {{ error }}</p>
+              </div>
+            </div>
+
+            <div v-if="storeError && storeError.includes('GITHUB_TOKEN')" class="mt-4 p-3 bg-error border border-destructive/50 rounded-md">
+              <div class="flex items-center gap-2">
+                <StatusLED status="error" size="sm" />
+                <p class="text-sm font-terminal text-destructive">CONFIG ERROR: GITHUB_TOKEN required</p>
+              </div>
+              <div class="text-xs font-terminal text-muted-foreground mt-2">
+                Backend needs GITHUB_TOKEN environment variable to function.
               </div>
             </div>
           </CardContent>
@@ -162,7 +172,7 @@ import { Terminal } from '@/components/ui/terminal'
 import { StatusLED } from '@/components/ui/status'
 
 const repositoryStore = useRepositoryStore()
-const { repositories } = repositoryStore
+const { repositories, error: storeError, loading: storeLoading } = repositoryStore
 
 const newRepo = ref({
   owner: '',

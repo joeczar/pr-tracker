@@ -16,7 +16,15 @@ export const useRepositoryStore = defineStore('repository', () => {
       const response = await api.get<Repository[]>('/api/repositories')
       repositories.value = response.data
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch repositories'
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch repositories'
+      error.value = errorMessage
+      
+      // For expected configuration errors, don't throw - just log the error
+      if (errorMessage.includes('GITHUB_TOKEN') || errorMessage.includes('500')) {
+        console.warn('Repository fetch failed:', errorMessage)
+        return
+      }
+      
       throw err
     } finally {
       loading.value = false
