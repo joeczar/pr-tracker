@@ -1,0 +1,33 @@
+{
+  "name": "pr-tracker-backend",
+  "version": "1.0.0",
+  "description": "Backend API for PR Progress Tracker",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "start": "bun dist/index.js",
+    "db:migrate": "bun src/db/migrate.ts",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage"
+  },
+  "dependencies": {
+    "@octokit/rest": "^21.0.0",
+    "date-fns": "^3.6.0",
+    "hono": "^4.6.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "typescript": "^5.6.0"
+  },
+  "keywords": [
+    "github",
+    "pr-tracking",
+    "hono",
+    "typescript"
+  ],
+  "author": "Joe Czarnomorph",
+  "license": "MIT"
+}
