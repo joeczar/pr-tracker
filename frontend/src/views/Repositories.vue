@@ -1,99 +1,153 @@
 <template>
   <div class="space-y-6">
-    <div class="bg-white shadow rounded-lg">
-      <div class="px-4 py-5 sm:p-6">
-        <h1 class="text-2xl font-bold text-gray-900 mb-4">
-          Repositories
-        </h1>
-        
-        <form @submit.prevent="addRepository" class="mb-6">
-          <div class="flex gap-4">
-            <div class="flex-1">
-              <label for="owner" class="block text-sm font-medium text-gray-700 mb-1">
-                Owner
-              </label>
-              <input
-                id="owner"
-                v-model="newRepo.owner"
-                type="text"
-                placeholder="e.g., facebook"
-                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                required
-              />
-            </div>
-            <div class="flex-1">
-              <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
-                Repository Name
-              </label>
-              <input
-                id="name"
-                v-model="newRepo.name"
-                type="text"
-                placeholder="e.g., react"
-                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                required
-              />
-            </div>
-            <div class="flex items-end">
-              <button
-                type="submit"
-                :disabled="loading"
-                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-              >
-                {{ loading ? 'Adding...' : 'Add Repository' }}
-              </button>
-            </div>
+    <!-- Terminal Header -->
+    <Terminal title="pr-tracker@repositories:~$" class="min-h-[700px]">
+      <div class="space-y-6">
+        <!-- Command Prompt Header -->
+        <div class="border-l-2 border-primary pl-4 py-2 bg-primary/5">
+          <div class="text-primary font-terminal text-sm">
+            > pr-tracker repo --manage
           </div>
-        </form>
-
-        <div v-if="error" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
-          <p class="text-sm text-red-600">{{ error }}</p>
+          <div class="text-muted-foreground font-terminal text-xs mt-1">
+            Repository management interface initialized...
+          </div>
         </div>
-      </div>
-    </div>
 
-    <div class="bg-white shadow rounded-lg">
-      <div class="px-4 py-5 sm:p-6">
-        <h2 class="text-lg font-medium text-gray-900 mb-4">
-          Tracked Repositories
-        </h2>
-        
-        <div v-if="repositories.length === 0" class="text-center py-8">
-          <p class="text-gray-500">No repositories added yet.</p>
-        </div>
-        
-        <div v-else class="space-y-4">
-          <div 
-            v-for="repo in repositories" 
-            :key="repo.id"
-            class="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-          >
-            <div>
-              <h3 class="text-lg font-medium text-gray-900">
-                {{ repo.full_name }}
-              </h3>
-              <p class="text-sm text-gray-600">
-                Added {{ formatDate(repo.created_at) }}
+        <!-- Add Repository Form -->
+        <Card variant="terminal" class="border-primary/30">
+          <CardHeader>
+            <CardTitle class="phosphor-text flex items-center gap-2">
+              <StatusLED status="processing" size="sm" />
+              ADD NEW REPOSITORY
+            </CardTitle>
+            <CardDescription class="font-terminal text-xs">
+              > Initialize new repository tracking module
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form @submit.prevent="addRepository" class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label for="owner" class="block text-sm font-terminal text-primary mb-2">
+                    >> OWNER:
+                  </label>
+                  <Input
+                    id="owner"
+                    v-model="newRepo.owner"
+                    variant="terminal"
+                    prompt="owner$"
+                    placeholder="facebook"
+                    required
+                  />
+                </div>
+                <div>
+                  <label for="name" class="block text-sm font-terminal text-primary mb-2">
+                    >> REPOSITORY:
+                  </label>
+                  <Input
+                    id="name"
+                    v-model="newRepo.name"
+                    variant="terminal" 
+                    prompt="repo$"
+                    placeholder="react"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div class="flex justify-end pt-4">
+                <Button
+                  type="submit"
+                  :disabled="loading"
+                  variant="terminal"
+                  size="terminal"
+                  class="min-w-[200px]"
+                >
+                  {{ loading ? '>> INITIALIZING...' : '>> EXECUTE_ADD' }}
+                </Button>
+              </div>
+            </form>
+
+            <div v-if="error" class="mt-4 p-3 bg-error border border-destructive/50 rounded-md">
+              <div class="flex items-center gap-2">
+                <StatusLED status="error" size="sm" />
+                <p class="text-sm font-terminal text-destructive">ERROR: {{ error }}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Repository List -->
+        <Card variant="command" class="border-border/50">
+          <CardHeader>
+            <CardTitle class="phosphor-text flex items-center gap-2">
+              <StatusLED :status="repositories.length > 0 ? 'success' : 'inactive'" size="sm" />
+              TRACKED REPOSITORIES [{{ repositories.length }}]
+            </CardTitle>
+            <CardDescription class="font-terminal text-xs">
+              > Active repository monitoring status
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div v-if="repositories.length === 0" class="text-center py-12">
+              <div class="phosphor-text text-muted-foreground mb-4 text-lg">
+                [ EMPTY ]
+              </div>
+              <p class="text-muted-foreground font-terminal text-sm">
+                No repositories in tracking database...
               </p>
             </div>
-            <div class="flex items-center space-x-3">
-              <router-link 
-                :to="`/repositories/${repo.id}`"
-                class="text-blue-600 hover:text-blue-500 text-sm font-medium"
+            
+            <div v-else class="space-y-3">
+              <div 
+                v-for="repo in repositories" 
+                :key="repo.id"
+                class="flex items-center justify-between p-4 border border-border/30 rounded-lg bg-card/50 hover:border-primary/30 hover:bg-primary/5 transition-all duration-200 group"
               >
-                View Details
-              </router-link>
-              <button
-                @click="deleteRepository(repo.id)"
-                class="text-red-600 hover:text-red-500 text-sm font-medium"
-              >
-                Delete
-              </button>
+                <div class="flex items-center gap-3">
+                  <StatusLED status="success" size="sm" />
+                  <div>
+                    <h3 class="text-base font-terminal text-foreground group-hover:text-primary transition-colors">
+                      {{ repo.full_name }}
+                    </h3>
+                    <p class="text-xs font-terminal text-muted-foreground">
+                      > init: {{ formatDate(repo.created_at) }}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <Button
+                    variant="command"
+                    size="sm"
+                    as-child
+                  >
+                    <router-link :to="`/repositories/${repo.id}`">
+                      >> ACCESS
+                    </router-link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    @click="deleteRepository(repo.id)"
+                    class="border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive"
+                  >
+                    >> DELETE
+                  </Button>
+                </div>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <!-- Terminal Footer -->
+        <div class="pt-4 border-t border-border/30">
+          <div class="text-muted-foreground font-terminal text-xs flex justify-between">
+            <span>pr-tracker repository-manager v2.0</span>
+            <span>tracked: {{ repositories.length }} | status: OPERATIONAL</span>
           </div>
         </div>
       </div>
-    </div>
+    </Terminal>
   </div>
 </template>
 
@@ -101,6 +155,11 @@
 import { ref, onMounted } from 'vue'
 import { useRepositoryStore } from '../stores/repository'
 import { format } from 'date-fns'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Terminal } from '@/components/ui/terminal'
+import { StatusLED } from '@/components/ui/status'
 
 const repositoryStore = useRepositoryStore()
 const { repositories } = repositoryStore
