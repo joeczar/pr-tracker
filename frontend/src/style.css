@@ -7,7 +7,9 @@
 /* Custom styles for ADHD-friendly UI */
 @layer base {
   body {
-    @apply font-terminal antialiased;
+    @apply font-terminal antialiased bg-background text-foreground;
+    font-feature-settings: 'liga' 1, 'calt' 1; /* Enable ligatures */
+    font-variant-ligatures: contextual;
   }
   
   /* Terminal-specific typography */
@@ -21,69 +23,105 @@
     @apply font-terminal;
   }
   :root {
-    /* Cyberpunk Terminal Color System */
-    --background: 218 100% 7%;        /* Deep navy #091833 */
-    --foreground: 180 100% 84%;       /* Bright cyan #00ff9f */
-    --card: 220 100% 10%;             /* Slightly lighter navy #001a33 */
-    --card-foreground: 186 100% 78%;  /* Cyan text #0abdc6 */
-    --popover: 220 100% 8%;           /* Dark navy for overlays */
-    --popover-foreground: 180 100% 84%;
-    --primary: 186 100% 78%;          /* Primary cyan #0abdc6 */
-    --primary-foreground: 218 100% 7%;
-    --secondary: 280 100% 73%;        /* Electric purple #cc11f0 */
-    --secondary-foreground: 218 100% 7%;
-    --muted: 215 25% 55%;             /* Steel blue-gray #8892b0 */
-    --muted-foreground: 215 35% 70%;
-    --accent: 320 100% 73%;           /* Neon pink #ea00d9 */
-    --accent-foreground: 218 100% 7%;
-    --destructive: 348 100% 64%;      /* Neon red #ff004d */
-    --destructive-foreground: 218 100% 7%;
-    --border: 220 50% 20%;            /* Dark border */
-    --input: 220 50% 15%;             /* Input background */
-    --ring: 186 100% 78%;             /* Focus ring cyan */
-    --success: 120 100% 64%;          /* Acid green #00ff41 */
-    --warning: 300 100% 73%;          /* Electric purple */
+    /* WCAG AA Compliant Cyberpunk Terminal Color System - Light Theme */
+    --background: 0 0% 98%;           /* Light Gray #fafafa */
+    --foreground: 218 100% 7%;        /* Deep Navy #091833 - Dark text on light bg */
+    --card: 0 0% 95%;                 /* Light Card Background #f2f2f2 */
+    --card-foreground: 218 100% 7%;   /* Dark text on light cards */
+    --popover: 0 0% 100%;             /* White popover */
+    --popover-foreground: 218 100% 7%;
+    --primary: 186 100% 35%;          /* Darker Cyan for light theme #00666b */
+    --primary-foreground: 0 0% 98%;   /* Light text on primary */
+    --secondary: 280 100% 40%;        /* Darker Purple for light theme #6600cc */
+    --secondary-foreground: 0 0% 98%;
+    --muted: 215 25% 65%;             /* Lighter muted for light theme */
+    --muted-foreground: 215 25% 45%;  /* Darker muted text */
+    --accent: 320 100% 45%;           /* Darker Pink for light theme #cc0099 */
+    --accent-foreground: 0 0% 98%;
+    --destructive: 348 100% 45%;      /* Darker Red for light theme #cc0033 */
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 13% 91%;            /* Light Border #e5e7eb */
+    --input: 0 0% 100%;               /* White Input Background */
+    --ring: 186 100% 35%;             /* Focus Ring - darker cyan */
+    --success: 120 100% 35%;          /* Darker Green for light theme #006600 */
+    --warning: 280 100% 40%;          /* Darker Purple Warning */
+    --info: 198 100% 40%;             /* Darker Blue for light theme */
+
+    /* Chart Colors */
     --chart-1: 186 100% 78%;          /* Cyan */
     --chart-2: 280 100% 73%;          /* Purple */
     --chart-3: 320 100% 73%;          /* Pink */
-    --chart-4: 198 100% 73%;          /* Electric blue #00b8ff */
+    --chart-4: 198 100% 73%;          /* Electric Blue */
     --chart-5: 120 100% 64%;          /* Green */
+
+    /* Typography */
+    --font-terminal: 'Fira Code', 'Monaco', 'Cascadia Code', 'SF Mono', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+    --font-sans: 'Inter', system-ui, sans-serif;
+
+    /* Font Sizes (Design System Scale) */
+    --text-xs: 0.75rem;     /* 12px */
+    --text-sm: 0.875rem;    /* 14px */
+    --text-base: 1rem;      /* 16px */
+    --text-lg: 1.125rem;    /* 18px */
+    --text-xl: 1.25rem;     /* 20px */
+    --text-2xl: 1.5rem;     /* 24px */
+    --text-3xl: 1.875rem;   /* 30px */
+
+    /* Line Heights */
+    --leading-xs: 1.33;     /* 16px for 12px text */
+    --leading-sm: 1.43;     /* 20px for 14px text */
+    --leading-base: 1.5;    /* 24px for 16px text */
+    --leading-lg: 1.56;     /* 28px for 18px text */
+    --leading-xl: 1.4;      /* 28px for 20px text */
+    --leading-2xl: 1.33;    /* 32px for 24px text */
+    --leading-3xl: 1.2;     /* 36px for 30px text */
+
+    /* Spacing */
     --radius: 0.5rem;
-    
+    --spacing-xs: 0.25rem;  /* 4px */
+    --spacing-sm: 0.5rem;   /* 8px */
+    --spacing-md: 1rem;     /* 16px */
+    --spacing-lg: 1.5rem;   /* 24px */
+    --spacing-xl: 2rem;     /* 32px */
+    --spacing-2xl: 3rem;    /* 48px */
+
     /* Cyberpunk Glow Effects */
     --glow-primary: 0 0 10px hsl(var(--primary)), 0 0 20px hsl(var(--primary)), 0 0 30px hsl(var(--primary));
     --glow-accent: 0 0 10px hsl(var(--accent)), 0 0 20px hsl(var(--accent)), 0 0 30px hsl(var(--accent));
     --glow-success: 0 0 10px hsl(var(--success)), 0 0 20px hsl(var(--success)), 0 0 30px hsl(var(--success));
   }
   .dark {
-    /* Enhanced Dark Mode - Even Darker Cyberpunk */
-    --background: 220 100% 4%;        /* Ultra deep navy #001122 */
-    --foreground: 180 100% 90%;       /* Brighter cyan #00ffaa */
-    --card: 220 100% 6%;              /* Darker card background */
-    --card-foreground: 186 100% 85%;  /* Brighter cyan text */
-    --popover: 220 100% 5%;           /* Very dark popover */
+    /* WCAG AA Compliant Enhanced Dark Mode - Ultra Dark Cyberpunk */
+    --background: 220 100% 4%;        /* Ultra Deep Navy #001122 */
+    --foreground: 180 100% 90%;       /* Brighter Cyan #00ffaa - Enhanced contrast */
+    --card: 220 100% 6%;              /* Darker Card Background */
+    --card-foreground: 186 100% 85%;  /* Brighter Cyan Text - Enhanced contrast */
+    --popover: 220 100% 5%;           /* Very Dark Popover */
     --popover-foreground: 180 100% 90%;
-    --primary: 186 100% 85%;          /* Brighter primary cyan */
+    --primary: 186 100% 85%;          /* Brighter Primary Cyan - Enhanced contrast */
     --primary-foreground: 220 100% 4%;
-    --secondary: 280 100% 80%;        /* Brighter purple */
+    --secondary: 280 100% 80%;        /* Brighter Purple - Enhanced contrast */
     --secondary-foreground: 220 100% 4%;
-    --muted: 215 30% 45%;             /* Darker muted */
-    --muted-foreground: 215 40% 65%;
-    --accent: 320 100% 80%;           /* Brighter pink */
+    --muted: 215 30% 45%;             /* Darker Muted - Improved accessibility */
+    --muted-foreground: 215 40% 65%;  /* Better contrast for muted text */
+    --accent: 320 100% 80%;           /* Brighter Pink - Enhanced contrast */
     --accent-foreground: 220 100% 4%;
-    --destructive: 348 100% 70%;      /* Brighter red */
+    --destructive: 348 100% 70%;      /* Brighter Red - Enhanced contrast */
     --destructive-foreground: 220 100% 4%;
-    --border: 220 60% 15%;            /* Darker border */
-    --input: 220 60% 10%;             /* Darker input */
-    --ring: 186 100% 85%;             /* Brighter focus ring */
-    --success: 120 100% 70%;          /* Brighter green */
-    --warning: 300 100% 80%;          /* Brighter purple warning */
-    --chart-1: 186 100% 85%;          /* Brighter cyan */
-    --chart-2: 280 100% 80%;          /* Brighter purple */
-    --chart-3: 320 100% 80%;          /* Brighter pink */
-    --chart-4: 198 100% 80%;          /* Brighter blue */
-    --chart-5: 120 100% 70%;          /* Brighter green */
-    
+    --border: 220 60% 15%;            /* Darker Border */
+    --input: 220 60% 10%;             /* Darker Input Background */
+    --ring: 186 100% 85%;             /* Brighter Focus Ring */
+    --success: 120 100% 70%;          /* Brighter Green - Enhanced contrast */
+    --warning: 280 100% 80%;          /* Brighter Purple Warning */
+    --info: 198 100% 80%;             /* Brighter Electric Blue */
+
+    /* Chart Colors - Enhanced for Dark Mode */
+    --chart-1: 186 100% 85%;          /* Brighter Cyan */
+    --chart-2: 280 100% 80%;          /* Brighter Purple */
+    --chart-3: 320 100% 80%;          /* Brighter Pink */
+    --chart-4: 198 100% 80%;          /* Brighter Blue */
+    --chart-5: 120 100% 70%;          /* Brighter Green */
+
     /* Enhanced Glow Effects for Dark Mode */
     --glow-primary: 0 0 15px hsl(var(--primary)), 0 0 30px hsl(var(--primary)), 0 0 45px hsl(var(--primary));
     --glow-accent: 0 0 15px hsl(var(--accent)), 0 0 30px hsl(var(--accent)), 0 0 45px hsl(var(--accent));
@@ -92,66 +130,177 @@
 }
 
 @layer components {
+  /* Design System Compliant Button Components */
   .btn-primary {
-    @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border: 1px solid hsl(var(--primary) / 0.2);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: var(--font-terminal);
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 200ms;
+    box-shadow: 0 4px 12px hsl(var(--primary) / 0.2);
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+    @apply disabled:pointer-events-none disabled:opacity-50;
   }
-  
+
+  .btn-primary:hover {
+    background: hsl(var(--primary) / 0.9);
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.4);
+  }
+
   .btn-secondary {
-    @apply inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200;
+    background: transparent;
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: var(--font-terminal);
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 200ms;
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+    @apply disabled:pointer-events-none disabled:opacity-50;
   }
-  
-  .card {
-    @apply bg-white overflow-hidden shadow rounded-lg;
+
+  .btn-secondary:hover {
+    border-color: hsl(var(--primary));
+    color: hsl(var(--primary));
+    box-shadow: 0 0 10px hsl(var(--primary) / 0.2);
   }
-  
-  .card-header {
-    @apply px-4 py-5 sm:px-6 border-b border-gray-200;
+
+  /* Design System Compliant Card Components */
+  .card-terminal {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: 12px;
+    box-shadow: 0 4px 20px hsl(var(--background) / 0.8);
+    font-family: var(--font-terminal);
+    transition: all 300ms;
+    @apply overflow-hidden;
   }
-  
-  .card-body {
-    @apply px-4 py-5 sm:p-6;
+
+  .card-terminal:hover {
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: 0 8px 32px hsl(var(--primary) / 0.1);
   }
-  
-  .form-input {
-    @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm;
+
+  /* Design System Compliant Input Components */
+  .input-terminal {
+    background: hsl(var(--input));
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--foreground));
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: var(--font-terminal);
+    font-size: 14px;
+    transition: all 200ms;
+    @apply block w-full;
   }
-  
+
+  .input-terminal:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+    outline: none;
+  }
+
+  .input-terminal::placeholder {
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Form Labels */
   .form-label {
-    @apply block text-sm font-medium text-gray-700 mb-1;
+    color: hsl(var(--foreground));
+    font-family: var(--font-terminal);
+    font-weight: 500;
+    font-size: 14px;
+    @apply block mb-1;
   }
 }
 
-/* Cyberpunk Terminal Utilities */
+/* WCAG AA Compliant Cyberpunk Terminal Utilities */
 @layer utilities {
+  /* Accessibility Focus Management */
   .focus-visible {
     @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary;
   }
-  
+
+  /* Screen Reader Only Content */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Skip Links for Keyboard Navigation */
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 6px;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    padding: 8px;
+    text-decoration: none;
+    border-radius: 4px;
+    z-index: 1000;
+    font-family: var(--font-terminal);
+    font-weight: 500;
+  }
+
+  .skip-link:focus {
+    top: 6px;
+  }
+
+  /* High Contrast Status Colors */
   .text-success {
     color: hsl(var(--success));
   }
-  
+
   .text-warning {
     color: hsl(var(--warning));
   }
-  
+
   .text-error {
     color: hsl(var(--destructive));
   }
-  
-  .bg-success {
-    background-color: hsl(var(--success) / 0.1);
-    border-color: hsl(var(--success) / 0.5);
+
+  .text-info {
+    color: hsl(var(--info));
   }
-  
-  .bg-warning {
-    background-color: hsl(var(--warning) / 0.1);
-    border-color: hsl(var(--warning) / 0.5);
+
+  /* Status Backgrounds with Proper Contrast */
+  .status-success {
+    color: hsl(var(--success));
+    background: hsl(var(--success) / 0.1);
+    border: 1px solid hsl(var(--success) / 0.3);
   }
-  
-  .bg-error {
-    background-color: hsl(var(--destructive) / 0.1);
-    border-color: hsl(var(--destructive) / 0.5);
+
+  .status-warning {
+    color: hsl(var(--warning));
+    background: hsl(var(--warning) / 0.1);
+    border: 1px solid hsl(var(--warning) / 0.3);
+  }
+
+  .status-error {
+    color: hsl(var(--destructive));
+    background: hsl(var(--destructive) / 0.1);
+    border: 1px solid hsl(var(--destructive) / 0.3);
+  }
+
+  .status-info {
+    color: hsl(var(--info));
+    background: hsl(var(--info) / 0.1);
+    border: 1px solid hsl(var(--info) / 0.3);
   }
   
   /* Cyberpunk Glow Effects */
@@ -172,7 +321,7 @@
     background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
     border-radius: calc(var(--radius) + 2px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 hsl(var(--border) / 0.5);
+    box-shadow: 0 4px 20px hsl(var(--background) / 0.8), inset 0 1px 0 hsl(var(--border) / 0.5);
   }
   
   .terminal-header {
@@ -410,7 +559,67 @@
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply font-terminal antialiased;
+    background-color: hsl(var(--background)) !important;
+    color: hsl(var(--foreground)) !important;
+    font-feature-settings: 'liga' 1, 'calt' 1; /* Enable ligatures */
+    font-variant-ligatures: contextual;
+  }
+
+  /* Ensure app container uses theme colors */
+  #app {
+    background-color: hsl(var(--background)) !important;
+    color: hsl(var(--foreground)) !important;
+    min-height: 100vh;
+  }
+
+  /* Accessibility: Respect user's motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    /* Disable cyberpunk effects for reduced motion */
+    .scanlines,
+    .matrix-bg,
+    .data-stream {
+      display: none;
+    }
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    :root {
+      --primary: 186 100% 90%;
+      --foreground: 180 100% 95%;
+      --border: 220 60% 30%;
+    }
+
+    .dark {
+      --primary: 186 100% 95%;
+      --foreground: 180 100% 98%;
+      --border: 220 80% 25%;
+    }
+  }
+
+  /* Focus management for keyboard users */
+  .js-focus-visible :focus:not(.focus-visible) {
+    outline: none;
+  }
+
+  /* Ensure minimum touch target size */
+  button,
+  [role="button"],
+  input[type="submit"],
+  input[type="button"] {
+    min-height: 44px;
+    min-width: 44px;
   }
 }

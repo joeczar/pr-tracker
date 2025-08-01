@@ -4,10 +4,24 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#091833" />
+    <meta name="description" content="Cyberpunk-themed PR tracking application with accessibility-first design" />
     <title>PR Progress Tracker</title>
   </head>
   <body>
     <div id="app"></div>
+    <script>
+      // Apply initial theme class to prevent flash of unstyled content
+      (function() {
+        const savedTheme = localStorage.getItem('pr-tracker-theme');
+        const theme = savedTheme && ['light', 'dark'].includes(savedTheme)
+          ? savedTheme
+          : 'dark'; // Default to dark theme
+        console.log('Initial theme from script:', theme);
+        document.documentElement.classList.add(theme);
+        console.log('Document classes from script:', document.documentElement.classList.toString());
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

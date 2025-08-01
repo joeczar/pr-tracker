@@ -1,5 +1,10 @@
 <template>
   <div id="app" class="min-h-screen bg-background font-terminal">
+    <!-- Accessibility Skip Link -->
+    <a href="#main-content" class="skip-link">
+      Skip to main content
+    </a>
+
     <!-- Cyberpunk Navigation -->
     <nav class="terminal-window border-b-0 rounded-none shadow-2xl">
       <div class="terminal-header">
@@ -43,6 +48,7 @@
                   >> REPOSITORIES
                 </router-link>
               </Button>
+              <ThemeToggle />
             </div>
           </div>
         </div>
@@ -61,7 +67,7 @@
       <div class="data-stream"></div>
     </div>
 
-    <main class="relative z-10 max-w-7xl mx-auto py-2 sm:px-6 lg:px-8">
+    <main id="main-content" class="relative z-10 max-w-7xl mx-auto py-2 sm:px-6 lg:px-8" role="main">
       <router-view />
     </main>
   </div>
@@ -69,8 +75,13 @@
 
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/ui/theme'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
+import { useTheme } from '@/composables/useTheme'
 
 // Initialize keyboard shortcuts
 useKeyboardShortcuts()
+
+// Initialize theme system (happens automatically)
+useTheme()
 </script>

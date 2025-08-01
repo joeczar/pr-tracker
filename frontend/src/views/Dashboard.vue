@@ -4,7 +4,7 @@
     <ASCIIHeader variant="animated" class="mb-4" />
     
     <!-- Main Terminal Window -->
-    <Terminal title="pr-tracker@dashboard:~$" class="min-h-[500px]">
+    <Terminal title="pr-tracker@dashboard:~$" class="min-h-[fit]">
       <div class="space-y-4">
         <!-- System Status -->
         <div class="flex items-center gap-4 mb-6">
