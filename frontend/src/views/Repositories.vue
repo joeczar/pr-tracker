@@ -28,9 +28,9 @@
             <form @submit.prevent="addRepository" class="space-y-4">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label for="owner" class="block text-sm font-terminal text-primary mb-2">
+                  <Label for="owner" class="block mb-2">
                     >> OWNER:
-                  </label>
+                  </Label>
                   <Input
                     id="owner"
                     v-model="newRepo.owner"
@@ -41,9 +41,9 @@
                   />
                 </div>
                 <div>
-                  <label for="name" class="block text-sm font-terminal text-primary mb-2">
+                  <Label for="name" class="block mb-2">
                     >> REPOSITORY:
-                  </label>
+                  </Label>
                   <Input
                     id="name"
                     v-model="newRepo.name"
@@ -170,6 +170,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Terminal } from '@/components/ui/terminal'
 import { StatusLED } from '@/components/ui/status'
+import { Label } from '@/components/ui/label'
 
 const repositoryStore = useRepositoryStore()
 const { repositories, error: storeError } = repositoryStore

@@ -554,24 +554,265 @@ The backend OAuth infrastructure is **complete and production-ready** with:
 - ✅ Full test coverage
 - ✅ Error handling and validation
 
-### 📋 **Next Steps for Completion**
+## Phase 6: Production Deployment (Fly.io)
 
-1. **Create GitHub OAuth App** (5 minutes)
-   - Go to GitHub Settings > Developer settings > OAuth Apps
-   - Create new app with callback URL: `http://localhost:3000/auth/github/callback`
+### 6.1 GitHub OAuth App Setup for Production
 
-2. **Configure Environment Variables** (2 minutes)
-   ```bash
-   GITHUB_OAUTH_CLIENT_ID=your_client_id
-   GITHUB_OAUTH_CLIENT_SECRET=your_client_secret
-   SESSION_SECRET=your_32_character_secret
-   ENCRYPTION_KEY=your_32_character_key
+#### Create Production OAuth App
+1. **Navigate to GitHub Settings**:
+   - Go to [GitHub.com](https://github.com) → Profile → Settings
+   - Developer settings → OAuth Apps → New OAuth App
+
+2. **Configure OAuth App**:
+   ```
+   Application name: PR Progress Tracker
+   Homepage URL: https://pr-tracker.fly.dev (or your custom domain)
+   Application description: Track and analyze pull request metrics across repositories
+   Authorization callback URL: https://pr-tracker.fly.dev/auth/github/callback
    ```
 
-3. **Implement Frontend Authentication UI** (2-3 days)
-   - Authentication store and components
-   - Route guards and API client updates
+3. **Get Credentials**:
+   - Copy **Client ID**
+   - Generate and copy **Client Secret** (shown only once!)
+
+#### Generate Secure Keys
+```bash
+# Generate 32-character session secret
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# Generate 32-character encryption key
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### 6.2 Prepare Single-App Deployment
+
+#### Create Dockerfile
+```dockerfile
+# Multi-stage build for full-stack app
+FROM node:18-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+FROM oven/bun:1 AS backend-builder
+WORKDIR /app/backend
+COPY backend/package*.json ./
+COPY backend/bun.lockb* ./
+RUN bun install --frozen-lockfile
+COPY backend/ ./
+
+FROM oven/bun:1-alpine AS production
+RUN apk add --no-cache curl
+WORKDIR /app
+
+# Copy backend
+COPY --from=backend-builder /app/backend/src ./src
+COPY --from=backend-builder /app/backend/package*.json ./
+COPY --from=backend-builder /app/backend/node_modules ./node_modules
+
+# Copy frontend build to serve statically
+COPY --from=frontend-builder /app/frontend/dist ./public
+
+# Create data directory for SQLite
+RUN mkdir -p /app/data
+
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+CMD ["bun", "run", "src/index.ts"]
+```
+
+#### Create fly.toml
+```toml
+app = "pr-tracker"
+primary_region = "sjc"
+
+[build]
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  DATABASE_URL = "/app/data/pr-tracker.db"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/health"
+
+[mounts]
+  source = "pr_tracker_data"
+  destination = "/app/data"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
+```
+
+### 6.3 Update Backend for Static Serving
+
+#### Modify backend/src/index.ts
+```typescript
+import { serveStatic } from 'hono/bun';
+
+// Add after API routes, before error handler:
+// Serve frontend static files
+app.use('/*', serveStatic({
+  root: './public',
+  index: 'index.html'
+}));
+
+// SPA fallback - serve index.html for client-side routing
+app.get('*', serveStatic({
+  path: './public/index.html'
+}));
+```
+
+### 6.4 Deploy to Fly.io
+
+#### Install Fly CLI
+```bash
+# macOS
+brew install flyctl
+
+# Or download from https://fly.io/docs/hands-on/install-flyctl/
+```
+
+#### Deploy Steps
+```bash
+# 1. Login to Fly.io
+fly auth login
+
+# 2. Create app and volume
+fly apps create pr-tracker
+fly volumes create pr_tracker_data --region sjc --size 1
+
+# 3. Set production environment variables
+fly secrets set \
+  GITHUB_OAUTH_CLIENT_ID="your_actual_client_id" \
+  GITHUB_OAUTH_CLIENT_SECRET="your_actual_client_secret" \
+  GITHUB_OAUTH_CALLBACK_URL="https://pr-tracker.fly.dev/auth/github/callback" \
+  SESSION_SECRET="your_generated_32_char_secret" \
+  ENCRYPTION_KEY="your_generated_32_char_encryption_key" \
+  CSRF_SECRET="your_csrf_secret" \
+  CORS_ORIGIN="https://pr-tracker.fly.dev"
+
+# 4. Deploy
+fly deploy
+
+# 5. Open your app
+fly open
+```
+
+### 6.5 Post-Deployment Testing
+
+#### Test Checklist
+- [ ] App loads at https://pr-tracker.fly.dev
+- [ ] Health check returns 200: `/health`
+- [ ] Auth status endpoint works: `/auth/status`
+- [ ] GitHub OAuth login redirects properly
+- [ ] Complete OAuth flow works end-to-end
+- [ ] User can access repositories after login
+- [ ] Data persists between deployments (SQLite volume)
+
+#### Monitoring Commands
+```bash
+# View logs
+fly logs
+
+# Check app status
+fly status
+
+# Scale resources if needed
+fly scale memory 512  # Increase to 512MB if needed
+
+# SSH into app for debugging
+fly ssh console
+```
+
+### 6.6 Production Environment Variables
+
+**Required Production Variables:**
+```bash
+# GitHub OAuth (from your OAuth app)
+GITHUB_OAUTH_CLIENT_ID=your_github_client_id
+GITHUB_OAUTH_CLIENT_SECRET=your_github_client_secret
+GITHUB_OAUTH_CALLBACK_URL=https://pr-tracker.fly.dev/auth/github/callback
+
+# Security (generate with crypto.randomBytes)
+SESSION_SECRET=your_32_character_session_secret
+ENCRYPTION_KEY=your_32_character_encryption_key
+CSRF_SECRET=your_csrf_protection_secret
+
+# App Configuration
+NODE_ENV=production
+PORT=3000
+DATABASE_URL=/app/data/pr-tracker.db
+CORS_ORIGIN=https://pr-tracker.fly.dev
+
+# Optional: Legacy token for migration period
+GITHUB_TOKEN=your_legacy_pat_if_needed
+```
+
+### 6.7 Cost Optimization
+
+**Fly.io Configuration for Personal Use:**
+- **Memory**: 256MB (sufficient for personal use)
+- **Auto-stop**: Scale to 0 when idle (saves money)
+- **Volume**: 1GB persistent storage for SQLite
+- **Expected cost**: ~$1.94/month
+
+**Monitoring Usage:**
+```bash
+# Check current usage and billing
+fly dashboard
+
+# View machine status
+fly machine list
+```
 
 ---
 
-*Last Updated: December 2024 - Backend OAuth implementation complete*
+### 📋 **Complete Deployment Checklist**
+
+#### Pre-Deployment
+- [ ] Create GitHub OAuth App with production URLs
+- [ ] Generate secure session and encryption keys
+- [ ] Test local build process
+- [ ] Verify all environment variables
+
+#### Deployment
+- [ ] Create Dockerfile and fly.toml
+- [ ] Update backend to serve static files
+- [ ] Install Fly CLI and authenticate
+- [ ] Create Fly app and persistent volume
+- [ ] Set production environment variables
+- [ ] Deploy application
+
+#### Post-Deployment
+- [ ] Test complete OAuth authentication flow
+- [ ] Verify data persistence across deployments
+- [ ] Monitor application logs and performance
+- [ ] Set up custom domain (optional)
+
+#### Production Maintenance
+- [ ] Regular security updates
+- [ ] Monitor Fly.io usage and costs
+- [ ] Backup SQLite database periodically
+- [ ] Update GitHub OAuth app if URLs change
+
+---
+
+*Last Updated: August 2024 - Complete OAuth implementation with Fly.io deployment guide*

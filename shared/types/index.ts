@@ -88,6 +88,31 @@ export interface ReviewMetrics {
   }>
 }
 
+// Authentication types
+export interface AuthenticatedUser {
+  id: number
+  github_id: number
+  login: string
+  name: string | null
+  email: string | null
+  avatar_url: string
+}
+
+export interface AuthResponse {
+  success: boolean
+  message?: string
+  redirect_url?: string
+}
+
+export interface AuthMeResponse {
+  user: AuthenticatedUser
+}
+
+export interface AuthStatusResponse {
+  authenticated: boolean
+  user?: AuthenticatedUser
+}
+
 // GitHub API response types (simplified)
 export interface GitHubUser {
   id: number

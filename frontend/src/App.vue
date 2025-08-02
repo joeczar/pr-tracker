@@ -28,27 +28,34 @@
               </router-link>
             </div>
             <div class="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                as-child
-                :class="{ 'bg-primary/10 text-primary border border-primary/30': $route.path === '/' }"
-              >
-                <router-link to="/">
-                  >> DASHBOARD
-                </router-link>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                as-child
-                :class="{ 'bg-primary/10 text-primary border border-primary/30': $route.path === '/repositories' }"
-              >
-                <router-link to="/repositories">
-                  >> REPOSITORIES
-                </router-link>
-              </Button>
+              <!-- Navigation Links (only show when authenticated) -->
+              <template v-if="authStore.isAuthenticated">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  as-child
+                  :class="{ 'bg-primary/10 text-primary border border-primary/30': $route.path === '/' }"
+                >
+                  <router-link to="/">
+                    >> DASHBOARD
+                  </router-link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  as-child
+                  :class="{ 'bg-primary/10 text-primary border border-primary/30': $route.path === '/repositories' }"
+                >
+                  <router-link to="/repositories">
+                    >> REPOSITORIES
+                  </router-link>
+                </Button>
+              </template>
+
               <ThemeToggle />
+
+              <!-- User Profile (only show when authenticated) -->
+              <UserProfile v-if="authStore.isAuthenticated" />
             </div>
           </div>
         </div>
@@ -74,14 +81,26 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme'
+import UserProfile from '@/components/auth/UserProfile.vue'
+import { useAuthStore } from '@/stores/auth'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useTheme } from '@/composables/useTheme'
+
+const authStore = useAuthStore()
 
 // Initialize keyboard shortcuts
 useKeyboardShortcuts()
 
 // Initialize theme system (happens automatically)
 useTheme()
+
+// Initialize authentication on app startup
+onMounted(async () => {
+  if (!authStore.isInitialized) {
+    await authStore.checkAuthStatus()
+  }
+})
 </script>
