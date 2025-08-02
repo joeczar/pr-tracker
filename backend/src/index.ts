@@ -15,6 +15,7 @@ import { pullRequestRoutes } from './routes/pull-requests.js';
 import { reviewRoutes } from './routes/reviews.js';
 import { analyticsRoutes } from './routes/analytics.js';
 import { syncRoutes } from './routes/sync.js';
+import authRoutes from './routes/auth.js';
 
 const app = new Hono();
 
@@ -27,6 +28,7 @@ app.use(
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true, // Allow cookies for authentication
   })
 );
 
@@ -38,6 +40,9 @@ app.get('/health', (c) => {
     version: '1.0.0',
   });
 });
+
+// Authentication routes
+app.route('/auth', authRoutes);
 
 // API routes
 app.route('/api/github', githubRoutes);

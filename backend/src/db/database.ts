@@ -85,6 +85,58 @@ export class DatabaseManager {
       )
     `);
 
+    // Create users table for OAuth authentication
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        github_id INTEGER UNIQUE NOT NULL,
+        login TEXT NOT NULL,
+        name TEXT,
+        email TEXT,
+        avatar_url TEXT,
+        access_token TEXT NOT NULL,
+        refresh_token TEXT,
+        token_expires_at DATETIME,
+        scopes TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create user_sessions table for session management
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        id TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        expires_at DATETIME NOT NULL,
+        ip_address TEXT,
+        user_agent TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Create oauth_states table for CSRF protection
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS oauth_states (
+        state TEXT PRIMARY KEY,
+        user_session_id TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        expires_at DATETIME NOT NULL
+      )
+    `);
+
+    // Add user_id to repositories table (if not exists)
+    try {
+      this.db.exec(`
+        ALTER TABLE repositories ADD COLUMN user_id INTEGER REFERENCES users(id);
+      `);
+    } catch (error) {
+      // Column might already exist, ignore error
+      console.log('Note: user_id column may already exist in repositories table');
+    }
+
     // Create indexes for better performance
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_pull_requests_repository_id ON pull_requests(repository_id);
@@ -92,6 +144,10 @@ export class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_pull_requests_created_at ON pull_requests(created_at);
       CREATE INDEX IF NOT EXISTS idx_reviews_pull_request_id ON reviews(pull_request_id);
       CREATE INDEX IF NOT EXISTS idx_reviews_reviewer_login ON reviews(reviewer_login);
+      CREATE INDEX IF NOT EXISTS idx_repositories_user_id ON repositories(user_id);
+      CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);
+      CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
+      CREATE INDEX IF NOT EXISTS idx_oauth_states_expires_at ON oauth_states(expires_at);
     `);
 
     console.log('✅ Database migrations completed');
