@@ -2,6 +2,7 @@
 import { ref, nextTick, watch } from 'vue'
 import { useCommandPalette } from '@/composables/useCommandPalette'
 import { cn } from '@/lib/utils'
+import { TerminalBox, TerminalButton, TerminalIcon, TerminalText } from '@/components/ui/terminal'
 
 const {
   isOpen,
@@ -98,14 +99,14 @@ const getCategoryColor = (category?: string) => {
         <!-- Commands List -->
         <div class="commands-container">
           <div v-if="isLoading" class="loading-state">
-            <div class="loading-spinner"></div>
-            <span class="loading-text">Executing command...</span>
+            <TerminalIcon icon="⟳" size="base" class="animate-spin" />
+            <TerminalText size="sm" variant="muted">Executing command...</TerminalText>
           </div>
 
           <div v-else-if="filteredCommands.length === 0" class="empty-state">
-            <div class="empty-icon">🔍</div>
-            <div class="empty-text">No commands found</div>
-            <div class="empty-hint">Try a different search term</div>
+            <TerminalIcon icon="🔍" size="lg" variant="muted" />
+            <TerminalText size="base" weight="medium">No commands found</TerminalText>
+            <TerminalText size="sm" variant="muted">Try a different search term</TerminalText>
           </div>
 
           <div v-else class="commands-list">
@@ -119,24 +120,39 @@ const getCategoryColor = (category?: string) => {
               @mouseenter="selectCommand(index)"
               @click="executeCommand(index)"
             >
-              <div class="command-icon" style="font-size: 14px;">
-                {{ result.item.icon || '⚡' }}
-              </div>
-              
+              <TerminalIcon
+                :icon="result.item.icon || '⚡'"
+                size="sm"
+                class="command-icon-terminal"
+              />
+
               <div class="command-content">
-                <div class="command-name">
+                <TerminalText
+                  size="sm"
+                  weight="medium"
+                  class="command-name"
+                >
                   {{ result.item.name }}
-                </div>
-                <div v-if="result.item.description" class="command-description">
+                </TerminalText>
+                <TerminalText
+                  v-if="result.item.description"
+                  size="xs"
+                  variant="muted"
+                  truncate
+                  class="command-description"
+                >
                   {{ result.item.description }}
-                </div>
+                </TerminalText>
               </div>
 
               <div class="command-meta">
-                <div v-if="result.item.category" 
-                     :class="cn('command-category', getCategoryColor(result.item.category))">
+                <TerminalText
+                  v-if="result.item.category"
+                  size="xs"
+                  :class="cn('command-category', getCategoryColor(result.item.category))"
+                >
                   {{ result.item.category }}
-                </div>
+                </TerminalText>
                 <div v-if="result.item.shortcut" class="command-shortcut">
                   <kbd class="kbd">{{ result.item.shortcut }}</kbd>
                 </div>
@@ -150,15 +166,15 @@ const getCategoryColor = (category?: string) => {
           <div class="footer-shortcuts">
             <div class="shortcut-item">
               <kbd class="kbd">↑↓</kbd>
-              <span>Navigate</span>
+              <TerminalText size="xs" variant="muted">Navigate</TerminalText>
             </div>
             <div class="shortcut-item">
               <kbd class="kbd">Enter</kbd>
-              <span>Execute</span>
+              <TerminalText size="xs" variant="muted">Execute</TerminalText>
             </div>
             <div class="shortcut-item">
               <kbd class="kbd">Esc</kbd>
-              <span>Close</span>
+              <TerminalText size="xs" variant="muted">Close</TerminalText>
             </div>
           </div>
         </div>
@@ -235,32 +251,13 @@ const getCategoryColor = (category?: string) => {
 
 /* Loading State */
 .loading-state {
-  @apply flex items-center justify-center gap-3 py-8 text-muted-foreground;
-}
-
-.loading-spinner {
-  @apply w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin;
-}
-
-.loading-text {
-  @apply font-mono text-sm;
+  @apply flex items-center justify-center terminal-gap-3 py-8;
 }
 
 /* Empty State */
 .empty-state {
-  @apply text-center py-12 px-4 text-muted-foreground;
-}
-
-.empty-icon {
-  @apply text-lg mb-3;
-}
-
-.empty-text {
-  @apply font-medium mb-1;
-}
-
-.empty-hint {
-  @apply text-sm;
+  @apply text-center py-12 px-4;
+  @apply flex flex-col items-center terminal-gap-3;
 }
 
 /* Commands List */
@@ -269,44 +266,29 @@ const getCategoryColor = (category?: string) => {
 }
 
 .command-item {
-  @apply flex items-center gap-2 px-3 py-2 cursor-pointer;
+  @apply flex items-center terminal-gap-3 terminal-p-3 cursor-pointer;
   @apply transition-all duration-150;
-}
-
-.command-item:hover,
-.command-item-selected {
-  @apply bg-muted/50;
+  @apply hover:bg-muted/50;
 }
 
 .command-item-selected {
-  @apply border-l-2 border-primary;
+  @apply bg-muted/50 border-l-2 border-primary;
 }
 
-.command-icon {
-  @apply flex-shrink-0 text-sm;
-  width: 20px;
-  text-align: center;
-  overflow: hidden;
+.command-icon-terminal {
+  @apply flex-shrink-0;
 }
 
 .command-content {
-  @apply flex-1 min-w-0;
-}
-
-.command-name {
-  @apply font-medium text-foreground;
-}
-
-.command-description {
-  @apply text-sm text-muted-foreground truncate;
+  @apply flex-1 min-w-0 flex flex-col terminal-gap-1;
 }
 
 .command-meta {
-  @apply flex items-center gap-2 flex-shrink-0;
+  @apply flex items-center terminal-gap-2 flex-shrink-0;
 }
 
 .command-category {
-  @apply text-xs font-mono uppercase tracking-wide;
+  @apply uppercase tracking-wide;
 }
 
 .command-shortcut {
@@ -364,6 +346,15 @@ const getCategoryColor = (category?: string) => {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
 /* Reduced motion support */

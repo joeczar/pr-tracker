@@ -1,2 +1,6 @@
 export { default as Terminal } from './Terminal.vue'
 export { default as CommandPalette } from './CommandPalette.vue'
+export { default as TerminalBox } from './TerminalBox.vue'
+export { default as TerminalButton } from './TerminalButton.vue'
+export { default as TerminalIcon } from './TerminalIcon.vue'
+export { default as TerminalText } from './TerminalText.vue'

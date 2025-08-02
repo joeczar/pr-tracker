@@ -36,16 +36,11 @@
         <!-- Quick Actions -->
         <div class="flex flex-wrap gap-2 justify-center">
           <button @click="$router.push('/repositories')" class="terminal-btn primary compact">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-            </svg>
+            <TerminalIcon icon="➕" size="xs" />
             Add Repo
           </button>
           <button @click="syncAll" :disabled="syncing" class="terminal-btn secondary compact">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" :class="{ 'animate-spin': syncing }">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
+            <TerminalIcon icon="⟳" size="xs" :class="syncing ? 'animate-spin' : ''" />
             {{ syncing ? 'Syncing...' : 'Sync All' }}
           </button>
         </div>
@@ -132,19 +127,14 @@
         <Card class="empty-card">
           <div class="empty-content">
             <div class="empty-icon">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
-                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-              </svg>
+              <TerminalIcon icon="📁" size="xl" variant="muted" />
             </div>
             <h3 class="empty-title">Ready to Start Tracking</h3>
             <p class="empty-description">
               Add your first repository to begin monitoring pull requests and analyzing collaboration metrics.
             </p>
             <button @click="$router.push('/repositories')" class="empty-action">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-              </svg>
+              <TerminalIcon icon="➕" size="sm" />
               Add Your First Repository
             </button>
           </div>
@@ -157,9 +147,7 @@
           <h2 class="section-title">Your Repositories</h2>
           <button @click="$router.push('/repositories')" class="section-action">
             View All
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
+            <TerminalIcon icon="→" size="xs" />
           </button>
         </div>
 
@@ -173,10 +161,7 @@
             <div class="repo-header">
               <div class="repo-info">
                 <div class="repo-icon">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                  </svg>
+                  <TerminalIcon icon="📁" size="sm" variant="primary" />
                 </div>
                 <div class="repo-details">
                   <h3 class="repo-name">{{ repo.full_name }}</h3>
@@ -205,10 +190,7 @@
 
             <div class="repo-actions">
               <button @click.stop="syncRepository(repo)" class="repo-action-btn">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
+                <TerminalIcon icon="⟳" size="xs" />
                 Sync
               </button>
               <button @click.stop="$router.push(`/repositories/${repo.id}`)" class="repo-action-btn primary">
@@ -228,7 +210,7 @@ import { useRepositoryStore } from '../stores/repository'
 import { formatDistanceToNow } from 'date-fns'
 import { Card } from '@/components/ui/card'
 import { ASCIIArt } from '@/components/ui/ascii'
-import { Terminal } from '@/components/ui/terminal'
+import { Terminal, TerminalIcon } from '@/components/ui/terminal'
 
 const repositoryStore = useRepositoryStore()
 const syncing = ref(false)
@@ -565,7 +547,7 @@ const syncRepository = async (repo: any) => {
 }
 
 .empty-icon {
-  @apply mx-auto text-muted-foreground/50;
+  @apply mx-auto flex items-center justify-center;
 }
 
 .empty-title {

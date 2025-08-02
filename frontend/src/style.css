@@ -12,6 +12,33 @@
     font-feature-settings: 'liga' 1, 'calt' 1;
     font-variant-ligatures: contextual;
   }
+
+  /* GLOBAL ICON AND EMOJI SIZE CONSTRAINTS */
+  svg {
+    flex-shrink: 0;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  /* Force all emojis to respect their container size */
+  * {
+    font-size: inherit;
+  }
+
+  /* Specific emoji and icon constraints */
+  .w-4 { width: 1rem !important; height: 1rem !important; }
+  .w-5 { width: 1.25rem !important; height: 1.25rem !important; }
+  .w-6 { width: 1.5rem !important; height: 1.5rem !important; }
+  .w-8 { width: 2rem !important; height: 2rem !important; }
+  .w-12 { width: 3rem !important; height: 3rem !important; }
+  .w-16 { width: 4rem !important; height: 4rem !important; }
+
+  .h-4 { height: 1rem !important; }
+  .h-5 { height: 1.25rem !important; }
+  .h-6 { height: 1.5rem !important; }
+  .h-8 { height: 2rem !important; }
+  .h-12 { height: 3rem !important; }
+  .h-16 { height: 4rem !important; }
   
   /* Terminal-specific typography for technical elements */
   .font-mono, .font-terminal {
@@ -105,6 +132,42 @@
     --glow-secondary: 0 0 10px hsl(var(--secondary) / 0.5), 0 0 20px hsl(var(--secondary) / 0.3);
     --glow-accent: 0 0 10px hsl(var(--accent) / 0.5), 0 0 20px hsl(var(--accent) / 0.3);
     --glow-success: 0 0 10px hsl(var(--success) / 0.5), 0 0 20px hsl(var(--success) / 0.3);
+
+    /* Terminal-Specific Color System */
+    --terminal-bg: 220 6% 6%;              /* Deep terminal black */
+    --terminal-fg: 120 100% 85%;           /* Bright terminal green */
+    --terminal-border: 120 100% 50%;       /* Neon green borders */
+    --terminal-border-muted: 120 20% 30%;  /* Dim green borders */
+
+    /* Terminal Status Colors */
+    --terminal-success: 120 100% 50%;      /* Bright green */
+    --terminal-warning: 45 93% 58%;        /* Amber/yellow */
+    --terminal-error: 0 100% 60%;          /* Bright red */
+    --terminal-info: 180 100% 50%;         /* Cyan */
+    --terminal-muted: 120 20% 40%;         /* Dim green */
+
+    /* Terminal Accent Colors */
+    --terminal-primary: 120 100% 50%;      /* Bright green */
+    --terminal-secondary: 180 100% 50%;    /* Cyan */
+    --terminal-accent: 45 93% 58%;         /* Amber */
+
+    /* Terminal Typography */
+    --font-terminal: 'Fira Code', 'Monaco', 'Cascadia Code', 'SF Mono', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+
+    /* Terminal Spacing (character-based) */
+    --terminal-space-1: 0.25rem;          /* 4px - Tight spacing */
+    --terminal-space-2: 0.5rem;           /* 8px - Small gaps */
+    --terminal-space-3: 0.75rem;          /* 12px - Default spacing */
+    --terminal-space-4: 1rem;             /* 16px - Medium spacing */
+    --terminal-space-6: 1.5rem;           /* 24px - Large spacing */
+    --terminal-space-8: 2rem;             /* 32px - Section spacing */
+
+    /* Terminal Icon Sizes */
+    --terminal-icon-xs: 0.75rem;          /* 12px */
+    --terminal-icon-sm: 1rem;             /* 16px */
+    --terminal-icon-base: 1.25rem;        /* 20px */
+    --terminal-icon-lg: 1.5rem;           /* 24px */
+    --terminal-icon-xl: 2rem;             /* 32px */
   }
 }
 
@@ -364,6 +427,107 @@
       box-shadow: 0 0 15px hsl(var(--primary) / 0.6);
     }
   }
+
+  /* Terminal-specific utility classes */
+  .terminal-text {
+    font-family: var(--font-terminal);
+    font-feature-settings: 'liga' 1, 'calt' 1;
+    font-variant-ligatures: contextual;
+  }
+
+  .terminal-border {
+    border: 1px solid hsl(var(--terminal-border));
+  }
+
+  .terminal-border-muted {
+    border: 1px solid hsl(var(--terminal-border-muted));
+  }
+
+  .terminal-bg {
+    background-color: hsl(var(--terminal-bg));
+  }
+
+  .terminal-fg {
+    color: hsl(var(--terminal-fg));
+  }
+
+  /* Terminal icon sizing utilities */
+  .terminal-icon-xs {
+    width: var(--terminal-icon-xs);
+    height: var(--terminal-icon-xs);
+    font-size: var(--terminal-icon-xs);
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .terminal-icon-sm {
+    width: var(--terminal-icon-sm);
+    height: var(--terminal-icon-sm);
+    font-size: var(--terminal-icon-sm);
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .terminal-icon-base {
+    width: var(--terminal-icon-base);
+    height: var(--terminal-icon-base);
+    font-size: var(--terminal-icon-base);
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .terminal-icon-lg {
+    width: var(--terminal-icon-lg);
+    height: var(--terminal-icon-lg);
+    font-size: var(--terminal-icon-lg);
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .terminal-icon-xl {
+    width: var(--terminal-icon-xl);
+    height: var(--terminal-icon-xl);
+    font-size: var(--terminal-icon-xl);
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* Terminal spacing utilities */
+  .terminal-p-1 { padding: var(--terminal-space-1); }
+  .terminal-p-2 { padding: var(--terminal-space-2); }
+  .terminal-p-3 { padding: var(--terminal-space-3); }
+  .terminal-p-4 { padding: var(--terminal-space-4); }
+  .terminal-p-6 { padding: var(--terminal-space-6); }
+  .terminal-p-8 { padding: var(--terminal-space-8); }
+
+  .terminal-m-1 { margin: var(--terminal-space-1); }
+  .terminal-m-2 { margin: var(--terminal-space-2); }
+  .terminal-m-3 { margin: var(--terminal-space-3); }
+  .terminal-m-4 { margin: var(--terminal-space-4); }
+  .terminal-m-6 { margin: var(--terminal-space-6); }
+  .terminal-m-8 { margin: var(--terminal-space-8); }
+
+  .terminal-gap-1 { gap: var(--terminal-space-1); }
+  .terminal-gap-2 { gap: var(--terminal-space-2); }
+  .terminal-gap-3 { gap: var(--terminal-space-3); }
+  .terminal-gap-4 { gap: var(--terminal-space-4); }
+  .terminal-gap-6 { gap: var(--terminal-space-6); }
+  .terminal-gap-8 { gap: var(--terminal-space-8); }
 
   /* Layout utilities */
   .content-grid {
