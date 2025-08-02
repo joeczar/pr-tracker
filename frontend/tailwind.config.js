@@ -78,6 +78,32 @@ export default {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
+  		},
+  		animation: {
+  			'terminal-typing': 'typing 2s steps(40, end), blink 1s infinite',
+  			'cyber-glow': 'pulse-glow 2s ease-in-out infinite alternate',
+  			'scanlines': 'scanlines 0.1s linear infinite'
+  		},
+  		keyframes: {
+  			typing: {
+  				'from': { width: '0' },
+  				'to': { width: '100%' }
+  			},
+  			blink: {
+  				'50%': { 'border-color': 'transparent' }
+  			},
+  			'pulse-glow': {
+  				'from': {
+  					'box-shadow': '0 0 5px hsl(var(--primary) / 0.3)'
+  				},
+  				'to': {
+  					'box-shadow': '0 0 20px hsl(var(--primary) / 0.6), 0 0 30px hsl(var(--primary) / 0.4)'
+  				}
+  			},
+  			scanlines: {
+  				'0%': { transform: 'translateY(-100%)' },
+  				'100%': { transform: 'translateY(100vh)' }
+  			}
   		}
   	}
   },

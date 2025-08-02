@@ -89,7 +89,7 @@
 
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <!-- Total PRs -->
-            <Card variant="command" class="group hover:border-primary/60 transition-all">
+            <Card variant="terminal" class="group hover:border-primary/60 transition-all">
               <CardContent class="p-4">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 bg-blue-500/20 border border-blue-500/30 rounded flex items-center justify-center">
@@ -113,7 +113,7 @@
             </Card>
 
             <!-- Avg Merge Time -->
-            <Card variant="command" class="group hover:border-primary/60 transition-all">
+            <Card variant="terminal" class="group hover:border-primary/60 transition-all">
               <CardContent class="p-4">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 bg-green-500/20 border border-green-500/30 rounded flex items-center justify-center">
@@ -137,7 +137,7 @@
             </Card>
 
             <!-- Avg Lines Added -->
-            <Card variant="command" class="group hover:border-primary/60 transition-all">
+            <Card variant="terminal" class="group hover:border-primary/60 transition-all">
               <CardContent class="p-4">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 bg-yellow-500/20 border border-yellow-500/30 rounded flex items-center justify-center">
@@ -161,7 +161,7 @@
             </Card>
 
             <!-- Avg Files Changed -->
-            <Card variant="command" class="group hover:border-primary/60 transition-all">
+            <Card variant="terminal" class="group hover:border-primary/60 transition-all">
               <CardContent class="p-4">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 bg-purple-500/20 border border-purple-500/30 rounded flex items-center justify-center">
@@ -233,7 +233,7 @@
                   :key="pr.id"
                   class="group"
                 >
-                  <Card variant="command" class="border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all duration-200">
+                  <Card variant="terminal" class="border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all duration-200">
                     <CardContent class="p-4">
                       <div class="flex items-start justify-between">
                         <div class="flex-1">
@@ -288,9 +288,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Terminal } from '@/components/ui/terminal'
 import { StatusLED } from '@/components/ui/status'
 import { StatusBadge } from '@/components/ui/badge'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Progress } from '@/components/ui/progress'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Separator } from '@/components/ui/separator'
 
 const route = useRoute()

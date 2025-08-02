@@ -1,97 +1,99 @@
 <template>
-  <div class="space-y-8">
-    <!-- Page Header -->
-    <div class="text-center">
-      <h1 class="text-3xl font-bold text-foreground mb-2">Repository Management</h1>
-      <p class="text-muted-foreground text-lg">Add and manage repositories to track pull requests</p>
-      <div class="mt-4 flex items-center justify-center gap-2">
-        <div class="w-2 h-2 bg-success rounded-full pulse-glow"></div>
-        <span class="text-sm text-muted-foreground">{{ repositories.length }} repositories tracked</span>
+  <div class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+    <!-- ASCII Header -->
+    <div class="mb-6">
+      <ASCIIArt
+        text="REPOSITORIES"
+        variant="glow"
+        color="primary"
+        size="md"
+        :animate="true"
+        class="mb-3"
+      />
+      <div class="text-center">
+        <div class="font-mono text-primary text-sm">
+          > user@pr-tracker:~$ repositories --list --count={{ repositories.length }}
+        </div>
+        <div class="font-mono text-muted-foreground text-xs mt-1">
+          Repository management system initialized. Status: ONLINE
+        </div>
       </div>
     </div>
 
-    <!-- Add Repository Form -->
-    <Card variant="glow" class="max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle class="text-xl text-foreground flex items-center gap-2">
-          <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-          </svg>
-          Add New Repository
-        </CardTitle>
-        <CardDescription>
-          Enter the GitHub repository owner and name to start tracking pull requests
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <!-- Add Repository Terminal -->
+    <Terminal title="repository-manager@add:~$" class="mb-6">
+      <div class="space-y-4">
+        <!-- Command Header -->
+        <div class="border-l-2 border-primary pl-3 py-2 bg-primary/5 rounded-r">
+          <div class="text-primary font-mono text-sm">
+            > repo-manager add --interactive
+          </div>
+          <div class="text-muted-foreground font-mono text-xs mt-1">
+            Enter GitHub repository details to initialize tracking...
+          </div>
+        </div>
+        <!-- Terminal Form -->
         <form @submit.prevent="addRepository" class="space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="space-y-2">
-              <Label for="owner" class="text-sm font-medium">
-                Repository Owner
-              </Label>
+          <div class="space-y-4">
+            <!-- Owner Input -->
+            <div class="terminal-input-group">
+              <div class="terminal-prompt">
+                <span class="text-primary font-mono">owner@github:</span>
+                <span class="text-muted-foreground font-mono">~$</span>
+              </div>
               <Input
                 id="owner"
                 v-model="newRepo.owner"
                 placeholder="facebook"
                 required
+                class="terminal-input"
               />
-              <p class="text-xs text-muted-foreground">GitHub username or organization</p>
             </div>
-            <div class="space-y-2">
-              <Label for="name" class="text-sm font-medium">
-                Repository Name
-              </Label>
+
+            <!-- Name Input -->
+            <div class="terminal-input-group">
+              <div class="terminal-prompt">
+                <span class="text-primary font-mono">repo@name:</span>
+                <span class="text-muted-foreground font-mono">~$</span>
+              </div>
               <Input
                 id="name"
                 v-model="newRepo.name"
                 placeholder="react"
                 required
+                class="terminal-input"
               />
-              <p class="text-xs text-muted-foreground">Repository name</p>
             </div>
           </div>
-          
-          <div class="flex justify-end pt-4">
-            <Button
+
+          <div class="flex justify-center pt-4">
+            <button
               type="submit"
               :disabled="loading"
-              class="min-w-[200px] glow-primary"
+              class="terminal-btn primary compact"
             >
-              {{ loading ? 'Adding Repository...' : 'Add Repository' }}
-            </Button>
+              {{ loading ? 'Adding...' : 'Add Repository' }}
+            </button>
           </div>
         </form>
 
-        <!-- Error Display -->
-        <div v-if="error" class="mt-6 p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
-          <div class="flex items-start gap-3">
-            <svg class="w-5 h-5 text-destructive mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <div>
-              <h4 class="text-sm font-medium text-destructive">Error adding repository</h4>
-              <p class="text-sm text-destructive/80 mt-1">{{ error }}</p>
-            </div>
+        <!-- Terminal Error Display -->
+        <div v-if="error" class="terminal-error">
+          <div class="text-destructive font-mono text-sm">
+            ERROR: {{ error }}
           </div>
         </div>
 
-        <div v-if="storeError && storeError.includes('GITHUB_TOKEN')" class="mt-6 p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
-          <div class="flex items-start gap-3">
-            <svg class="w-5 h-5 text-destructive mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <div>
-              <h4 class="text-sm font-medium text-destructive">Configuration Error</h4>
-              <p class="text-sm text-destructive/80 mt-1">GitHub token is required for backend functionality</p>
-              <code class="text-xs text-mono bg-muted/50 px-2 py-1 rounded mt-2 block text-primary">
-                export GITHUB_TOKEN=your_github_token_here
-              </code>
-            </div>
+        <div v-if="storeError && storeError.includes('GITHUB_TOKEN')" class="terminal-error">
+          <div class="text-destructive font-mono text-sm">
+            FATAL: GitHub token configuration required
+          </div>
+          <div class="text-muted-foreground font-mono text-xs mt-2">
+            > export GITHUB_TOKEN=your_github_token_here
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </Terminal>
 
     <!-- Repository List -->
     <div class="space-y-6">
@@ -182,9 +184,10 @@ import { ref, onMounted } from 'vue'
 import { useRepositoryStore } from '../stores/repository'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { ASCIIArt } from '@/components/ui/ascii'
+import { Terminal } from '@/components/ui/terminal'
 
 const repositoryStore = useRepositoryStore()
 const { repositories, error: storeError } = repositoryStore
@@ -231,3 +234,88 @@ const formatDate = (dateString: string) => {
   return format(new Date(dateString), 'MMM d, yyyy')
 }
 </script>
+
+<style scoped>
+/* Terminal Input Styling */
+.terminal-input-group {
+  @apply flex items-center gap-3 bg-muted/20 border border-border/50 rounded-lg p-3;
+  @apply transition-all duration-200;
+}
+
+.terminal-input-group:focus-within {
+  @apply border-primary/50 bg-primary/5;
+}
+
+.terminal-prompt {
+  @apply flex-shrink-0 text-sm;
+}
+
+.terminal-input {
+  @apply bg-transparent border-none outline-none flex-1;
+  @apply font-mono text-sm text-foreground;
+  @apply placeholder:text-muted-foreground;
+}
+
+.terminal-input:focus {
+  @apply ring-0 border-none outline-none;
+}
+
+/* Terminal Button Styling */
+.terminal-btn {
+  @apply px-4 py-2 font-mono text-sm font-medium;
+  @apply border border-border rounded-md;
+  @apply transition-all duration-200;
+  @apply flex items-center gap-1.5;
+  @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  letter-spacing: 0.025em;
+}
+
+.terminal-btn.compact {
+  @apply px-3 py-1.5 text-xs;
+  @apply gap-1;
+}
+
+.terminal-btn.primary {
+  @apply bg-primary/10 text-primary border-primary/30;
+  @apply hover:bg-primary/20 hover:border-primary/50;
+  @apply focus:ring-primary;
+}
+
+.terminal-btn.primary:hover {
+  box-shadow: 0 0 15px hsl(var(--primary) / 0.4);
+}
+
+/* Terminal Error Styling */
+.terminal-error {
+  @apply mt-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg;
+  @apply border-l-4 border-l-destructive;
+}
+
+/* Repository Card Styling */
+.repo-terminal-card {
+  @apply bg-card/50 border border-border/50 rounded-lg p-4;
+  @apply hover:border-primary/30 hover:bg-card/80;
+  @apply transition-all duration-200;
+  @apply cursor-pointer;
+}
+
+.repo-terminal-card:hover {
+  box-shadow: 0 0 20px hsl(var(--primary) / 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .terminal-input-group {
+    @apply flex-col items-start gap-2;
+  }
+
+  .terminal-prompt {
+    @apply text-xs;
+  }
+
+  .terminal-input {
+    @apply w-full;
+  }
+}
+</style>
