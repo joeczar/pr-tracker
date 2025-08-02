@@ -131,6 +131,37 @@ export interface GitHubRepository {
   updated_at: string
 }
 
+// Repository option for dropdown selection
+export interface RepositoryOption {
+  id: number
+  name: string
+  full_name: string
+  owner: {
+    login: string
+    type: 'User' | 'Organization'
+  }
+  private: boolean
+  description?: string | null
+  language?: string | null
+  updated_at: string
+  permissions?: {
+    admin: boolean
+    push: boolean
+    pull: boolean
+  }
+}
+
+// API response for accessible repositories
+export interface AccessibleRepositoriesResponse {
+  repositories: RepositoryOption[]
+  pagination: {
+    page: number
+    per_page: number
+    total_count: number
+    has_next_page: boolean
+  }
+}
+
 export interface GitHubPullRequest {
   id: number
   number: number

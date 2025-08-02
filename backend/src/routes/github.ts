@@ -154,4 +154,47 @@ githubRoutes.get('/rate-limit', requireAuth, async (c) => {
   }
 })
 
+// Get all accessible repositories for the authenticated user
+githubRoutes.get('/repositories', requireAuth, async (c) => {
+  try {
+    const user = getUser(c)
+    if (!user) {
+      return c.json({ error: 'User not found' }, 401)
+    }
+
+    // Parse query parameters
+    const page = parseInt(c.req.query('page') || '1')
+    const per_page = parseInt(c.req.query('per_page') || '100')
+    const sort = c.req.query('sort') as 'created' | 'updated' | 'pushed' | 'full_name' || 'updated'
+    const direction = c.req.query('direction') as 'asc' | 'desc' || 'desc'
+    const affiliation = c.req.query('affiliation') || 'owner,collaborator,organization_member'
+    const visibility = c.req.query('visibility') as 'all' | 'public' | 'private' || 'all'
+
+    const githubService = GitHubService.forUser(user)
+    const result = await githubService.getUserAccessibleRepositories({
+      page,
+      per_page,
+      sort,
+      direction,
+      affiliation,
+      visibility
+    })
+
+    return c.json({
+      repositories: result.repositories,
+      pagination: {
+        page,
+        per_page,
+        total_count: result.total_count,
+        has_next_page: result.has_next_page
+      }
+    })
+  } catch (error) {
+    console.error('Failed to fetch accessible repositories:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to fetch repositories'
+    }, 500)
+  }
+})
+
 export { githubRoutes }

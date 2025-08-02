@@ -228,4 +228,53 @@ export class GitHubService {
       return response.data
     })
   }
+
+  /**
+   * Get all repositories the authenticated user has access to
+   * Includes personal repos, organization repos, and collaborator repos
+   */
+  async getUserAccessibleRepositories(options: {
+    page?: number
+    per_page?: number
+    sort?: 'created' | 'updated' | 'pushed' | 'full_name'
+    direction?: 'asc' | 'desc'
+    affiliation?: string
+    visibility?: 'all' | 'public' | 'private'
+  } = {}) {
+    return this.withTokenRefresh(async () => {
+      // Build parameters - cannot use both affiliation and type together
+      const params: any = {
+        page: options.page || 1,
+        per_page: Math.min(options.per_page || 100, 100), // GitHub API limit
+        sort: options.sort || 'updated',
+        direction: options.direction || 'desc',
+      }
+
+      // Use affiliation to get repos from personal, collaborator, and organization contexts
+      // This is more comprehensive than using 'type' parameter
+      if (options.affiliation) {
+        params.affiliation = options.affiliation
+      } else {
+        params.affiliation = 'owner,collaborator,organization_member'
+      }
+
+      // Optionally filter by visibility (public/private)
+      if (options.visibility && options.visibility !== 'all') {
+        params.visibility = options.visibility
+      }
+
+      const response = await this.octokit.rest.repos.listForAuthenticatedUser(params)
+
+      // Filter out archived repositories and ensure user has at least read access
+      const accessibleRepos = response.data.filter(repo => {
+        return !repo.archived && (repo.permissions?.pull || repo.permissions?.push || repo.permissions?.admin)
+      })
+
+      return {
+        repositories: accessibleRepos,
+        total_count: response.data.length,
+        has_next_page: response.data.length === (options.per_page || 100)
+      }
+    })
+  }
 }

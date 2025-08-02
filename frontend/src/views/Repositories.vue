@@ -35,34 +35,64 @@
         <!-- Terminal Form -->
         <form @submit.prevent="addRepository" class="space-y-6">
           <div class="space-y-4">
-            <!-- Owner Input -->
+            <!-- Repository Selector -->
             <div class="terminal-input-group">
               <div class="terminal-prompt">
-                <span class="text-primary font-mono">owner@github:</span>
+                <span class="text-primary font-mono">select@repo:</span>
                 <span class="text-muted-foreground font-mono">~$</span>
               </div>
-              <Input
-                id="owner"
-                v-model="newRepo.owner"
-                placeholder="facebook"
-                required
-                class="terminal-input"
-              />
+              <div class="flex-1">
+                <RepositorySelector
+                  v-model="selectedRepoFullName"
+                  placeholder="Choose from your accessible repositories..."
+                  @select="handleRepositorySelect"
+                  :disabled="loading"
+                />
+              </div>
             </div>
 
-            <!-- Name Input -->
-            <div class="terminal-input-group">
-              <div class="terminal-prompt">
-                <span class="text-primary font-mono">repo@name:</span>
-                <span class="text-muted-foreground font-mono">~$</span>
+            <!-- Manual Entry Toggle -->
+            <div class="flex items-center justify-center">
+              <button
+                type="button"
+                @click="showManualEntry = !showManualEntry"
+                class="text-xs text-muted-foreground hover:text-primary font-mono transition-colors"
+              >
+                {{ showManualEntry ? '◀ Use Repository Selector' : '▶ Enter Manually' }}
+              </button>
+            </div>
+
+            <!-- Manual Entry (fallback) -->
+            <div v-if="showManualEntry" class="space-y-4 border-t border-primary/20 pt-4">
+              <!-- Owner Input -->
+              <div class="terminal-input-group">
+                <div class="terminal-prompt">
+                  <span class="text-primary font-mono">owner@github:</span>
+                  <span class="text-muted-foreground font-mono">~$</span>
+                </div>
+                <Input
+                  id="owner"
+                  v-model="newRepo.owner"
+                  placeholder="facebook"
+                  required
+                  class="terminal-input"
+                />
               </div>
-              <Input
-                id="name"
-                v-model="newRepo.name"
-                placeholder="react"
-                required
-                class="terminal-input"
-              />
+
+              <!-- Name Input -->
+              <div class="terminal-input-group">
+                <div class="terminal-prompt">
+                  <span class="text-primary font-mono">repo@name:</span>
+                  <span class="text-muted-foreground font-mono">~$</span>
+                </div>
+                <Input
+                  id="name"
+                  v-model="newRepo.name"
+                  placeholder="react"
+                  required
+                  class="terminal-input"
+                />
+              </div>
             </div>
           </div>
 
@@ -183,11 +213,13 @@
 import { ref, onMounted } from 'vue'
 import { useRepositoryStore } from '../stores/repository'
 import { format } from 'date-fns'
+import type { RepositoryOption } from '@shared/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ASCIIArt } from '@/components/ui/ascii'
 import { Terminal } from '@/components/ui/terminal'
+import RepositorySelector from '@/components/RepositorySelector.vue'
 
 const repositoryStore = useRepositoryStore()
 const { repositories, error: storeError } = repositoryStore
@@ -197,6 +229,9 @@ const newRepo = ref({
   name: ''
 })
 
+const selectedRepoFullName = ref('')
+const selectedRepository = ref<RepositoryOption | null>(null)
+const showManualEntry = ref(false)
 const loading = ref(false)
 const error = ref('')
 
@@ -204,15 +239,33 @@ onMounted(async () => {
   await repositoryStore.fetchRepositories()
 })
 
+const handleRepositorySelect = (repository: RepositoryOption) => {
+  selectedRepository.value = repository
+  // Parse owner and name from full_name for the existing addRepository function
+  const [owner, name] = repository.full_name.split('/')
+  newRepo.value = { owner, name }
+}
+
 const addRepository = async () => {
-  if (!newRepo.value.owner || !newRepo.value.name) return
-  
+  // Check if we have repository data from either selector or manual entry
+  const owner = newRepo.value.owner
+  const name = newRepo.value.name
+
+  if (!owner || !name) {
+    error.value = 'Please select a repository or enter owner and name manually'
+    return
+  }
+
   loading.value = true
   error.value = ''
-  
+
   try {
-    await repositoryStore.addRepository(newRepo.value.owner, newRepo.value.name)
+    await repositoryStore.addRepository(owner, name)
+    // Reset form
     newRepo.value = { owner: '', name: '' }
+    selectedRepoFullName.value = ''
+    selectedRepository.value = null
+    showManualEntry.value = false
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to add repository'
   } finally {
