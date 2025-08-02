@@ -1,44 +1,36 @@
 <template>
-  <TooltipProvider>
-    <div class="space-y-4">
+  <div class="space-y-8">
     <!-- Loading State -->
-    <Terminal v-if="loading" title="pr-tracker@repository-detail:~$" class="min-h-[400px]">
-      <div class="space-y-4">
-        <div class="border-l-2 border-primary pl-4 py-2 bg-primary/5">
-          <div class="text-primary font-terminal text-sm">
-            > pr-tracker repo --analyze {{ repositoryId }}
+    <div v-if="loading" class="text-center py-16">
+      <Card class="max-w-md mx-auto" variant="minimal">
+        <div class="p-8">
+          <div class="w-16 h-16 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center">
+            <svg class="w-8 h-8 text-primary animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
           </div>
-          <div class="text-muted-foreground font-terminal text-xs mt-1">
-            Loading repository analysis...
-          </div>
+          <h3 class="text-xl font-semibold text-foreground mb-2">Loading Repository</h3>
+          <p class="text-muted-foreground text-mono text-sm">
+            Analyzing repository {{ repositoryId }}...
+          </p>
         </div>
-        
-        <div class="flex items-center justify-center py-12">
-          <div class="flex items-center gap-4">
-            <StatusLED status="processing" label="SCANNING..." animate />
-            <Progress variant="terminal" :model-value="65" class="w-48" />
-          </div>
-        </div>
-        
-        <div class="text-center">
-          <p class="text-muted-foreground font-terminal text-sm">Analyzing repository data...</p>
-        </div>
-      </div>
-    </Terminal>
+      </Card>
+    </div>
     
     <!-- Error State -->
-    <Terminal v-else-if="error" title="pr-tracker@repository-detail:~$" class="min-h-[300px]">
-      <div class="space-y-4">
-        <Alert variant="error" class="mb-4">
-          <AlertTitle class="flex items-center gap-2">
-            ⚠ REPOSITORY ERROR
-          </AlertTitle>
-          <AlertDescription class="mt-2">
-            {{ error }}
-          </AlertDescription>
-        </Alert>
-      </div>
-    </Terminal>
+    <div v-else-if="error" class="text-center py-16">
+      <Card class="max-w-md mx-auto" variant="minimal">
+        <div class="p-8">
+          <div class="w-16 h-16 mx-auto mb-6 bg-destructive/10 rounded-full flex items-center justify-center">
+            <svg class="w-8 h-8 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-foreground mb-2">Repository Error</h3>
+          <p class="text-muted-foreground">{{ error }}</p>
+        </div>
+      </Card>
+    </div>
     
     <!-- Repository Content -->
     <div v-else-if="repository" class="space-y-4">

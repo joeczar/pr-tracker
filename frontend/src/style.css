@@ -4,144 +4,121 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom styles for ADHD-friendly UI */
+/* Modern Minimal Design System with Cyberpunk Accents */
 @layer base {
   body {
-    @apply font-terminal antialiased bg-background text-foreground;
-    font-feature-settings: 'liga' 1, 'calt' 1; /* Enable ligatures */
+    @apply antialiased bg-background text-foreground font-sans;
+    font-feature-settings: 'liga' 1, 'calt' 1;
     font-variant-ligatures: contextual;
   }
   
-  /* Terminal-specific typography */
-  .font-terminal {
-    font-family: var(--font-terminal, ui-monospace, 'Fira Code', 'Monaco', 'Cascadia Code', 'SF Mono', 'Consolas', 'Liberation Mono', 'Menlo', monospace);
-    font-feature-settings: 'liga' 1, 'calt' 1; /* Enable ligatures */
+  /* Terminal-specific typography for technical elements */
+  .font-mono, .font-terminal {
+    font-family: var(--font-mono, ui-monospace, 'Fira Code', 'Monaco', 'Cascadia Code', 'SF Mono', 'Consolas', 'Liberation Mono', 'Menlo', monospace);
+    font-feature-settings: 'liga' 1, 'calt' 1;
     font-variant-ligatures: contextual;
   }
   
   code, pre, kbd, samp {
-    @apply font-terminal;
+    @apply font-mono;
   }
   :root {
-    /* WCAG AA Compliant Cyberpunk Terminal Color System - Light Theme */
-    --background: 0 0% 98%;           /* Light Gray #fafafa */
-    --foreground: 218 100% 7%;        /* Deep Navy #091833 - Dark text on light bg */
-    --card: 0 0% 95%;                 /* Light Card Background #f2f2f2 */
-    --card-foreground: 218 100% 7%;   /* Dark text on light cards */
-    --popover: 0 0% 100%;             /* White popover */
-    --popover-foreground: 218 100% 7%;
-    --primary: 186 100% 35%;          /* Darker Cyan for light theme #00666b */
-    --primary-foreground: 0 0% 98%;   /* Light text on primary */
-    --secondary: 280 100% 40%;        /* Darker Purple for light theme #6600cc */
+    /* Modern Minimal Dark Theme - Primary Color System */
+    --background: 220 6% 6%;           /* Deep Dark Gray #0f0f0f */
+    --foreground: 0 0% 98%;            /* Bright White #fafafa */
+    --card: 220 6% 8%;                 /* Card Background #141414 */
+    --card-foreground: 0 0% 95%;       /* Light text on cards #f2f2f2 */
+    --popover: 220 6% 10%;             /* Popover Background #1a1a1a */
+    --popover-foreground: 0 0% 95%;
+    
+    /* Cyberpunk Accent Colors */
+    --primary: 180 100% 50%;           /* Neon Cyan #00ffff */
+    --primary-foreground: 220 6% 6%;   /* Dark text on primary */
+    --secondary: 262 83% 68%;          /* Electric Purple #a855f7 */
     --secondary-foreground: 0 0% 98%;
-    --muted: 215 25% 65%;             /* Lighter muted for light theme */
-    --muted-foreground: 215 25% 45%;  /* Darker muted text */
-    --accent: 320 100% 45%;           /* Darker Pink for light theme #cc0099 */
-    --accent-foreground: 0 0% 98%;
-    --destructive: 348 100% 45%;      /* Darker Red for light theme #cc0033 */
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 13% 91%;            /* Light Border #e5e7eb */
-    --input: 0 0% 100%;               /* White Input Background */
-    --ring: 186 100% 35%;             /* Focus Ring - darker cyan */
-    --success: 120 100% 35%;          /* Darker Green for light theme #006600 */
-    --warning: 280 100% 40%;          /* Darker Purple Warning */
-    --info: 198 100% 40%;             /* Darker Blue for light theme */
+    --accent: 322 81% 59%;             /* Electric Pink #e879f9 */
+    --accent-foreground: 220 6% 6%;
+    
+    /* Neutral Grays */
+    --muted: 220 6% 12%;               /* Muted Background #1f1f1f */
+    --muted-foreground: 220 6% 65%;    /* Muted Text #a3a3a3 */
+    --border: 220 6% 15%;              /* Subtle Border #262626 */
+    --input: 220 6% 10%;               /* Input Background #1a1a1a */
+    --ring: 180 100% 50%;              /* Cyan Focus Ring */
 
-    /* Chart Colors */
-    --chart-1: 186 100% 78%;          /* Cyan */
-    --chart-2: 280 100% 73%;          /* Purple */
-    --chart-3: 320 100% 73%;          /* Pink */
-    --chart-4: 198 100% 73%;          /* Electric Blue */
-    --chart-5: 120 100% 64%;          /* Green */
+    /* Status Colors */
+    --success: 120 100% 50%;           /* Neon Green #00ff00 */
+    --warning: 45 93% 58%;             /* Electric Amber #fbbf24 */
+    --destructive: 348 100% 60%;       /* Electric Red #ff0040 */
+    --info: 199 89% 48%;               /* Electric Blue #0ea5e9 */
+
+    /* Chart Colors - Neon Palette */
+    --chart-1: 180 100% 50%;           /* Neon Cyan */
+    --chart-2: 262 83% 68%;            /* Electric Purple */  
+    --chart-3: 322 81% 59%;            /* Electric Pink */
+    --chart-4: 45 93% 58%;             /* Electric Amber */
+    --chart-5: 120 100% 50%;           /* Neon Green */
 
     /* Typography */
-    --font-terminal: 'Fira Code', 'Monaco', 'Cascadia Code', 'SF Mono', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
-    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-mono: 'Fira Code', 'Monaco', 'Cascadia Code', 'SF Mono', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+    --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 
-    /* Font Sizes (Design System Scale) */
-    --text-xs: 0.75rem;     /* 12px */
-    --text-sm: 0.875rem;    /* 14px */
-    --text-base: 1rem;      /* 16px */
-    --text-lg: 1.125rem;    /* 18px */
-    --text-xl: 1.25rem;     /* 20px */
-    --text-2xl: 1.5rem;     /* 24px */
-    --text-3xl: 1.875rem;   /* 30px */
+    /* Font Sizes - 8px Grid System */
+    --text-xs: 0.75rem;      /* 12px */
+    --text-sm: 0.875rem;     /* 14px */
+    --text-base: 1rem;       /* 16px */
+    --text-lg: 1.125rem;     /* 18px */
+    --text-xl: 1.25rem;      /* 20px */
+    --text-2xl: 1.5rem;      /* 24px */
+    --text-3xl: 1.875rem;    /* 30px */
+    --text-4xl: 2.25rem;     /* 36px */
 
     /* Line Heights */
-    --leading-xs: 1.33;     /* 16px for 12px text */
-    --leading-sm: 1.43;     /* 20px for 14px text */
-    --leading-base: 1.5;    /* 24px for 16px text */
-    --leading-lg: 1.56;     /* 28px for 18px text */
-    --leading-xl: 1.4;      /* 28px for 20px text */
-    --leading-2xl: 1.33;    /* 32px for 24px text */
-    --leading-3xl: 1.2;     /* 36px for 30px text */
+    --leading-xs: 1.4;
+    --leading-sm: 1.5;
+    --leading-base: 1.6;
+    --leading-lg: 1.6;
+    --leading-xl: 1.5;
+    --leading-2xl: 1.4;
+    --leading-3xl: 1.3;
+    
+    /* Spacing - 8px Grid System */
+    --radius: 0.5rem;        /* 8px */
+    --radius-lg: 0.75rem;    /* 12px */
+    --spacing-xs: 0.25rem;   /* 4px */
+    --spacing-sm: 0.5rem;    /* 8px */
+    --spacing-md: 1rem;      /* 16px */
+    --spacing-lg: 1.5rem;    /* 24px */
+    --spacing-xl: 2rem;      /* 32px */
+    --spacing-2xl: 3rem;     /* 48px */
+    --spacing-3xl: 4rem;     /* 64px */
 
-    /* Spacing */
-    --radius: 0.5rem;
-    --spacing-xs: 0.25rem;  /* 4px */
-    --spacing-sm: 0.5rem;   /* 8px */
-    --spacing-md: 1rem;     /* 16px */
-    --spacing-lg: 1.5rem;   /* 24px */
-    --spacing-xl: 2rem;     /* 32px */
-    --spacing-2xl: 3rem;    /* 48px */
+    /* Modern Shadow System */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.25);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.6), 0 8px 10px -6px rgb(0 0 0 / 0.6);
 
     /* Cyberpunk Glow Effects */
-    --glow-primary: 0 0 10px hsl(var(--primary)), 0 0 20px hsl(var(--primary)), 0 0 30px hsl(var(--primary));
-    --glow-accent: 0 0 10px hsl(var(--accent)), 0 0 20px hsl(var(--accent)), 0 0 30px hsl(var(--accent));
-    --glow-success: 0 0 10px hsl(var(--success)), 0 0 20px hsl(var(--success)), 0 0 30px hsl(var(--success));
-  }
-  .dark {
-    /* WCAG AA Compliant Enhanced Dark Mode - Ultra Dark Cyberpunk */
-    --background: 220 100% 4%;        /* Ultra Deep Navy #001122 */
-    --foreground: 180 100% 90%;       /* Brighter Cyan #00ffaa - Enhanced contrast */
-    --card: 220 100% 6%;              /* Darker Card Background */
-    --card-foreground: 186 100% 85%;  /* Brighter Cyan Text - Enhanced contrast */
-    --popover: 220 100% 5%;           /* Very Dark Popover */
-    --popover-foreground: 180 100% 90%;
-    --primary: 186 100% 85%;          /* Brighter Primary Cyan - Enhanced contrast */
-    --primary-foreground: 220 100% 4%;
-    --secondary: 280 100% 80%;        /* Brighter Purple - Enhanced contrast */
-    --secondary-foreground: 220 100% 4%;
-    --muted: 215 30% 45%;             /* Darker Muted - Improved accessibility */
-    --muted-foreground: 215 40% 65%;  /* Better contrast for muted text */
-    --accent: 320 100% 80%;           /* Brighter Pink - Enhanced contrast */
-    --accent-foreground: 220 100% 4%;
-    --destructive: 348 100% 70%;      /* Brighter Red - Enhanced contrast */
-    --destructive-foreground: 220 100% 4%;
-    --border: 220 60% 15%;            /* Darker Border */
-    --input: 220 60% 10%;             /* Darker Input Background */
-    --ring: 186 100% 85%;             /* Brighter Focus Ring */
-    --success: 120 100% 70%;          /* Brighter Green - Enhanced contrast */
-    --warning: 280 100% 80%;          /* Brighter Purple Warning */
-    --info: 198 100% 80%;             /* Brighter Electric Blue */
-
-    /* Chart Colors - Enhanced for Dark Mode */
-    --chart-1: 186 100% 85%;          /* Brighter Cyan */
-    --chart-2: 280 100% 80%;          /* Brighter Purple */
-    --chart-3: 320 100% 80%;          /* Brighter Pink */
-    --chart-4: 198 100% 80%;          /* Brighter Blue */
-    --chart-5: 120 100% 70%;          /* Brighter Green */
-
-    /* Enhanced Glow Effects for Dark Mode */
-    --glow-primary: 0 0 15px hsl(var(--primary)), 0 0 30px hsl(var(--primary)), 0 0 45px hsl(var(--primary));
-    --glow-accent: 0 0 15px hsl(var(--accent)), 0 0 30px hsl(var(--accent)), 0 0 45px hsl(var(--accent));
-    --glow-success: 0 0 15px hsl(var(--success)), 0 0 30px hsl(var(--success)), 0 0 45px hsl(var(--success));
+    --glow-primary: 0 0 10px hsl(var(--primary) / 0.5), 0 0 20px hsl(var(--primary) / 0.3);
+    --glow-secondary: 0 0 10px hsl(var(--secondary) / 0.5), 0 0 20px hsl(var(--secondary) / 0.3);
+    --glow-accent: 0 0 10px hsl(var(--accent) / 0.5), 0 0 20px hsl(var(--accent) / 0.3);
+    --glow-success: 0 0 10px hsl(var(--success) / 0.5), 0 0 20px hsl(var(--success) / 0.3);
   }
 }
 
 @layer components {
-  /* Design System Compliant Button Components */
+  /* Modern Minimal Button Components */
   .btn-primary {
     background: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
-    border: 1px solid hsl(var(--primary) / 0.2);
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-family: var(--font-terminal);
+    border: 1px solid transparent;
+    padding: 12px 24px;
+    border-radius: var(--radius);
+    font-family: var(--font-sans);
     font-weight: 500;
     font-size: 14px;
-    transition: all 200ms;
-    box-shadow: 0 4px 12px hsl(var(--primary) / 0.2);
+    transition: all 200ms ease;
     @apply inline-flex items-center justify-center gap-2 whitespace-nowrap;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
     @apply disabled:pointer-events-none disabled:opacity-50;
@@ -149,19 +126,20 @@
 
   .btn-primary:hover {
     background: hsl(var(--primary) / 0.9);
-    box-shadow: 0 0 20px hsl(var(--primary) / 0.4);
+    box-shadow: var(--glow-primary);
+    transform: translateY(-1px);
   }
 
   .btn-secondary {
     background: transparent;
     color: hsl(var(--foreground));
     border: 1px solid hsl(var(--border));
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-family: var(--font-terminal);
+    padding: 12px 24px;
+    border-radius: var(--radius);
+    font-family: var(--font-sans);
     font-weight: 500;
     font-size: 14px;
-    transition: all 200ms;
+    transition: all 200ms ease;
     @apply inline-flex items-center justify-center gap-2 whitespace-nowrap;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
     @apply disabled:pointer-events-none disabled:opacity-50;
@@ -170,66 +148,150 @@
   .btn-secondary:hover {
     border-color: hsl(var(--primary));
     color: hsl(var(--primary));
-    box-shadow: 0 0 10px hsl(var(--primary) / 0.2);
+    box-shadow: var(--glow-primary);
   }
 
-  /* Design System Compliant Card Components */
-  .card-terminal {
+  .btn-ghost {
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    border: 1px solid transparent;
+    padding: 12px 24px;
+    border-radius: var(--radius);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 200ms ease;
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-ghost:hover {
+    background: hsl(var(--muted));
+    color: hsl(var(--foreground));
+  }
+
+  /* Terminal/Code style buttons for technical elements */
+  .btn-terminal {
+    background: transparent;
+    color: hsl(var(--primary));
+    border: 1px solid hsl(var(--primary) / 0.3);
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 13px;
+    transition: all 200ms ease;
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-terminal:hover {
+    background: hsl(var(--primary) / 0.1);
+    border-color: hsl(var(--primary) / 0.6);
+    box-shadow: var(--glow-primary);
+  }
+
+  /* Modern Minimal Card Components */
+  .card-minimal {
     background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
-    border-radius: 12px;
-    box-shadow: 0 4px 20px hsl(var(--background) / 0.8);
-    font-family: var(--font-terminal);
-    transition: all 300ms;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: all 200ms ease;
     @apply overflow-hidden;
   }
 
-  .card-terminal:hover {
+  .card-minimal:hover {
     border-color: hsl(var(--primary) / 0.3);
-    box-shadow: 0 8px 32px hsl(var(--primary) / 0.1);
+    box-shadow: var(--shadow-md);
   }
 
-  /* Design System Compliant Input Components */
-  .input-terminal {
+  .card-glow {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: all 300ms ease;
+    @apply overflow-hidden;
+  }
+
+  .card-glow:hover {
+    border-color: hsl(var(--primary) / 0.5);
+    box-shadow: var(--glow-primary);
+  }
+
+  /* Modern Input Components */
+  .input-minimal {
     background: hsl(var(--input));
     border: 1px solid hsl(var(--border));
     color: hsl(var(--foreground));
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-family: var(--font-terminal);
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-family: var(--font-sans);
     font-size: 14px;
-    transition: all 200ms;
+    transition: all 200ms ease;
     @apply block w-full;
   }
 
-  .input-terminal:focus {
+  .input-minimal:focus {
     border-color: hsl(var(--primary));
     box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
     outline: none;
   }
 
-  .input-terminal::placeholder {
+  .input-minimal::placeholder {
     color: hsl(var(--muted-foreground));
   }
 
-  /* Form Labels */
-  .form-label {
+  /* Label Components */
+  .label-minimal {
     color: hsl(var(--foreground));
-    font-family: var(--font-terminal);
+    font-family: var(--font-sans);
     font-weight: 500;
     font-size: 14px;
-    @apply block mb-1;
+    @apply block mb-2;
+  }
+
+  /* Status Components */
+  .status-indicator {
+    padding: 4px 8px;
+    border-radius: var(--radius);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    @apply inline-flex items-center gap-1;
+  }
+
+  .status-success {
+    background: hsl(var(--success) / 0.1);
+    color: hsl(var(--success));
+    border: 1px solid hsl(var(--success) / 0.3);
+  }
+
+  .status-warning {
+    background: hsl(var(--warning) / 0.1);
+    color: hsl(var(--warning));
+    border: 1px solid hsl(var(--warning) / 0.3);
+  }
+
+  .status-error {
+    background: hsl(var(--destructive) / 0.1);
+    color: hsl(var(--destructive));
+    border: 1px solid hsl(var(--destructive) / 0.3);
+  }
+
+  .status-info {
+    background: hsl(var(--primary) / 0.1);
+    color: hsl(var(--primary));
+    border: 1px solid hsl(var(--primary) / 0.3);
   }
 }
-
-/* WCAG AA Compliant Cyberpunk Terminal Utilities */
 @layer utilities {
-  /* Accessibility Focus Management */
-  .focus-visible {
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary;
-  }
-
-  /* Screen Reader Only Content */
+  /* Accessibility */
   .sr-only {
     position: absolute;
     width: 1px;
@@ -242,7 +304,6 @@
     border: 0;
   }
 
-  /* Skip Links for Keyboard Navigation */
   .skip-link {
     position: absolute;
     top: -40px;
@@ -251,9 +312,9 @@
     color: hsl(var(--primary-foreground));
     padding: 8px;
     text-decoration: none;
-    border-radius: 4px;
+    border-radius: var(--radius);
     z-index: 1000;
-    font-family: var(--font-terminal);
+    font-family: var(--font-mono);
     font-weight: 500;
   }
 
@@ -261,51 +322,13 @@
     top: 6px;
   }
 
-  /* High Contrast Status Colors */
-  .text-success {
-    color: hsl(var(--success));
-  }
-
-  .text-warning {
-    color: hsl(var(--warning));
-  }
-
-  .text-error {
-    color: hsl(var(--destructive));
-  }
-
-  .text-info {
-    color: hsl(var(--info));
-  }
-
-  /* Status Backgrounds with Proper Contrast */
-  .status-success {
-    color: hsl(var(--success));
-    background: hsl(var(--success) / 0.1);
-    border: 1px solid hsl(var(--success) / 0.3);
-  }
-
-  .status-warning {
-    color: hsl(var(--warning));
-    background: hsl(var(--warning) / 0.1);
-    border: 1px solid hsl(var(--warning) / 0.3);
-  }
-
-  .status-error {
-    color: hsl(var(--destructive));
-    background: hsl(var(--destructive) / 0.1);
-    border: 1px solid hsl(var(--destructive) / 0.3);
-  }
-
-  .status-info {
-    color: hsl(var(--info));
-    background: hsl(var(--info) / 0.1);
-    border: 1px solid hsl(var(--info) / 0.3);
-  }
-  
-  /* Cyberpunk Glow Effects */
+  /* Cyberpunk Effects - Subtle and Optional */
   .glow-primary {
     box-shadow: var(--glow-primary);
+  }
+  
+  .glow-secondary {
+    box-shadow: var(--glow-secondary);
   }
   
   .glow-accent {
@@ -315,267 +338,71 @@
   .glow-success {
     box-shadow: var(--glow-success);
   }
-  
-  /* Terminal Window Chrome */
-  .terminal-window {
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: calc(var(--radius) + 2px);
-    box-shadow: 0 4px 20px hsl(var(--background) / 0.8), inset 0 1px 0 hsl(var(--border) / 0.5);
+
+  /* Terminal-style text for code/technical elements */
+  .text-mono {
+    font-family: var(--font-mono);
+    font-feature-settings: 'liga' 1, 'calt' 1;
   }
-  
-  .terminal-header {
-    background: linear-gradient(to bottom, hsl(var(--card)), hsl(var(--background)));
-    border-bottom: 1px solid hsl(var(--border));
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  
-  .terminal-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    display: inline-block;
-  }
-  
-  .terminal-dot-close { background: hsl(var(--destructive)); }
-  .terminal-dot-minimize { background: hsl(var(--warning)); }
-  .terminal-dot-maximize { background: hsl(var(--success)); }
-  
-  /* Phosphor Glow Text Effect */
-  .phosphor-text {
+
+  .text-glow {
     color: hsl(var(--primary));
-    text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor;
+    text-shadow: 0 0 5px currentColor;
+  }
+
+  /* Pulse animation for status indicators */
+  .pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
   }
   
-  /* Typing Animation */
-  .typing::after {
-    content: '|';
-    animation: blink 1s infinite;
-    color: hsl(var(--primary));
-  }
-  
-  @keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
-  }
-  
-  /* Glitch Effect */
-  .glitch {
-    position: relative;
-    color: hsl(var(--foreground));
-  }
-  
-  .glitch::before,
-  .glitch::after {
-    content: attr(data-text);
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  }
-  
-  .glitch::before {
-    animation: glitch-1 0.5s infinite;
-    color: hsl(var(--accent));
-    z-index: -1;
-  }
-  
-  .glitch::after {
-    animation: glitch-2 0.5s infinite;
-    color: hsl(var(--primary));
-    z-index: -2;
-  }
-  
-  @keyframes glitch-1 {
-    0%, 14%, 15%, 49%, 50%, 99%, 100% {
-      transform: translate3d(0, 0, 0);
-    }
-    1%, 13% {
-      transform: translate3d(-2px, 0, 0);
-    }
-    16%, 48% {
-      transform: translate3d(1px, 0, 0);
-    }
-  }
-  
-  @keyframes glitch-2 {
-    0%, 20%, 21%, 63%, 64%, 99%, 100% {
-      transform: translate3d(0, 0, 0);
-    }
-    1%, 19% {
-      transform: translate3d(2px, 0, 0);
-    }
-    22%, 62% {
-      transform: translate3d(-1px, 0, 0);
-    }
-  }
-  
-  /* Matrix Background Effect */
-  .matrix-bg {
-    width: 100%;
-    height: 100vh;
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .matrix-bg::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: 
-      linear-gradient(90deg, transparent 95%, hsl(var(--primary)) 95%),
-      linear-gradient(0deg, transparent 95%, hsl(var(--primary)) 95%);
-    background-size: 50px 50px;
-    animation: matrix-grid 20s linear infinite;
-    opacity: 0.1;
-  }
-  
-  .matrix-bg::after {
-    content: '0011010110100101 0101101001011010 1010010110100101 0101101001011010 1010010110100101 0011010110100101 0101101001011010 1010010110100101 0101101001011010 1010010110100101 0011010110100101 0101101001011010 1010010110100101 0101101001011010 1010010110100101';
-    position: absolute;
-    top: -100%;
-    left: 0;
-    width: 200%;
-    height: 200%;
-    font-family: var(--font-terminal, 'Fira Code', monospace);
-    font-size: 12px;
-    line-height: 20px;
-    color: hsl(var(--primary));
-    opacity: 0.03;
-    animation: matrix-fall 15s linear infinite;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-  
-  @keyframes matrix-grid {
-    0% { transform: translate(0, 0); }
-    100% { transform: translate(50px, 50px); }
-  }
-  
-  @keyframes matrix-fall {
-    0% { transform: translateY(-100%); }
-    100% { transform: translateY(100vh); }
-  }
-  
-  /* Cyberpunk Scanlines */
-  .scanlines {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 1000;
-  }
-  
-  .scanlines::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      to bottom,
-      transparent 50%,
-      hsl(var(--primary) / 0.02) 50%
-    );
-    background-size: 100% 4px;
-    animation: scanlines 0.1s linear infinite;
-  }
-  
-  @keyframes scanlines {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(4px); }
-  }
-  
-  /* Data Stream Animation */
-  .data-stream {
-    position: fixed;
-    top: 0;
-    right: 20px;
-    width: 200px;
-    height: 100vh;
-    pointer-events: none;
-    opacity: 0.1;
-    z-index: 1;
-  }
-  
-  .data-stream::before {
-    content: 'INCOMING_DATA: 0x7F3A2B1C\nSTATUS: CONNECTED\nUPTIME: 99.7%\nCPU: 23%\nMEM: 45%\nNETWORK: SECURE\nPROTOCOL: SSH-2.0\nENCRYPTION: AES-256\nDATA_RATE: 1.2GB/s\nLATENCY: 12ms\nPACKETS: 99.99%\nSIGNAL: STRONG\nBATTERY: 87%\nTEMP: 42°C\nFAN: 2400RPM\nSYSTEM: OPERATIONAL';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    font-family: var(--font-terminal, 'Fira Code', monospace);
-    font-size: 10px;
-    line-height: 14px;
-    color: hsl(var(--success));
-    white-space: pre-line;
-    animation: data-scroll 10s linear infinite;
-  }
-  
-  @keyframes data-scroll {
-    0% { transform: translateY(100vh); }
-    100% { transform: translateY(-100%); }
-  }
-  
-  /* Pulse Effects */
-  .pulse-primary {
-    animation: pulse-primary 2s ease-in-out infinite;
-  }
-  
-  .pulse-accent {
-    animation: pulse-accent 2s ease-in-out infinite;
-  }
-  
-  @keyframes pulse-primary {
+  @keyframes pulse-glow {
     0%, 100% { 
-      box-shadow: 0 0 5px hsl(var(--primary) / 0.5);
+      box-shadow: 0 0 5px hsl(var(--primary) / 0.3);
     }
     50% { 
-      box-shadow: 0 0 20px hsl(var(--primary) / 0.8), 0 0 30px hsl(var(--primary) / 0.6);
+      box-shadow: 0 0 15px hsl(var(--primary) / 0.6);
     }
   }
-  
-  @keyframes pulse-accent {
-    0%, 100% { 
-      box-shadow: 0 0 5px hsl(var(--accent) / 0.5);
-    }
-    50% { 
-      box-shadow: 0 0 20px hsl(var(--accent) / 0.8), 0 0 30px hsl(var(--accent) / 0.6);
+
+  /* Layout utilities */
+  .content-grid {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+
+  .sidebar-layout {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 2rem;
+  }
+
+  @media (max-width: 768px) {
+    .sidebar-layout {
+      grid-template-columns: 1fr;
     }
   }
 }
-
 @layer base {
   * {
     @apply border-border;
   }
 
   body {
-    @apply font-terminal antialiased;
+    @apply font-sans antialiased;
     background-color: hsl(var(--background)) !important;
     color: hsl(var(--foreground)) !important;
-    font-feature-settings: 'liga' 1, 'calt' 1; /* Enable ligatures */
+    font-feature-settings: 'liga' 1, 'calt' 1;
     font-variant-ligatures: contextual;
   }
 
-  /* Ensure app container uses theme colors */
   #app {
     background-color: hsl(var(--background)) !important;
     color: hsl(var(--foreground)) !important;
     min-height: 100vh;
   }
 
-  /* Accessibility: Respect user's motion preferences */
+  /* Accessibility: Respect user preferences */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -586,40 +413,31 @@
       scroll-behavior: auto !important;
     }
 
-    /* Disable cyberpunk effects for reduced motion */
-    .scanlines,
-    .matrix-bg,
-    .data-stream {
-      display: none;
+    .pulse-glow {
+      animation: none;
     }
   }
 
   /* High contrast mode support */
   @media (prefers-contrast: high) {
     :root {
-      --primary: 186 100% 90%;
-      --foreground: 180 100% 95%;
-      --border: 220 60% 30%;
-    }
-
-    .dark {
-      --primary: 186 100% 95%;
-      --foreground: 180 100% 98%;
-      --border: 220 80% 25%;
+      --primary: 180 100% 80%;
+      --foreground: 0 0% 100%;
+      --border: 0 0% 50%;
     }
   }
 
-  /* Focus management for keyboard users */
-  .js-focus-visible :focus:not(.focus-visible) {
-    outline: none;
-  }
-
-  /* Ensure minimum touch target size */
+  /* Ensure minimum touch target size for accessibility */
   button,
   [role="button"],
   input[type="submit"],
   input[type="button"] {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
   }
 }

@@ -7,7 +7,7 @@ const props = withDefaults(defineProps<{
   defaultValue?: string | number
   modelValue?: string | number
   class?: HTMLAttributes['class']
-  variant?: 'default' | 'terminal' | 'command'
+  variant?: 'default' | 'terminal'
   prompt?: string
 }>(), {
   variant: 'default',
@@ -26,23 +26,16 @@ const modelValue = useVModel(props, 'modelValue', emits, {
 
 <template>
   <div 
-    v-if="variant === 'terminal' || variant === 'command'"
-    :class="cn('flex items-center bg-input border border-border rounded-md transition-all duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 focus-within:glow-primary')"
+    v-if="variant === 'terminal'"
+    :class="cn('flex items-center bg-input border border-border rounded-md transition-all duration-200 ease-out focus-within:border-primary focus-within:shadow-[0_0_0_2px_hsl(var(--primary)/0.2)]')"
   >
-    <span 
-      v-if="variant === 'terminal'" 
-      class="px-3 py-2 text-primary font-terminal text-sm select-none"
-    >
+    <span class="px-3 py-2 text-primary font-mono text-sm select-none">
       {{ prompt }}&nbsp;
     </span>
     <input 
       v-model="modelValue" 
       :class="cn(
-        'flex h-10 w-full bg-transparent px-3 py-2 text-sm font-terminal transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 border-0 focus:ring-0',
-        {
-          'pl-0': variant === 'terminal',
-          'text-primary': variant === 'terminal' || variant === 'command'
-        },
+        'flex h-10 w-full bg-transparent px-0 py-2 text-sm font-mono text-primary transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 border-0',
         props.class
       )"
     >
@@ -51,7 +44,7 @@ const modelValue = useVModel(props, 'modelValue', emits, {
     v-else
     v-model="modelValue" 
     :class="cn(
-      'flex h-10 w-full rounded-md border border-input bg-input px-3 py-2 text-sm font-terminal shadow-sm transition-all duration-200 file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 hover:border-primary/50',
+      'flex h-10 w-full rounded-md border border-border bg-input px-3 py-2 text-sm font-sans shadow-sm transition-all duration-200 ease-out file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-primary focus-visible:shadow-[0_0_0_2px_hsl(var(--primary)/0.2)] disabled:cursor-not-allowed disabled:opacity-50 hover:border-primary/30',
       props.class
     )"
   >

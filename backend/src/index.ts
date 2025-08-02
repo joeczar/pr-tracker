@@ -15,6 +15,7 @@ import { pullRequestRoutes } from './routes/pull-requests.js';
 import { reviewRoutes } from './routes/reviews.js';
 import { analyticsRoutes } from './routes/analytics.js';
 import { syncRoutes } from './routes/sync.js';
+import { webhookRoutes } from './routes/webhooks.js';
 import authRoutes from './routes/auth.js';
 
 const app = new Hono();
@@ -43,6 +44,9 @@ app.get('/health', (c) => {
 
 // Authentication routes
 app.route('/auth', authRoutes);
+
+// Webhook routes
+app.route('/webhooks', webhookRoutes);
 
 // API routes
 app.route('/api/github', githubRoutes);

@@ -4,11 +4,9 @@ import { cn } from '@/lib/utils'
 
 const props = withDefaults(defineProps<{
   class?: HTMLAttributes['class']
-  variant?: 'default' | 'terminal' | 'command' | 'glow'
-  glow?: boolean
+  variant?: 'default' | 'minimal' | 'glow' | 'terminal'
 }>(), {
-  variant: 'default',
-  glow: false
+  variant: 'default'
 })
 </script>
 
@@ -16,13 +14,12 @@ const props = withDefaults(defineProps<{
   <div
     :class="
       cn(
-        'rounded-xl border bg-card text-card-foreground shadow-lg transition-all duration-300 font-terminal',
+        'rounded-lg border bg-card text-card-foreground shadow-sm transition-all duration-200 ease-out',
         {
-          'border border-border shadow-lg shadow-black/50 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10': variant === 'terminal',
-          'bg-background border-2 border-primary/50 shadow-primary/20': variant === 'command',
-          'hover:shadow-2xl hover:shadow-primary/30 hover:border-primary/50': variant === 'glow',
-          'shadow-primary/40': glow,
-          'border-border hover:border-primary/30 hover:shadow-xl hover:shadow-primary/20': variant === 'default'
+          'border-border hover:border-primary/30 hover:shadow-md': variant === 'default',
+          'border-border hover:border-primary/30 hover:shadow-md hover:-translate-y-0.5': variant === 'minimal',
+          'border-border hover:border-primary/50 hover:shadow-[0_0_20px_hsl(var(--primary)/0.3)]': variant === 'glow',
+          'border-primary/30 font-mono hover:border-primary/60 hover:shadow-[0_0_15px_hsl(var(--primary)/0.3)]': variant === 'terminal'
         },
         props.class,
       )

@@ -1,55 +1,101 @@
 import { ref, computed, readonly } from 'vue'
 
-export type Theme = 'light' | 'dark'
+export type ColorScheme = 'light' | 'dark'
+export type ThemeStyle = 'clean' | 'cyberpunk'
 
-const THEME_STORAGE_KEY = 'pr-tracker-theme'
+const COLOR_SCHEME_STORAGE_KEY = 'pr-tracker-color-scheme'
+const THEME_STYLE_STORAGE_KEY = 'pr-tracker-theme-style'
 
-// Reactive theme state - simplified to just light/dark
-const theme = ref<Theme>('dark')
+// Reactive theme state
+const colorScheme = ref<ColorScheme>('light')
+const themeStyle = ref<ThemeStyle>('clean')
 
-// Check if dark mode is active
-const isDark = computed(() => theme.value === 'dark')
+// Computed properties
+const isDark = computed(() => colorScheme.value === 'dark')
+const isCyberpunk = computed(() => themeStyle.value === 'cyberpunk')
 
 /**
  * Apply theme to document
  */
-function applyTheme(newTheme: Theme) {
-  console.log('Applying theme:', newTheme)
+function applyTheme(scheme: ColorScheme, style: ThemeStyle) {
+  console.log('Applying theme:', { scheme, style })
   const root = document.documentElement
+  const body = document.body
 
   // Remove existing theme classes
   root.classList.remove('light', 'dark')
+  root.removeAttribute('data-theme')
+  body.removeAttribute('data-theme')
 
-  // Add new theme class
-  root.classList.add(newTheme)
+  // Add new theme classes
+  root.classList.add(scheme)
+  
+  // Set theme style data attribute if cyberpunk
+  if (style === 'cyberpunk') {
+    root.setAttribute('data-theme', 'cyberpunk')
+    body.setAttribute('data-theme', 'cyberpunk')
+  }
 
   console.log('Document classes after theme application:', root.classList.toString())
 
   // Update meta theme-color for mobile browsers
   const metaThemeColor = document.querySelector('meta[name="theme-color"]')
   if (metaThemeColor) {
-    const themeColor = newTheme === 'dark' ? '#001122' : '#091833'
+    let themeColor = '#ffffff' // clean light default
+    
+    if (style === 'cyberpunk') {
+      themeColor = scheme === 'dark' ? '#001122' : '#091833'
+    } else {
+      themeColor = scheme === 'dark' ? '#0f0f23' : '#ffffff'
+    }
+    
     metaThemeColor.setAttribute('content', themeColor)
   }
 }
 
 /**
- * Set theme preference
+ * Set color scheme (light/dark)
  */
-function setTheme(newTheme: Theme) {
-  console.log('Setting theme to:', newTheme)
-  theme.value = newTheme
-  localStorage.setItem(THEME_STORAGE_KEY, newTheme)
-  applyTheme(newTheme)
+function setColorScheme(newScheme: ColorScheme) {
+  console.log('Setting color scheme to:', newScheme)
+  colorScheme.value = newScheme
+  localStorage.setItem(COLOR_SCHEME_STORAGE_KEY, newScheme)
+  applyTheme(newScheme, themeStyle.value)
 }
 
 /**
- * Toggle between light and dark themes
+ * Set theme style (clean/cyberpunk)
+ */
+function setThemeStyle(newStyle: ThemeStyle) {
+  console.log('Setting theme style to:', newStyle)
+  themeStyle.value = newStyle
+  localStorage.setItem(THEME_STYLE_STORAGE_KEY, newStyle)
+  applyTheme(colorScheme.value, newStyle)
+}
+
+/**
+ * Toggle between light and dark color schemes
+ */
+function toggleColorScheme() {
+  console.log('Toggling color scheme from:', colorScheme.value)
+  const newScheme = colorScheme.value === 'dark' ? 'light' : 'dark'
+  setColorScheme(newScheme)
+}
+
+/**
+ * Toggle between clean and cyberpunk styles
+ */
+function toggleThemeStyle() {
+  console.log('Toggling theme style from:', themeStyle.value)
+  const newStyle = themeStyle.value === 'cyberpunk' ? 'clean' : 'cyberpunk'
+  setThemeStyle(newStyle)
+}
+
+/**
+ * Legacy theme toggle (for backwards compatibility)
  */
 function toggleTheme() {
-  console.log('Toggling theme from:', theme.value)
-  const newTheme = theme.value === 'dark' ? 'light' : 'dark'
-  setTheme(newTheme)
+  toggleColorScheme()
 }
 
 /**
@@ -58,16 +104,22 @@ function toggleTheme() {
 function initializeTheme() {
   console.log('Initializing theme system')
 
-  // Get saved theme preference
-  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
-  console.log('Saved theme from localStorage:', savedTheme)
+  // Get saved preferences
+  const savedScheme = localStorage.getItem(COLOR_SCHEME_STORAGE_KEY) as ColorScheme | null
+  const savedStyle = localStorage.getItem(THEME_STYLE_STORAGE_KEY) as ThemeStyle | null
+  
+  console.log('Saved preferences:', { scheme: savedScheme, style: savedStyle })
 
-  if (savedTheme && ['light', 'dark'].includes(savedTheme)) {
-    theme.value = savedTheme
+  if (savedScheme && ['light', 'dark'].includes(savedScheme)) {
+    colorScheme.value = savedScheme
+  }
+  
+  if (savedStyle && ['clean', 'cyberpunk'].includes(savedStyle)) {
+    themeStyle.value = savedStyle
   }
 
-  console.log('Initial theme set to:', theme.value)
-  applyTheme(theme.value)
+  console.log('Initial theme set to:', { scheme: colorScheme.value, style: themeStyle.value })
+  applyTheme(colorScheme.value, themeStyle.value)
 }
 
 // Initialize theme system immediately
@@ -84,12 +136,23 @@ export function useTheme() {
   }
 
   return {
-    theme: readonly(theme),
+    // State
+    colorScheme: readonly(colorScheme),
+    themeStyle: readonly(themeStyle),
     isDark: readonly(isDark),
-    setTheme,
+    isCyberpunk: readonly(isCyberpunk),
+    
+    // Actions
+    setColorScheme,
+    setThemeStyle,
+    toggleColorScheme,
+    toggleThemeStyle,
+    
+    // Legacy support
+    theme: readonly(colorScheme), // map to colorScheme for backwards compatibility
     toggleTheme
   }
 }
 
 // Export for use in other composables
-export { theme, isDark }
+export { colorScheme, themeStyle, isDark, isCyberpunk }
