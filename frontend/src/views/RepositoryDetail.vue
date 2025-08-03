@@ -12,7 +12,7 @@ import { repositoriesApi } from '@/lib/api/repositories'
 import { pullRequestsApi } from '@/lib/api/pullRequests'
 import { reviewsApi } from '@/lib/api/reviews'
 import { analyticsApi } from '@/lib/api/analytics'
-import { syncApi } from '@/lib/api/sync'
+import { syncApi, type RepoSyncHistoryItem } from '@/lib/api/sync'
 import { qk } from '@/lib/api/queryKeys'
 
 // Basic env
@@ -118,6 +118,21 @@ const currentTrend = computed(() => {
     datasets: [{ label: 'Change %', data: changeRateData.value, backgroundColor: 'rgba(234,0,217,0.15)', borderColor: '#ea00d9' }]
   }
 })
+/* Optional Sync History wiring */
+const historyLimit = ref(10)
+
+const {
+  data: syncHistory,
+  isLoading: historyLoading,
+  isError: historyError,
+  error: historyErr,
+  refetch: refetchHistory,
+} = useQuery({
+  queryKey: qk.sync.history(repoId.value, historyLimit.value),
+  queryFn: () => syncApi.repoHistory(repoId.value, historyLimit.value),
+  enabled: computed(() => Number.isFinite(repoId.value) && historyLimit.value > 0),
+})
+
 </script>
 
 <template>
@@ -127,12 +142,60 @@ const currentTrend = computed(() => {
         <TerminalHeader>
           <template #title>
             <TerminalTitle command="repository-detail" />
-          </template>
+            <!-- Optional: Sync History -->
+  <section aria-labelledby="sync-history-title" class="mt-6">
+    <div class="flex items-center justify-between mb-2">
+      <h2 id="sync-history-title" class="text-base font-semibold">Sync history</h2>
+      <div class="flex items-center gap-2">
+        <label class="text-xs text-slate-500" for="history-limit">Limit</label>
+        <select id="history-limit" class="border rounded px-2 py-1 text-sm bg-background"
+                v-model.number="historyLimit" @change="refetchHistory()">
+          <option :value="10">10</option>
+          <option :value="25">25</option>
+          <option :value="50">50</option>
+        </select>
+      </div>
+    </div>
+
+    <div v-if="historyLoading" class="text-sm text-slate-500">Loading history…</div>
+    <div v-else-if="historyError" class="text-sm text-rose-600">
+      Failed to load sync history: {{ (historyErr as any)?.message || 'Unknown error' }}
+    </div>
+    <div v-else>
+      <div v-if="!syncHistory || (syncHistory as RepoSyncHistoryItem[]).length === 0" class="text-sm text-slate-500">
+        No sync events yet.
+      </div>
+      <ul v-else class="divide-y divide-slate-200 dark:divide-slate-800 rounded border border-slate-200 dark:border-slate-800">
+        <li v-for="item in (syncHistory as RepoSyncHistoryItem[])" :key="item.id" class="p-3 flex items-center justify-between text-sm">
+          <div class="flex items-center gap-3">
+            <span class="font-mono text-xs opacity-70">#{{ item.id }}</span>
+            <span class="font-medium">{{ item.type || 'incremental' }}</span>
+            <span class="text-xs px-2 py-0.5 rounded border"
+                  :class="item.status === 'completed' ? 'border-emerald-400 text-emerald-600' :
+                          item.status === 'queued' ? 'border-amber-400 text-amber-600' :
+                          item.status === 'running' ? 'border-sky-400 text-sky-600' :
+                          'border-rose-400 text-rose-600'">
+              {{ item.status }}
+            </span>
+          </div>
+          <div class="flex items-center gap-3 text-xs text-slate-500">
+            <span>{{ new Date(item.started_at || item.finished_at || Date.now()).toLocaleString() }}</span>
+            <a v-if="(item as any).job_id" class="underline hover:no-underline"
+               :href="`/api/sync/job/${(item as any).job_id}`" target="_blank" rel="noreferrer">
+              Job {{ (item as any).job_id }}
+            </a>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+</template>
           <template #actions>
             <div class="flex items-center gap-2">
-              <TerminalButton size="sm" variant="secondary" aria-label="Sync repository">Sync</TerminalButton>
-              <TerminalButton size="sm" variant="ghost" aria-label="Export data">Export</TerminalButton>
-              <TerminalButton size="sm" variant="accent" aria-label="Back">Back</TerminalButton>
+              <TerminalButton size="sm" variant="secondary" aria-label="Sync repository" :disabled="syncStatus === 'pending'" @click="syncNow">
+                <span v-if="syncStatus === 'pending'">Syncing…</span>
+                <span v-else>Sync</span>
+              </TerminalButton>
             </div>
           </template>
         </TerminalHeader>
