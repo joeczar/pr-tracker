@@ -1,10 +1,12 @@
-<template>
-  <router-view />
-</template>
-
 <script setup lang="ts">
-// Minimal App
+import AppShell from "./components/layout/AppShell.vue"
 </script>
+
+<template>
+  <AppShell>
+    <router-view />
+  </AppShell>
+</template>
 
 <style>
 /* no-op */
