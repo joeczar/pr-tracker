@@ -1,15 +1,33 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 
-const timeframe = ref<'7d' | '30d' | '90d'>('7d')
+type Timeframe = '7d' | '30d' | '90d'
+
+const timeframe = ref<Timeframe>('7d')
 const loading = ref(true)
 
-// Simulate initial loading state; replace with real data fetch later
-setTimeout(() => {
-  loading.value = false
-}, 600)
+// Stub: pretend-fetch analytics for a given timeframe
+async function fetchAnalytics(tf: Timeframe) {
+  loading.value = true
+  try {
+    // TODO: replace with real API call, e.g. await api.get(`/analytics?timeframe=${tf}`)
+    await new Promise((r) => setTimeout(r, 600))
+  } finally {
+    loading.value = false
+  }
+}
+
+// Initial load
+onMounted(() => {
+  fetchAnalytics(timeframe.value)
+})
+
+// Refetch when timeframe changes
+watch(timeframe, (tf) => {
+  fetchAnalytics(tf)
+})
 </script>
 
 <template>

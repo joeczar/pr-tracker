@@ -11,6 +11,10 @@ import CardTitle from '@/components/ui/card/CardTitle.vue'
  */
 import Badge from '@/components/ui/badge/Badge.vue'
 /**
+ * shadcn-vue progress
+ */
+import Progress from '@/components/ui/progress/Progress.vue'
+/**
  * shadcn-vue dropdown menu primitives
  */
 import {
@@ -23,6 +27,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 type RepoStatus = 'idle' | 'syncing' | 'error' | 'ok'
+type BadgeVariant = 'default' | 'secondary' | 'outline' | 'destructive'
 
 interface RecentPR {
   id: number | string
@@ -65,6 +70,22 @@ const statusLabel = computed(() => {
       return 'Idle'
   }
 })
+
+/**
+ * Standardized Badge variant mapping by repository status
+ */
+const statusVariant = computed<BadgeVariant>(() => {
+  switch (props.status) {
+    case 'error':
+      return 'destructive'
+    case 'syncing':
+      return 'secondary'
+    case 'ok':
+      return 'default'
+    default:
+      return 'outline'
+  }
+})
 </script>
 
 <template>
@@ -79,7 +100,7 @@ const statusLabel = computed(() => {
           </CardHeader>
           <!-- Status badge -->
           <Badge
-            :variant="status === 'error' ? 'destructive' : status === 'syncing' ? 'secondary' : status === 'ok' ? 'default' : 'outline'"
+            :variant="statusVariant"
             :aria-label="statusLabel"
             :title="statusLabel"
           >
@@ -114,13 +135,14 @@ const statusLabel = computed(() => {
       <!-- Actions: shadcn dropdown for consistent menu patterns -->
       <div class="sm:justify-end flex items-center">
         <DropdownMenu>
-          <DropdownMenuTrigger class="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-mono cursor-pointer
+          <!-- Causing a double button on hover -->
+          <!--<DropdownMenuTrigger class="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-mono cursor-pointer
                    bg-white text-slate-700 border-slate-300 hover:bg-slate-50
                    dark:bg-transparent dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-800/40"
             aria-label="Repository actions menu"
           >
-            Actions ▾
-          </DropdownMenuTrigger>
+            ...
+          </DropdownMenuTrigger> -->
           <DropdownMenuContent align="end" class="w-44 font-mono text-xs">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -148,6 +170,15 @@ const statusLabel = computed(() => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+    </div>
+
+    <!-- Linear progress when syncing -->
+    <div v-if="status === 'syncing'" class="mt-4">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-mono text-slate-600 dark:text-slate-300">Sync in progress…</span>
+        <span class="text-xs font-mono text-slate-500 dark:text-slate-400" aria-hidden="true">~</span>
+      </div>
+      <Progress :model-value="66" aria-label="Repository syncing progress" />
     </div>
 
     <div v-if="recent?.length" class="mt-4">

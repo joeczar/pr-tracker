@@ -30,15 +30,18 @@ Purpose: Track progress of replacing custom components with shadcn-vue equivalen
 ## Phase 3 — Dialog / Modal
 - [x] Convert `frontend/src/components/repositories/AddRepositoryDialog.vue` to shadcn Dialog
 - [x] Replace inputs inside with Input/Label/Button
-- [ ] Optional: Integrate shadcn Form + Zod for validation
+- [x] Optional: Integrate shadcn Form + Zod for validation
+  - Implemented: Added Zod schema, `ui/form` primitives (FormItem/Label/Control/Message), disabled submit until valid.
 - [ ] Replace ad-hoc overlays elsewhere with shadcn Dialog where applicable
 
 ## Phase 4 — Buttons
 - [x] Replace `frontend/src/components/ui/terminal/TerminalButton.vue` internals with shadcn Button
-- [ ] Migrate ad-hoc buttons across views to shadcn variants
+- [~] Migrate ad-hoc buttons across views to shadcn variants
+  - Implemented: Migrated AppShell mobile sidebar toggle to `ui/button` (outline, icon size).
+  - Next: Review Dashboard/Settings for ad-hoc buttons and migrate if any.
 - [x] Preserve terminal/cyber theme via Tailwind classes
-- [ ] Audit for remaining non-shadcn button usage in views (Login/Settings/Dashboard)
-  - Action: Grep for raw <button> or legacy classes; replace with `ui/button` variants
+- [x] Audit for remaining non-shadcn button usage in views (Login/Settings/Dashboard)
+  - Implemented: Repo-wide grep; only remaining raw button is inside `ui/command/CommandItem.vue` (primitive), intentionally left as native button.
 
 ## Phase 5 — Cards & Badges
 - [x] Repository cards to shadcn Card (+ Badge for status)
@@ -71,13 +74,15 @@ Purpose: Track progress of replacing custom components with shadcn-vue equivalen
   - [x] `frontend/src/App.vue` (wire Toast Toaster provider)
 
 ## Phase 8 — Analytics & Dashboard Enhancements
-- [~] Tabs for timeframe filters (7d/30d/90d)
-  - [~] `frontend/src/views/Analytics.vue` (Tabs scaffolded with v-model timeframe; pending data wiring)
+- [x] Tabs for timeframe filters (7d/30d/90d)
+  - Implemented: `frontend/src/views/Analytics.vue` imports Tabs primitives and binds v-model to timeframe with 7d/30d/90d triggers.
+  - Added stub data fetch wiring on timeframe change (`fetchAnalytics(tf)`), with initial load and loading state.
 - [x] Tooltip/Dropdown for chart actions/info
   - [x] `frontend/src/components/analytics/TrendChart.vue`
-- [ ] Progress (linear) for background/sync states
-  - [ ] Add where applicable (Dashboard/Analytics)
-- [ ] Use Badge for state chips across analytics where helpful
+- [x] Progress (linear) for background/sync states
+  - Implemented: Repository cards show linear Progress when syncing; dynamic progress wired in `Repositories.vue` with simulated updates and completion toast.
+- [~] Use Badge for state chips across analytics where helpful
+  - Action: Apply `ui/badge` for trend/status chips with standardized variants.
 - [x] Skeleton loaders for lists/cards where loading occurs
   - [x] Implemented in `Analytics.vue` (filters and chart placeholders)
   - [x] Implemented in `Repositories.vue` (card placeholders)
@@ -85,18 +90,22 @@ Purpose: Track progress of replacing custom components with shadcn-vue equivalen
 ## Phase 9 — Repositories and Detail
 - [x] Repositories list item actions using DropdownMenu
   - [x] `frontend/src/views/Repositories.vue` (Actions: Open, Sync Now, Delete; hover-revealed menu on each card)
-- [ ] Dialogs for destructive actions (confirmations)
-  - [ ] Add where applicable
-- [ ] Badge standardization for repo statuses (open/merged/draft/syncing/idle/error)
-  - [ ] `RepositoryCard.vue` and related
-- [ ] Linear Progress for repo syncing states where appropriate
+- [x] Dialogs for destructive actions (confirmations)
+  - Implemented in `Repositories.vue`: View-level shadcn Dialog confirm for Delete with toasts (confirm/cancel), wired from dropdown and card remove.
+  - Decision: Keep a single shared dialog at view level for consistency and to avoid multiple dialog instances per card; per-card dialogs not required.
+- [x] Badge standardization for repo statuses (open/merged/draft/syncing/idle/error)
+  - Implemented: Standardized status→Badge variant mapping in `RepositoryCard.vue` (error→destructive, syncing→secondary, ok→default, idle→outline).
+- [~] Linear Progress for repo syncing states where appropriate
+  - Action: Display `ui/progress` on repository cards when `syncing === true`.
   - Next: Add actions dropdown per repo (Open, Sync Now, Delete) with shadcn Dialog confirm for Delete; wire Sync to toast + placeholder service.
 
 ## Phase 10 — System-wide UX
 - [x] Toast system (success/error feedback) — Toaster mounted in `frontend/src/App.vue`
 - [x] Skeleton loaders (lists, analytics, cards)
-- [ ] Separator standardization across forms/headers
-- [ ] Wire `use-toast` in flows (add repo success/error, sync started/completed)
+- [~] Separator standardization across forms/headers
+  - Status: Current audit found no obvious ad-hoc separators to replace. Keep watch and replace with `ui/separator` as forms/headers evolve.
+- [x] Wire `use-toast` in flows (add repo success/error, sync started/completed)
+  - Implemented: Add Repo success/error, Sync started/completed, Delete confirmed/canceled toasts in `Repositories.vue`.
 
 ## Keep as Custom (n/a)
 - (n/a) `frontend/src/components/analytics/ProgressRadial.vue` (radial; keep, add shadcn Progress for linear usage)
@@ -113,7 +122,7 @@ Purpose: Track progress of replacing custom components with shadcn-vue equivalen
 - Confirm class-variance-authority (cva) setup if used
 - Align `utils.ts` with shadcn's `cn` pattern
 - Generators configured at `frontend/components.json`; components live under `frontend/src/components/ui/*`
-- Dropdown, Dialog, Button, Card, Badge, Tabs, Skeleton present; Command pending
+- Dropdown, Dialog, Button, Card, Badge, Tabs, Skeleton present; Command present (local primitives aligned)
 
 ## Risks / Mitigations
 - API differences in dropdown/dialog may require minor callsite updates → mitigate via index barrel and wrapper props
@@ -123,3 +132,20 @@ Purpose: Track progress of replacing custom components with shadcn-vue equivalen
 ## Links
 - shadcn-vue docs: https://www.shadcn-vue.com/
 - Components generator config: `frontend/components.json`
+
+## Next Implementation Steps (quick pick-up)
+- [x] Add zod + shadcn Form to `AddRepositoryDialog.vue` (schema, messages, disabled submit)
+- [x] Add destructive Dialog confirm for Delete in `Repositories.vue`/`RepositoryCard.vue`; wire to toasts
+  - Implemented in `Repositories.vue` (view-level dialog + toasts). Decision: per-card dialog not needed; shared dialog pattern adopted.
+- [x] Standardize Badge variants for repo status in `RepositoryCard.vue`
+- [x] Show linear Progress when a repo is syncing
+  - Implemented in `RepositoryCard.vue`; dynamic progress simulation wired in `Repositories.vue`.
+- [x] Audit and replace remaining raw buttons with `ui/button`
+  - Done for AppShell mobile toggle; remaining native buttons are inside `ui/command` primitive by design.
+- [x] Ensure `ui/tabs` exports and wire timeframe v-model in `Analytics.vue`
+  - Verified exports present and v-model wired in `Analytics.vue`; added stub timeframe-driven fetch handler with loading state.
+- [~] Replace ad-hoc borders with `ui/separator` across forms/headers
+  - Current audit found no obvious ad-hoc separators to replace; keep as a watch item for future forms/headers.
+- [x] Wire `use-toast` in add/sync/delete flows
+  - Implemented in `Repositories.vue` (add success/error with duplicate guard, sync started/completed, delete confirm/cancel).
+  - Completed in Repositories (add success/error, sync started/completed, delete confirm/cancel)

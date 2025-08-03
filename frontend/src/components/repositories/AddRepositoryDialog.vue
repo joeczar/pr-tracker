@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
+import { z } from 'zod'
 import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
 import TerminalWindow from '@/components/ui/terminal/TerminalWindow.vue'
 import TerminalHeader from '@/components/ui/terminal/TerminalHeader.vue'
@@ -16,10 +17,13 @@ import DialogFooter from '@/components/ui/dialog/DialogFooter.vue'
 import DialogClose from '@/components/ui/dialog/DialogClose.vue'
 
 /**
- * shadcn-vue input/label
+ * shadcn-vue input/label + form primitives
  */
 import Input from '@/components/ui/input/Input.vue'
-import Label from '@/components/ui/label/Label.vue'
+import FormItem from '@/components/ui/form/FormItem.vue'
+import FormLabel from '@/components/ui/form/FormLabel.vue'
+import FormControl from '@/components/ui/form/FormControl.vue'
+import FormMessage from '@/components/ui/form/FormMessage.vue'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean
@@ -36,26 +40,50 @@ const open = ref(props.modelValue)
 watch(() => props.modelValue, v => open.value = v)
 watch(open, v => emit('update:modelValue', v))
 
+/**
+ * Form state
+ */
 const input = ref('')
-const error = ref<string | null>(null)
 const owner = ref('')
 const name = ref('')
 const derivedUrl = ref<string | undefined>(undefined)
 const dialogEl = ref<HTMLElement | null>(null)
 
-function parseInput(val: string) {
-  error.value = null
+/**
+ * Validation with Zod
+ */
+const schema = z.object({
+  input: z.string()
+    .min(1, 'Enter owner/repository or a GitHub URL')
+    .refine((val) => {
+      const trimmed = val.trim()
+      if (!trimmed) return false
+      const githubMatch = trimmed.match(/^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/\s]+)\/([^/\s#?]+).*$/i)
+      if (githubMatch) return true
+      const simple = trimmed.match(/^([^/\s]+)\/([^/\s#?]+)$/)
+      return !!simple
+    }, 'Enter as owner/repository or a valid GitHub URL')
+})
+
+const zodError = ref<string | null>(null)
+const isValid = computed(() => !zodError.value && !!owner.value && !!name.value)
+
+/**
+ * Parse input + set derived fields
+ */
+function parseAndValidate(val: string) {
+  zodError.value = null
   owner.value = ''
   name.value = ''
   derivedUrl.value = undefined
 
-  const trimmed = val.trim()
-  if (!trimmed) return
+  const check = schema.safeParse({ input: val })
+  if (!check.success) {
+    zodError.value = check.error.issues[0]?.message ?? 'Invalid value'
+    return
+  }
 
-  // Accept forms:
-  // - owner/repo
-  // - https://github.com/owner/repo
-  // - github.com/owner/repo
+  const trimmed = val.trim()
   const githubMatch = trimmed.match(/^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/\s]+)\/([^/\s#?]+).*$/i)
   if (githubMatch) {
     owner.value = githubMatch[1]
@@ -72,10 +100,11 @@ function parseInput(val: string) {
     return
   }
 
-  error.value = 'Enter as owner/repository or a valid GitHub URL'
+  // fallback (shouldn't hit due to refine)
+  zodError.value = 'Enter as owner/repository or a valid GitHub URL'
 }
 
-watch(input, parseInput)
+watch(input, parseAndValidate, { immediate: true })
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && open.value) {
@@ -89,8 +118,8 @@ function close() {
 }
 
 function submit() {
-  if (!owner.value || !name.value) {
-    error.value = 'Owner and repository are required'
+  parseAndValidate(input.value)
+  if (!isValid.value) {
     return
   }
   emit('submit', { owner: owner.value, name: name.value, url: derivedUrl.value })
@@ -137,24 +166,30 @@ onBeforeUnmount(() => {
 
           <div class="p-4 space-y-4">
             <div>
-              <Label for="repo-input" class="block text-sm font-mono text-slate-300 mb-1">
-                Repository URL or Owner/Name
-              </Label>
-              <Input
-                id="repo-input"
-                v-model="input"
-                type="text"
-                placeholder="e.g. joeczar/pr-tracker or https://github.com/joeczar/pr-tracker"
-                class="font-mono"
-                aria-describedby="repo-examples repo-error"
-                :aria-invalid="!!error"
-              />
-              <p id="repo-examples" class="mt-2 text-xs text-slate-400 font-mono">
-                Examples: owner/repository or full GitHub URL
-              </p>
-              <p v-if="error" id="repo-error" class="mt-1 text-xs font-mono text-rose-400">
-                {{ error }}
-              </p>
+              <FormItem>
+                <FormLabel as="label" for="repo-input" class="block text-sm font-mono text-slate-300 mb-1">
+                  Repository URL or Owner/Name
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    id="repo-input"
+                    v-model="input"
+                    type="text"
+                    placeholder="e.g. joeczar/pr-tracker or https://github.com/joeczar/pr-tracker"
+                    class="font-mono"
+                    aria-describedby="repo-examples repo-error"
+                    :aria-invalid="!!zodError"
+                  />
+                </FormControl>
+                <p id="repo-examples" class="mt-2 text-xs text-slate-400 font-mono">
+                  Examples: owner/repository or full GitHub URL
+                </p>
+                <FormMessage v-if="zodError">
+                  <p id="repo-error" class="mt-1 text-xs font-mono text-rose-400">
+                    {{ zodError }}
+                  </p>
+                </FormMessage>
+              </FormItem>
             </div>
 
             <div class="rounded border border-cyber-border bg-black/20 p-3">
@@ -164,7 +199,7 @@ onBeforeUnmount(() => {
                   <span>📊 {{ owner }}/{{ name }}</span>
                   <span v-if="derivedUrl" class="text-slate-400">{{ derivedUrl }}</span>
                 </div>
-                <TerminalButton size="sm" variant="secondary" :as="'a'" :href="derivedUrl" target="_blank" aria-label="Open repository on GitHub">
+                <TerminalButton size="sm" variant="secondary" :as="'a'" :href="derivedUrl" target="_blank" rel="noopener noreferrer" aria-label="Open repository on GitHub">
                   Open on GitHub
                 </TerminalButton>
               </div>
@@ -177,7 +212,7 @@ onBeforeUnmount(() => {
               <DialogClose as-child>
                 <TerminalButton variant="ghost">Cancel</TerminalButton>
               </DialogClose>
-              <TerminalButton variant="primary" :disabled="!owner || !name" @click="submit">Add Repository</TerminalButton>
+              <TerminalButton variant="primary" :disabled="!isValid" @click="submit">Add Repository</TerminalButton>
             </DialogFooter>
           </div>
         </TerminalWindow>

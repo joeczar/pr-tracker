@@ -55,7 +55,9 @@ onBeforeUnmount(() => {
     <header class="sticky top-0 z-40 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <button
+          <Button
+            variant="outline"
+            size="icon"
             class="inline-flex h-9 w-9 items-center justify-center rounded md:hidden border border-slate-200 dark:border-slate-800"
             aria-label="Toggle sidebar"
             @click="toggleSidebar"
@@ -64,7 +66,7 @@ onBeforeUnmount(() => {
             <span class="block h-0.5 w-5 bg-current"></span>
             <span class="block h-0.5 w-5 bg-current mt-1"></span>
             <span class="block h-0.5 w-5 bg-current mt-1"></span>
-          </button>
+          </Button>
           <RouterLink to="/" class="font-semibold tracking-tight">
             PR Tracker
             <span class="sr-only">Home</span>

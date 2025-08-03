@@ -16,10 +16,21 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import Dialog from '@/components/ui/dialog/Dialog.vue'
+import DialogContent from '@/components/ui/dialog/DialogContent.vue'
+import DialogHeader from '@/components/ui/dialog/DialogHeader.vue'
+import DialogTitle from '@/components/ui/dialog/DialogTitle.vue'
+import DialogDescription from '@/components/ui/dialog/DialogDescription.vue'
+import DialogFooter from '@/components/ui/dialog/DialogFooter.vue'
+import DialogClose from '@/components/ui/dialog/DialogClose.vue'
+import { useToast } from '@/components/ui/toast'
 
 const search = ref('')
 const showAdd = ref(false)
 const loading = ref(true)
+const showDelete = ref(false)
+const toDelete = ref<{ owner: string; name: string } | null>(null)
+const { toast } = useToast?.() ?? { toast: (args: any) => console.log('[toast]', args) }
 
 // Simulate initial load; replace with real fetch wiring
 setTimeout(() => {
@@ -34,6 +45,7 @@ const repos = ref([
     description: 'Frontend Repository',
     stats: { prs: 23, avgCommentsPerPR: 2.1, changeRequestRate: 16, lastSync: '5m' },
     status: 'ok',
+    progress: 100,
     recent: [
       { id: 156, title: 'feat: add dashboard', state: 'merged' as const, comments: 3, updatedAt: '2h ago' },
       { id: 155, title: 'fix: auth redirect', state: 'review' as const, comments: 1, updatedAt: '6h ago' }
@@ -45,6 +57,7 @@ const repos = ref([
     description: 'Backend API',
     stats: { prs: 15, avgCommentsPerPR: 3.2, changeRequestRate: 24, lastSync: '12m' },
     status: 'idle',
+    progress: 0,
     recent: [
       { id: 89, title: 'feat: add auth routes', state: 'open' as const, comments: 2, updatedAt: '1d ago' }
     ]
@@ -55,6 +68,7 @@ const repos = ref([
     description: 'Utility Library',
     stats: { prs: 9, avgCommentsPerPR: 1.4, changeRequestRate: 8, lastSync: '1h' },
     status: 'syncing',
+    progress: 35,
     recent: [
       { id: 23, title: 'feat: add date helpers', state: 'draft' as const, comments: 0, updatedAt: '3d ago' }
     ]
@@ -72,15 +86,31 @@ const filtered = computed(() => {
 
 function handleAddSubmit(payload: { owner: string; name: string; url?: string }) {
   // optimistic add with placeholder stats
+  const id = `${payload.owner}/${payload.name}`
+  const exists = repos.value.some(r => `${r.owner}/${r.name}`.toLowerCase() === id.toLowerCase())
+  if (exists) {
+    toast?.({
+      title: 'Add failed',
+      description: `Repository ${id} already exists.`,
+    })
+    return
+  }
+
   repos.value.unshift({
     owner: payload.owner,
     name: payload.name,
     description: 'Newly added repository',
     stats: { prs: 0, avgCommentsPerPR: 0, changeRequestRate: 0, lastSync: '—' },
     status: 'idle',
+    progress: 0,
     recent: []
   })
   showAdd.value = false
+
+  toast?.({
+    title: 'Repository added',
+    description: id
+  })
 }
 
 function openRepo(r: { owner: string; name: string }) {
@@ -91,13 +121,57 @@ function openRepo(r: { owner: string; name: string }) {
   }
 }
 
-function syncRepo(r: { status: string }) {
+function syncRepo(r: { status: string; owner?: string; name?: string; progress?: number }) {
   r.status = 'syncing'
-  // TODO: call service; show toast
+  r.progress = 0
+  toast?.({
+    title: 'Sync started',
+    description: r.owner && r.name ? `${r.owner}/${r.name} is syncing…` : 'Repository sync started.',
+  })
+  // Simulated progress; replace with real service events
+  const step = () => {
+    if (r.status !== 'syncing') return
+    r.progress = Math.min(100, (r.progress ?? 0) + Math.floor(Math.random() * 20) + 10)
+    if ((r.progress ?? 0) >= 100) {
+      r.status = 'ok'
+      toast?.({
+        title: 'Sync completed',
+        description: r.owner && r.name ? `${r.owner}/${r.name} is up to date.` : 'Repository sync completed.',
+      })
+      return
+    }
+    setTimeout(step, 500 + Math.random() * 700)
+  }
+  setTimeout(step, 500)
 }
 
-function deleteRepo(r: { owner: string; name: string }) {
-  repos.value = repos.value.filter(x => `${x.owner}/${x.name}` !== `${r.owner}/${r.name}`)
+function requestDeleteRepo(r: { owner: string; name: string }) {
+  toDelete.value = { owner: r.owner, name: r.name }
+  showDelete.value = true
+}
+
+function confirmDeleteRepo() {
+  if (!toDelete.value) return
+  const id = `${toDelete.value.owner}/${toDelete.value.name}`
+  repos.value = repos.value.filter(x => `${x.owner}/${x.name}` !== id)
+  // Some toast implementations use variant enums; fall back to styling via title/description only.
+  toast?.({
+    title: 'Repository deleted',
+    description: id
+  })
+  toDelete.value = null
+  showDelete.value = false
+}
+
+function cancelDeleteRepo() {
+  if (toDelete.value) {
+    toast?.({
+      title: 'Deletion canceled',
+      description: `${toDelete.value.owner}/${toDelete.value.name}`
+    })
+  }
+  toDelete.value = null
+  showDelete.value = false
 }
 </script>
 
@@ -160,7 +234,7 @@ function deleteRepo(r: { owner: string; name: string }) {
                     <DropdownMenuItem @click="openRepo(r)">Open</DropdownMenuItem>
                     <DropdownMenuItem @click="syncRepo(r)">Sync Now</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem class="text-red-600 dark:text-red-400" @click="deleteRepo(r)">Delete</DropdownMenuItem>
+                    <DropdownMenuItem class="text-red-600 dark:text-red-400" @click="requestDeleteRepo(r)">Delete</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -173,7 +247,7 @@ function deleteRepo(r: { owner: string; name: string }) {
                 :status="r.status as any"
                 @view="openRepo(r)"
                 @sync="syncRepo(r)"
-                @remove="deleteRepo(r)"
+                @remove="requestDeleteRepo(r)"
               />
             </div>
             <div v-if="filtered.length === 0" class="col-span-full text-sm font-mono text-slate-400">
@@ -185,5 +259,28 @@ function deleteRepo(r: { owner: string; name: string }) {
     </TerminalWindow>
 
     <AddRepositoryDialog v-model="showAdd" @submit="handleAddSubmit" />
+
+    <!-- Delete confirmation dialog -->
+    <Dialog :open="showDelete" @update:open="val => showDelete = val">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete repository</DialogTitle>
+          <DialogDescription>
+            This action cannot be undone. This will permanently remove
+            <span class="font-mono">{{ toDelete ? `${toDelete.owner}/${toDelete.name}` : '' }}</span>
+            from this list.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose as-child>
+            <TerminalButton variant="ghost" @click="cancelDeleteRepo">Cancel</TerminalButton>
+          </DialogClose>
+          <!-- Use a supported variant and add destructive styling via classes -->
+          <TerminalButton variant="primary" class="bg-red-600 hover:bg-red-700 text-white" @click="confirmDeleteRepo">
+            Delete
+          </TerminalButton>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </section>
 </template>
