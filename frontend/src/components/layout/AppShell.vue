@@ -100,13 +100,30 @@ onBeforeUnmount(() => {
             <DropdownMenuTrigger as-child>
               <Button variant="ghost" size="sm" class="h-8 w-8 rounded-full p-0 border border-slate-200 dark:border-slate-800" aria-label="Open user menu">
                 <span class="sr-only">Open user menu</span>
-                <div class="h-7 w-7 rounded-full bg-gradient-to-br from-cyan-500/30 to-fuchsia-500/30 border border-slate-300/40 dark:border-slate-700/60"></div>
+                <img
+                  v-if="auth.user?.avatar_url"
+                  :src="auth.user.avatar_url"
+                  alt="User avatar"
+                  class="h-7 w-7 rounded-full"
+                />
+                <div
+                  v-else
+                  class="h-7 w-7 rounded-full bg-gradient-to-br from-cyan-500/30 to-fuchsia-500/30 border border-slate-300/40 dark:border-slate-700/60"
+                />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent class="w-40" align="end">
               <DropdownMenuLabel class="text-xs">
-                <span v-if="auth.user">Signed in as {{ auth.user.login }}</span>
-                <span v-else>Not signed in</span>
+                <div class="flex items-center gap-2">
+                  <img
+                    v-if="auth.user?.avatar_url"
+                    :src="auth.user.avatar_url"
+                    alt="User avatar"
+                    class="h-5 w-5 rounded-full border border-slate-300 dark:border-slate-700"
+                  />
+                  <span v-if="auth.user">Signed in as {{ auth.user.login }}</span>
+                  <span v-else>Not signed in</span>
+                </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem as-child>

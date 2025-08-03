@@ -143,13 +143,57 @@ onBeforeUnmount(() => {
 })
 </script>
 
+<script lang="ts">
+/**
+ * Non-reactive script block to compute viewport-based caps at runtime.
+ * This ensures late DOM/content changes cannot grow the dialog beyond our limit.
+ */
+import { onMounted as onMountedRaw, onBeforeUnmount as onBeforeUnmountRaw, ref as vueRef } from 'vue'
+
+const windowMax = vueRef('60vh') // default
+const bodyMax = vueRef('calc(60vh - 4rem)')
+
+function computeCaps() {
+  // Use smaller of: 60vh (desktop) or 68vh (tiny heights), but prefer 60vh.
+  const h = window.innerHeight
+  // For very small heights, keep some breathing room and avoid 100%:
+  const cap = Math.max(320, Math.floor(h * 0.6)) // px
+  const capPx = `${cap}px`
+  windowMax.value = capPx
+  // Subtract approx header/footer/padding (64px) to size scroll area
+  bodyMax.value = `calc(${capPx} - 4rem)`
+}
+
+let ro: ResizeObserver | null = null
+
+onMountedRaw(() => {
+  computeCaps()
+  window.addEventListener('resize', computeCaps)
+  // If any async content changes size, recompute cap to keep within viewport
+  ro = new ResizeObserver(() => computeCaps())
+  const root = document.documentElement
+  ro.observe(root)
+})
+
+onBeforeUnmountRaw(() => {
+  window.removeEventListener('resize', computeCaps)
+  ro?.disconnect()
+  ro = null
+})
+</script>
+
 <template>
   <Dialog :open="open" @update:open="val => open = val">
-    <DialogContent ref="dialogEl" class="max-w-[680px]">
+    <!-- Hard cap enforced via explicit inline style to avoid growth after async content loads -->
+    <DialogContent
+      ref="dialogEl"
+      class="max-w-[680px] overflow-hidden p-0"
+      :style="{ maxHeight: windowMax }"
+    >
       <DialogHeader>
         <DialogTitle id="add-repo-title" class="sr-only">Add Repository</DialogTitle>
         <!-- Preserve terminal-styled header inside content -->
-        <TerminalWindow class="shadow-cyber">
+        <TerminalWindow class="shadow-cyber h-full flex flex-col" :style="{ maxHeight: 'inherit' }">
           <template #title>
             <TerminalHeader>
               <template #title>
@@ -163,7 +207,9 @@ onBeforeUnmount(() => {
             </TerminalHeader>
           </template>
 
-          <div class="p-4 space-y-4">
+          <!-- Make only the body scrollable to keep actions visible -->
+          <!-- Body scroll area sized against computed cap; min-h-0 prevents flex overflow -->
+          <div class="p-4 space-y-4 overflow-y-auto flex-1 min-h-0" :style="{ maxHeight: bodyMax }">
             <div class="space-y-2">
               <Label for="repo-input" class="block text-sm font-mono text-slate-300">
                 Repository URL or Owner/Name
@@ -201,7 +247,8 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <DialogFooter class="flex items-center justify-end gap-2">
+            <!-- Keep footer visible and not pushed out of viewport -->
+            <DialogFooter class="flex items-center justify-end gap-2 sticky bottom-0 bg-black/60 supports-[backdrop-filter]:bg-black/30 backdrop-blur border-t border-cyber-border p-3 mt-2">
               <DialogClose as-child>
                 <TerminalButton variant="ghost">Cancel</TerminalButton>
               </DialogClose>

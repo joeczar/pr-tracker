@@ -6,7 +6,7 @@ import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
 import TerminalHeader from '@/components/ui/terminal/TerminalHeader.vue'
 import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
 import RepositoryCard from '@/components/repositories/RepositoryCard.vue'
-import AddRepositoryDialog from '@/components/repositories/AddRepositoryDialog.vue'
+import AddRepositoryView from '@/components/repositories/AddRepositoryView.vue'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
@@ -29,7 +29,7 @@ import { repositoriesApi, type Repository } from '@/lib/api/repositories'
 import { qk } from '@/lib/api/queryKeys'
 
 const search = ref('')
-const showAdd = ref(false)
+const showAddInline = ref(false)
 const showDelete = ref(false)
 const toDelete = ref<{ id?: number; owner: string; name: string } | null>(null)
 const { toast } = useToast?.() ?? { toast: (args: any) => console.log('[toast]', args) }
@@ -53,7 +53,7 @@ const createRepo = useMutation({
   mutationFn: (input: { owner: string; name: string }) => repositoriesApi.create(input),
   onSuccess: () => {
     qc.invalidateQueries({ queryKey: qk.repositories.list() })
-    showAdd.value = false
+    showAddInline.value = false
     toast?.({ title: 'Repository added' })
   },
   onError: (e: any) => {
@@ -87,8 +87,31 @@ const filtered = computed(() => {
   )
 })
 
-function handleAddSubmit(payload: { owner: string; name: string; url?: string }) {
-  createRepo.mutate({ owner: payload.owner, name: payload.name })
+function handleAddSubmit(payload: { owner: string; name: string; url?: string; prNumber?: number }) {
+  createRepo.mutate(
+    { owner: payload.owner, name: payload.name },
+    {
+      onSuccess: (created: any) => {
+        // default onSuccess from mutation still runs (toast, list invalidate, close dialog)
+        // Deep-link to repo detail when a PR number was selected in the picker
+        if (payload.prNumber != null) {
+          const inst = getCurrentInstance()
+          const router = inst?.proxy?.$router as any | undefined
+          // Navigate using numeric id if available, otherwise fallback to owner/name
+          const id = created?.id ?? `${payload.owner}/${payload.name}`
+          router?.push({ name: 'repository-detail', params: { id }, query: { pr: String(payload.prNumber) } })
+        }
+      },
+    }
+  )
+}
+
+function showAddRepositoryInline() {
+  showAddInline.value = true
+}
+
+function cancelAddRepository() {
+  showAddInline.value = false
 }
 
 function openRepo(r: { owner: string; name: string }) {
@@ -141,7 +164,7 @@ function cancelDeleteRepo() {
                 aria-label="Search repositories"
                 class="h-9 w-56 rounded border border-cyber-border bg-black/30 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-cyber-accent"
               />
-              <TerminalButton size="md" variant="primary" aria-label="Add repository" @click="showAdd = true">
+              <TerminalButton size="md" variant="primary" aria-label="Add repository" @click="showAddRepositoryInline">
                 + Add Repository
               </TerminalButton>
             </div>
@@ -150,12 +173,23 @@ function cancelDeleteRepo() {
       </template>
 
       <div class="p-3 space-y-6">
-        <header class="flex items-center justify-between">
-          <h1 id="repos-title" class="text-xl font-semibold tracking-tight">Repositories</h1>
-          <div class="text-xs text-cyber-muted">Search and manage repositories</div>
-        </header>
-        <!-- Repo cards grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <!-- Show Add Repository View -->
+        <div v-if="showAddInline">
+          <header class="flex items-center justify-between mb-6">
+            <h1 id="repos-title" class="text-xl font-semibold tracking-tight">Add Repository</h1>
+            <div class="text-xs text-cyber-muted">Select a repository and optionally a pull request</div>
+          </header>
+          <AddRepositoryView @submit="handleAddSubmit" @cancel="cancelAddRepository" />
+        </div>
+
+        <!-- Show Repository List -->
+        <div v-else>
+          <header class="flex items-center justify-between">
+            <h1 id="repos-title" class="text-xl font-semibold tracking-tight">Repositories</h1>
+            <div class="text-xs text-cyber-muted">Search and manage repositories</div>
+          </header>
+          <!-- Repo cards grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           <template v-if="isLoading">
             <div v-for="i in 6" :key="i" class="space-y-3">
               <Skeleton class="h-40 w-full" />
@@ -206,11 +240,12 @@ function cancelDeleteRepo() {
               No repositories match “{{ search }}”.
             </div>
           </template>
+          </div>
         </div>
       </div>
     </TerminalWindow>
 
-    <AddRepositoryDialog v-model="showAdd" @submit="handleAddSubmit" :loading="createRepo.isPending" />
+
 
     <!-- Delete confirmation dialog -->
     <Dialog :open="showDelete" @update:open="val => showDelete = val">

@@ -134,6 +134,131 @@ githubRoutes.get('/repos/:owner/:repo/pulls/:pull_number/files', requireAuth, as
   }
 })
 
+/**
+ * Organizations
+ */
+githubRoutes.get('/organizations', requireAuth, async (c) => {
+  try {
+    const user = getUser(c)
+    if (!user) return c.json({ error: 'User not found' }, 401)
+
+    const githubService = GitHubService.forUser(user)
+    
+    // Debug: Try the API call directly and log details
+    console.log('🔍 Fetching organizations for user:', user.login)
+    
+    try {
+      const response = await githubService.octokit.rest.orgs.listForAuthenticatedUser({
+        per_page: 100
+      })
+      
+      console.log('✅ GitHub API response status:', response.status)
+      console.log('📊 Organizations count:', response.data.length)
+      console.log('🏢 Organization names:', response.data.map(org => org.login))
+      console.log('🔐 Response headers - scopes:', response.headers['x-oauth-scopes'])
+      
+      const orgs = response.data.map(org => ({
+        login: org.login,
+        id: org.id,
+        avatar_url: org.avatar_url ?? undefined,
+      }))
+      
+      return c.json({ 
+        organizations: orgs,
+        debug: {
+          api_status: response.status,
+          count: response.data.length,
+          scopes: response.headers['x-oauth-scopes']
+        }
+      })
+    } catch (apiError: any) {
+      console.error('❌ GitHub API error:', apiError.status, apiError.message)
+      console.error('📝 Full error:', apiError)
+      
+      return c.json({
+        organizations: [],
+        error: `GitHub API error: ${apiError.status} - ${apiError.message}`,
+        debug: {
+          status: apiError.status,
+          message: apiError.message
+        }
+      }, apiError.status || 500)
+    }
+  } catch (error) {
+    console.error('Failed to fetch organizations:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to fetch organizations'
+    }, 500)
+  }
+})
+
+githubRoutes.get('/orgs/:org/repos', requireAuth, async (c) => {
+  try {
+    const { org } = c.req.param()
+    const page = parseInt(c.req.query('page') || '1')
+    const per_page = parseInt(c.req.query('per_page') || '100')
+    const sort = (c.req.query('sort') as 'created' | 'updated' | 'pushed' | 'full_name') || 'updated'
+    const direction = (c.req.query('direction') as 'asc' | 'desc') || 'desc'
+    const type = (c.req.query('type') as 'all' | 'public' | 'private' | 'forks' | 'sources' | 'member') || 'all'
+
+    const user = getUser(c)
+    if (!user) return c.json({ error: 'User not found' }, 401)
+
+    const githubService = GitHubService.forUser(user)
+    const repositories = await githubService.getOrganizationRepositories(org, {
+      page,
+      per_page,
+      sort,
+      direction,
+      type,
+    })
+
+    return c.json({
+      repositories,
+      pagination: {
+        page,
+        per_page,
+        has_next_page: repositories.length === per_page
+      }
+    })
+  } catch (error) {
+    console.error('Failed to fetch organization repositories:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to fetch organization repositories'
+    }, 500)
+  }
+})
+
+// Debug: Check current OAuth scopes
+githubRoutes.get('/debug/token-info', requireAuth, async (c) => {
+  try {
+    const user = getUser(c)
+    if (!user) {
+      return c.json({ error: 'User not found' }, 401)
+    }
+
+    const githubService = GitHubService.forUser(user)
+    
+    // Make a request to GitHub to see what scopes we actually have
+    const response = await githubService.octokit.request('GET /user')
+    const scopes = response.headers['x-oauth-scopes']?.split(', ') || []
+    
+    return c.json({
+      user_login: response.data.login,
+      granted_scopes: scopes,
+      has_read_org: scopes.includes('read:org'),
+      has_repo: scopes.includes('repo'),
+      token_created: user.created_at,
+      raw_scopes_header: response.headers['x-oauth-scopes']
+    })
+  } catch (error) {
+    console.error('Failed to get token info:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to get token info'
+    }, 500)
+  }
+})
+
 // Get rate limit information
 githubRoutes.get('/rate-limit', requireAuth, async (c) => {
   try {

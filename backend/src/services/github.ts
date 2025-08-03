@@ -3,6 +3,8 @@ import { User } from '../types/auth.js'
 import { OAuthService } from './oauth.js'
 import { UserService } from './user.js'
 
+type OrgSummary = { login: string; id: number; avatar_url?: string };
+
 export class GitHubService {
   private octokit: Octokit
   private user?: User
@@ -226,6 +228,55 @@ export class GitHubService {
     return this.withTokenRefresh(async () => {
       const response = await this.octokit.rest.rateLimit.get()
       return response.data
+    })
+  }
+
+  /**
+   * List organizations for the authenticated user
+   */
+  async getUserOrganizations(): Promise<OrgSummary[]> {
+    return this.withTokenRefresh(async () => {
+      const response = await this.octokit.rest.orgs.listForAuthenticatedUser({
+        per_page: 100,
+        page: 1,
+      })
+      return response.data.map(org => ({
+        login: org.login,
+        id: org.id,
+        avatar_url: org.avatar_url ?? undefined,
+      }))
+    })
+  }
+
+  /**
+   * List repositories for a specific organization
+   */
+  async getOrganizationRepositories(
+    org: string,
+    options: {
+      page?: number
+      per_page?: number
+      sort?: 'created' | 'updated' | 'pushed' | 'full_name'
+      direction?: 'asc' | 'desc'
+      type?: 'all' | 'public' | 'private' | 'forks' | 'sources' | 'member'
+    } = {}
+  ) {
+    return this.withTokenRefresh(async () => {
+      const response = await this.octokit.rest.repos.listForOrg({
+        org,
+        page: options.page || 1,
+        per_page: Math.min(options.per_page || 100, 100),
+        sort: options.sort || 'updated',
+        direction: options.direction || 'desc',
+        type: (options.type as any) || 'all',
+      })
+
+      // Filter out archived repos and ensure user has at least read permissions if present
+      const repos = response.data.filter(repo => {
+        return !repo.archived && (repo.permissions?.pull ?? true)
+      })
+
+      return repos
     })
   }
 
