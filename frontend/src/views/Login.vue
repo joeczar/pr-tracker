@@ -17,11 +17,19 @@ const auth = useAuthStore()
 
 
 onMounted(async () => {
+  // If user is already authenticated, redirect them away from login page
+  if (auth.isAuthenticated) {
+    const { redirect } = route.query as { redirect?: string }
+    const target = redirect || '/dashboard'
+    router.replace({ path: target })
+    return
+  }
+
   // If we landed here with ?auth=success (after OAuth), re-check status and redirect accordingly
   const authSuccess = route.query.auth === 'success'
   if (authSuccess) {
     try {
-      await auth.checkStatus()
+      await auth.bootstrap()
     } catch {
       // ignore, guard will handle unauthenticated
     } finally {

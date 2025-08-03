@@ -8,6 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+test-results/
 dist
 dist-ssr
 *.local
@@ -90,4 +91,3 @@ temp/
 
 # Keep public assets for production
 !public/
-frontend/test-results/

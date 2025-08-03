@@ -54,7 +54,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="min-h-dvh flex flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+  <div v-if="auth.isAuthenticated" class="min-h-dvh flex flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
     <!-- Skip link -->
     <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:m-2 focus:rounded focus:bg-slate-900 focus:px-3 focus:py-2 focus:text-white">
       Skip to content
@@ -185,6 +185,12 @@ onBeforeUnmount(() => {
       </div>
     </footer>
   </div>
+
+  <!-- Fallback for unauthenticated users or loading state -->
+  <div v-else class="min-h-dvh flex items-center justify-center bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <RouterView />
+  </div>
+
   <!-- Command Palette -->
   <CommandPalette
     v-model="showCommandPalette"

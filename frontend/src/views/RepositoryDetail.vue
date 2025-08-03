@@ -14,6 +14,7 @@ import { reviewsApi } from '@/lib/api/reviews'
 import { analyticsApi } from '@/lib/api/analytics'
 import { syncApi, type RepoSyncHistoryItem } from '@/lib/api/sync'
 import { qk } from '@/lib/api/queryKeys'
+import ErrorBoundary from "@/components/error/ErrorBoundary.vue"
 
 // Basic env
 const reducedMotion =
@@ -133,10 +134,6 @@ const {
   enabled: computed(() => Number.isFinite(repoId.value) && historyLimit.value > 0),
 })
 
-</script>
-
-<script setup lang="ts">
-import ErrorBoundary from "@/components/error/ErrorBoundary.vue";
 </script>
 
 <template>
