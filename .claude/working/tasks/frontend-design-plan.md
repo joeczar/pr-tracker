@@ -206,9 +206,24 @@ Phase 1: Theme foundation (days 1-2)
    - .scanlines, .cyber-glow, .kbd, focus-visible outline
 3. prefers-reduced-motion support in global CSS and transitions
 
+PROGRESS (done):
+- terminal.css imported in frontend/src/style.css
+- Added cyberpunk utilities: .scanlines, .cyber-glow, .kbd
+- Strong :focus-visible outline and prefers-reduced-motion handling
+- Fira Code bundled locally and applied globally via @font-face in frontend/src/style.css
+- Public folder ignore fixed so assets ship to prod (root .gitignore and frontend/.gitignore exceptions added)
+
 Phase 2: Terminal components (days 3-4)
 1. TerminalWindow.vue, TerminalTitle.vue, TerminalHeader.vue, TerminalCard.vue, TerminalButton.vue
 2. Replace ad-hoc chrome with TerminalWindow + TerminalTitle across views (Dashboard, Repositories, RepositoryDetail)
+
+PROGRESS (done/partial):
+- TerminalHeader.vue CREATED at frontend/src/components/ui/terminal/TerminalHeader.vue
+- TerminalButton.vue CREATED at frontend/src/components/ui/terminal/TerminalButton.vue
+- Dashboard updated to use TerminalHeader + TerminalButton in TerminalWindow title slots
+- Repositories updated with TerminalHeader + search input + "+ Add Repository" TerminalButton
+- RepositoryDetail updated with TerminalHeader + actions (Sync, Export, Back) and cyber-styled sections
+- Existing primitives present: TerminalWindow.vue, TerminalTitle.vue, TerminalCard.vue
 
 Phase 3: Analytics visuals (days 5-7)
 1. TrendChart.vue with Chart.js global theme registration
@@ -216,6 +231,17 @@ Phase 3: Analytics visuals (days 5-7)
 3. Dashboard composition:
    - Swap placeholders for MetricTiles + TrendChart + ProgressRadial
    - Add “View Data Table” toggle for SRs
+
+STATUS:
+- In progress.
+- Implemented:
+  - TrendChart.vue present and verified: lazy-loads chart.js + vue-chartjs, applies cyber theme defaults, supports reduced motion, and includes an accessible “View Data Table” fallback.
+  - MetricTile.vue CREATED at frontend/src/components/analytics/MetricTile.vue (metric display with trend arrow, delta, and aria labeling).
+  - ProgressRadial.vue CREATED at frontend/src/components/analytics/ProgressRadial.vue (SVG radial progress with reduced-motion handling and cyber styling).
+- Next:
+  - Install vue-chartjs and chart.js to render charts (component already lazy-loads them).
+  - Wire MetricTile + TrendChart + ProgressRadial into Dashboard.vue sections (Quick Metrics, Trend tabs, Goals).
+  - Provide mock data in Dashboard.vue until stores/analytics endpoints are connected.
 
 Phase 4: Repo pages polish (days 8-10)
 1. Repositories.vue:
@@ -228,8 +254,11 @@ Phase 4: Repo pages polish (days 8-10)
 
 Phase 5: A11y + performance (days 11-12)
 1. LiveRegion.vue and async status announcements
+   - PROGRESS: LiveRegion.vue CREATED at frontend/src/components/accessibility/LiveRegion.vue
+   - PROGRESS: useA11y.ts composable CREATED at frontend/src/composables/useA11y.ts with announce(), focus trap, hotkey helpers
 2. Axe automated checks + manual keyboard/reader passes
 3. Route-based code splitting and lazy chart imports
+   - PROGRESS: TrendChart.vue already lazy-loads chart.js and vue-chartjs
 4. Small microinteractions (hover/click with reduced-motion awareness)
 
 Exit criteria:
@@ -237,6 +266,23 @@ Exit criteria:
 - WCAG AA contrast validated
 - Dashboard charts render with theme and table fallbacks
 - Repos CRUD and PR lists functional with filters
+
+Recent progress toward exit criteria:
+- Keyboard shortcuts: Command palette toggle (Cmd/Ctrl+K), ESC to close
+  - PROGRESS: useCommandPalette.ts composable implemented; integrates Fuse search and global hotkey handling
+- Aesthetic/contrast: cyber tokens and styles applied; strong focus-visible
+- Consistency: Terminal headers/buttons across Dashboard, Repositories, RepositoryDetail
+- Fonts: Fira Code bundled locally and applied globally; public folder tracked for prod
+- Charts a11y: TrendChart provides a “View Data Table” fallback for screen readers
+- Metrics/goals: MetricTile and ProgressRadial components created for dashboard integration
+
+## 6.1) Tooling Rule (Important)
+- Do NOT use the system terminal to create or modify files for this project. Use the provided tools:
+  - write_to_file for full-file writes and new files
+  - replace_in_file for targeted edits
+  - read_file to inspect content
+  - search_files for cross-repo queries
+Reason: terminal-created files may pick up shell-escaped characters and encoding artifacts, breaking Vue SFCs and causing mismatches for SEARCH/REPLACE operations. The tools ensure exact content and proper auto-formatting for reliable diffs.
 
 ## 7) Dependencies and Config
 
@@ -247,6 +293,11 @@ Status:
 Add (frontend/package.json):
 - dependencies: terminal.css, figlet, fuse.js, vue-chartjs, chart.js
 - devDependencies: @types/figlet, @axe-core/vue, focus-trap-vue
+
+PROGRESS (installed):
+- terminal.css, figlet, fuse.js, focus-trap-vue installed
+- @types/figlet installed as devDependency
+- vue-chartjs and chart.js pending (to be installed at Phase 3)
 
 Tailwind (frontend/tailwind.config.js):
 - extend theme with “cyber-*” tokens and font-terminal
@@ -304,29 +355,29 @@ Errors:
 ## 11) Concrete File Plan
 
 Create:
-- src/components/ui/terminal/TerminalWindow.vue
-- src/components/ui/terminal/TerminalTitle.vue
-- src/components/ui/terminal/TerminalHeader.vue
-- src/components/ui/terminal/TerminalCard.vue
-- src/components/ui/terminal/TerminalButton.vue
-- src/components/analytics/TrendChart.vue
-- src/components/analytics/MetricTile.vue
-- src/components/analytics/ProgressRadial.vue
+- src/components/ui/terminal/TerminalWindow.vue (exists)
+- src/components/ui/terminal/TerminalTitle.vue (exists)
+- src/components/ui/terminal/TerminalHeader.vue (CREATED)
+- src/components/ui/terminal/TerminalCard.vue (exists)
+- src/components/ui/terminal/TerminalButton.vue (CREATED)
+- src/components/analytics/TrendChart.vue (exists, enhanced)
+- src/components/analytics/MetricTile.vue (CREATED)
+- src/components/analytics/ProgressRadial.vue (CREATED)
 - src/components/repositories/RepositoryCard.vue
 - src/components/repositories/AddRepositoryDialog.vue
 - src/components/accessibility/SkipToContent.vue
-- src/components/accessibility/LiveRegion.vue
-- src/composables/useCommandPalette.ts
+- src/components/accessibility/LiveRegion.vue (CREATED)
+- src/composables/useCommandPalette.ts (CREATED)
 - src/composables/useCyberpunkTheme.ts
 - src/composables/useTerminalEffects.ts
-- src/composables/useA11y.ts
+- src/composables/useA11y.ts (CREATED)
 
 Modify:
-- src/style.css (tokens/utilities/import terminal.css)
-- src/views/Dashboard.vue (compose new sections)
-- src/views/Repositories.vue (card grid + add dialog)
-- src/views/RepositoryDetail.vue (overview + trends + PR list)
-- src/components/layout/AppShell.vue (skip links, keyboard shortcuts, command palette)
+- src/style.css (COMPLETED: terminal.css import, cyber utilities, focus-visible, reduced-motion, @font-face Fira Code)
+- src/views/Dashboard.vue (UPDATED: TerminalHeader + TerminalButton wired)
+- src/views/Repositories.vue (UPDATED: TerminalWindow header with search + add button)
+- src/views/RepositoryDetail.vue (UPDATED: TerminalWindow header with actions; cyber-styled sections)
+- src/components/layout/AppShell.vue (UPDATED: Cmd/Ctrl+K command palette toggle scaffold)
 
 ## 12) Demo Scenarios (for boss)
 
