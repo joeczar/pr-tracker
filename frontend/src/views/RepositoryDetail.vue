@@ -1,279 +1,200 @@
 <template>
-  <div class="space-y-8">
+  <section aria-labelledby="repo-title" class="space-y-6 content-grid">
     <!-- Loading State -->
-    <div v-if="loading" class="text-center py-16">
-      <Card class="max-w-md mx-auto" variant="minimal">
-        <div class="p-8">
-          <div class="w-16 h-16 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center">
-            <svg class="w-8 h-8 text-primary animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
-          </div>
-          <h3 class="text-xl font-semibold text-foreground mb-2">Loading Repository</h3>
-          <p class="text-muted-foreground text-mono text-sm">
-            Analyzing repository {{ repositoryId }}...
-          </p>
+    <Card v-if="loading" class="max-w-md mx-auto glass-panel card-cyber">
+      <CardContent class="p-8 text-center">
+        <div class="w-16 h-16 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center ring-neon">
+          <svg class="w-8 h-8 text-primary animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-label="Loading">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
         </div>
-      </Card>
-    </div>
-    
-    <!-- Error State -->
-    <div v-else-if="error" class="text-center py-16">
-      <Card class="max-w-md mx-auto" variant="minimal">
-        <div class="p-8">
-          <div class="w-16 h-16 mx-auto mb-6 bg-destructive/10 rounded-full flex items-center justify-center">
-            <svg class="w-8 h-8 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-          </div>
-          <h3 class="text-xl font-semibold text-foreground mb-2">Repository Error</h3>
-          <p class="text-muted-foreground">{{ error }}</p>
-        </div>
-      </Card>
-    </div>
-    
-    <!-- Repository Content -->
-    <div v-else-if="repository" class="space-y-4">
-      <!-- Repository Header -->
-      <Terminal :title="`pr-tracker@${repository.full_name}:~$`" class="min-h-[fit]">
-        <div class="space-y-4">
-          <!-- Command Prompt -->
-          <div class="border-l-2 border-primary pl-4 py-2 bg-primary/5">
-            <div class="text-primary font-terminal text-sm">
-              > pr-tracker repo --details {{ repository.full_name }}
-            </div>
-            <div class="text-muted-foreground font-terminal text-xs mt-1">
-              Repository analysis complete. {{ metrics?.total_prs || 0 }} PRs tracked.
-            </div>
-          </div>
+        <h3 class="text-xl font-semibold text-foreground mb-2">Loading Repository</h3>
+        <p class="text-muted-foreground font-mono text-sm">
+          Analyzing repository {{ repositoryId }}...
+        </p>
+      </CardContent>
+    </Card>
 
-          <!-- Repository Info -->
-          <Card variant="terminal" class="border-primary/30">
-            <CardHeader>
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <StatusLED status="success" size="sm" />
-                  <div>
-                    <CardTitle class="phosphor-text text-xl">{{ repository.full_name }}</CardTitle>
-                    <CardDescription class="font-terminal text-xs">
-                      > init_date: {{ formatDate(repository.created_at) }}
-                    </CardDescription>
-                  </div>
-                </div>
-                <Button
-                  @click="syncPullRequests"
-                  :disabled="syncing"
-                  variant="terminal"
-                  size="terminal"
-                  class="min-w-[150px]"
-                >
-                  {{ syncing ? '>> SYNCING...' : '>> SYNC_PRS' }}
-                </Button>
+    <!-- Error State -->
+    <Alert v-else-if="error" variant="destructive" class="glass-panel">
+      <AlertTitle>Repository Error</AlertTitle>
+      <AlertDescription>{{ error }}</AlertDescription>
+    </Alert>
+
+    <!-- Repository Content -->
+    <div v-else-if="repository" class="space-y-6">
+      <!-- Repository Header -->
+      <Card class="card-cyber glass-panel border-primary/30">
+        <CardHeader>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="inline-flex size-2 rounded-full bg-success animate-pulse" aria-hidden="true"></span>
+              <div>
+                <CardTitle id="repo-title" class="neon text-xl">{{ repository.full_name }}</CardTitle>
+                <CardDescription class="font-mono text-xs">
+                  > init_date: {{ formatDate(repository.created_at) }}
+                </CardDescription>
               </div>
-            </CardHeader>
-          </Card>
-        </div>
-      </Terminal>
+            </div>
+            <Button
+              @click="syncPullRequests"
+              :disabled="syncing"
+              variant="outline"
+              class="btn-neo min-w-[150px]"
+            >
+              {{ syncing ? '>> SYNCING...' : '>> SYNC_PRS' }}
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
 
       <!-- Metrics Overview -->
-      <Terminal title="pr-tracker@metrics:~$" class="min-h-[fit]">
-        <div class="space-y-4">
-          <div class="border-l-2 border-primary pl-4 py-2 bg-primary/5">
-            <div class="text-primary font-terminal text-sm">
-              > pr-tracker metrics --overview
-            </div>
-            <div class="text-muted-foreground font-terminal text-xs mt-1">
-              Displaying PR analytics and performance metrics...
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <!-- Total PRs -->
-            <Card variant="terminal" class="group hover:border-primary/60 transition-all">
-              <CardContent class="p-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 bg-blue-500/20 border border-blue-500/30 rounded flex items-center justify-center">
-                    <span class="text-blue-400 text-sm font-terminal">#</span>
-                  </div>
-                  <div class="flex-1">
-                    <Tooltip variant="terminal">
-                      <TooltipTrigger as-child>
-                        <div class="cursor-help">
-                          <p class="text-xs font-terminal text-muted-foreground">TOTAL_PRS</p>
-                          <p class="text-lg font-terminal text-primary">{{ metrics?.total_prs || 0 }}</p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent variant="terminal">
-                        Total number of pull requests tracked for this repository
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <!-- Avg Merge Time -->
-            <Card variant="terminal" class="group hover:border-primary/60 transition-all">
-              <CardContent class="p-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 bg-green-500/20 border border-green-500/30 rounded flex items-center justify-center">
-                    <span class="text-green-400 text-sm font-terminal">⏱</span>
-                  </div>
-                  <div class="flex-1">
-                    <Tooltip variant="terminal">
-                      <TooltipTrigger as-child>
-                        <div class="cursor-help">
-                          <p class="text-xs font-terminal text-muted-foreground">AVG_MERGE_TIME</p>
-                          <p class="text-lg font-terminal text-primary">{{ formatHours(metrics?.avg_merge_time_hours || 0) }}</p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent variant="terminal">
-                        Average time from PR creation to merge
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <!-- Avg Lines Added -->
-            <Card variant="terminal" class="group hover:border-primary/60 transition-all">
-              <CardContent class="p-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 bg-yellow-500/20 border border-yellow-500/30 rounded flex items-center justify-center">
-                    <span class="text-yellow-400 text-sm font-terminal">+</span>
-                  </div>
-                  <div class="flex-1">
-                    <Tooltip variant="terminal">
-                      <TooltipTrigger as-child>
-                        <div class="cursor-help">
-                          <p class="text-xs font-terminal text-muted-foreground">AVG_LINES_ADDED</p>
-                          <p class="text-lg font-terminal text-primary">{{ Math.round(metrics?.avg_lines_added || 0) }}</p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent variant="terminal">
-                        Average number of lines added per pull request
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <!-- Avg Files Changed -->
-            <Card variant="terminal" class="group hover:border-primary/60 transition-all">
-              <CardContent class="p-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 bg-purple-500/20 border border-purple-500/30 rounded flex items-center justify-center">
-                    <span class="text-purple-400 text-sm font-terminal">📁</span>
-                  </div>
-                  <div class="flex-1">
-                    <Tooltip variant="terminal">
-                      <TooltipTrigger as-child>
-                        <div class="cursor-help">
-                          <p class="text-xs font-terminal text-muted-foreground">AVG_FILES_CHANGED</p>
-                          <p class="text-lg font-terminal text-primary">{{ Math.round(metrics?.avg_files_changed || 0) }}</p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent variant="terminal">
-                        Average number of files modified per pull request
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </Terminal>
-
-      <!-- Pull Requests List -->
-      <Terminal title="pr-tracker@pull-requests:~$" class="min-h-[fit]">
-        <div class="space-y-4">
-          <div class="border-l-2 border-primary pl-4 py-2 bg-primary/5">
-            <div class="text-primary font-terminal text-sm">
-              > pr-tracker list --recent
-            </div>
-            <div class="text-muted-foreground font-terminal text-xs mt-1">
-              Displaying recent pull request activity...
-            </div>
-          </div>
-
-          <Card variant="terminal" class="border-primary/30">
-            <CardHeader>
+      <div class="space-y-3">
+        <h2 class="text-lg font-semibold neon">Metrics</h2>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <!-- Total PRs -->
+          <Card class="card-cyber glass-panel group hover:border-primary/60 transition-all">
+            <CardContent class="p-4">
               <div class="flex items-center gap-3">
-                <StatusLED :status="pullRequests.length > 0 ? 'success' : 'warning'" size="sm" />
-                <CardTitle class="phosphor-text">RECENT PULL REQUESTS [{{ pullRequests.length }}]</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div v-if="pullRequests.length === 0" class="text-center py-12">
-                <div class="space-y-4">
-                  <div class="phosphor-text text-muted-foreground mb-4 text-lg">
-                    [ NO DATA ]
-                  </div>
-                  <p class="text-muted-foreground font-terminal text-sm">
-                    No pull requests found. Execute sync command to fetch data from GitHub.
-                  </p>
-                  <Button
-                    @click="syncPullRequests"
-                    :disabled="syncing"
-                    variant="terminal"
-                    size="sm"
-                    class="mt-4"
-                  >
-                    {{ syncing ? '>> SYNCING...' : '>> SYNC_NOW' }}
-                  </Button>
+                <div class="w-8 h-8 bg-blue-500/20 border border-blue-500/30 rounded flex items-center justify-center">
+                  <span class="text-blue-400 text-sm font-mono">#</span>
+                </div>
+                <div class="flex-1">
+                  <p class="text-xs font-mono text-muted-foreground">TOTAL_PRS</p>
+                  <p class="text-lg font-mono text-primary">{{ metrics?.total_prs || 0 }}</p>
                 </div>
               </div>
-              
-              <div v-else class="space-y-3">
-                <div 
-                  v-for="(pr, index) in pullRequests" 
-                  :key="pr.id"
-                  class="group"
-                >
-                  <Card variant="terminal" class="border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all duration-200">
-                    <CardContent class="p-4">
-                      <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                          <div class="flex items-center gap-2 mb-2">
-                            <StatusBadge :status="getStatusFromState(pr.state)" :label="pr.state.toUpperCase()" />
-                            <span class="text-muted-foreground font-terminal text-xs">
-                              #{{ pr.number }}
-                            </span>
-                          </div>
-                          <h3 class="text-sm font-terminal text-foreground group-hover:text-primary transition-colors mb-2">
-                            {{ pr.title }}
-                          </h3>
-                          <div class="flex items-center gap-4 text-xs font-terminal text-muted-foreground">
-                            <span class="flex items-center gap-1">
-                              <span class="text-green-400">+{{ pr.lines_added }}</span>
-                              <span>/</span>
-                              <span class="text-red-400">-{{ pr.lines_deleted }}</span>
-                            </span>
-                            <span>{{ pr.files_changed }} files</span>
-                            <span>{{ formatDate(pr.created_at) }}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <!-- Add separator between PRs, but not after the last one -->
-                  <Separator 
-                    v-if="index < pullRequests.length - 1" 
-                    variant="terminal" 
-                    class="my-3" 
-                  />
+            </CardContent>
+          </Card>
+
+          <!-- Avg Merge Time -->
+          <Card class="card-cyber glass-panel group hover:border-primary/60 transition-all">
+            <CardContent class="p-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-green-500/20 border border-green-500/30 rounded flex items-center justify-center">
+                  <span class="text-green-400 text-sm font-mono">⏱</span>
+                </div>
+                <div class="flex-1">
+                  <p class="text-xs font-mono text-muted-foreground">AVG_MERGE_TIME</p>
+                  <p class="text-lg font-mono text-primary">{{ formatHours(metrics?.avg_merge_time_hours || 0) }}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Avg Lines Added -->
+          <Card class="card-cyber glass-panel group hover:border-primary/60 transition-all">
+            <CardContent class="p-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-yellow-500/20 border border-yellow-500/30 rounded flex items-center justify-center">
+                  <span class="text-yellow-400 text-sm font-mono">+</span>
+                </div>
+                <div class="flex-1">
+                  <p class="text-xs font-mono text-muted-foreground">AVG_LINES_ADDED</p>
+                  <p class="text-lg font-mono text-primary">{{ Math.round(metrics?.avg_lines_added || 0) }}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Avg Files Changed -->
+          <Card class="card-cyber glass-panel group hover:border-primary/60 transition-all">
+            <CardContent class="p-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-purple-500/20 border border-purple-500/30 rounded flex items-center justify-center">
+                  <span class="text-purple-400 text-sm font-mono">📁</span>
+                </div>
+                <div class="flex-1">
+                  <p class="text-xs font-mono text-muted-foreground">AVG_FILES_CHANGED</p>
+                  <p class="text-lg font-mono text-primary">{{ Math.round(metrics?.avg_files_changed || 0) }}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
-      </Terminal>
+      </div>
+
+      <!-- Pull Requests List -->
+      <div class="space-y-3">
+        <h2 class="text-lg font-semibold neon">Recent Pull Requests</h2>
+        <Card class="card-cyber glass-panel border-primary/30">
+          <CardHeader>
+            <div class="flex items-center gap-3">
+              <span
+                class="inline-flex size-2 rounded-full"
+                :class="pullRequests.length > 0 ? 'bg-success' : 'bg-warning'"
+                aria-hidden="true"
+              />
+              <CardTitle class="font-mono">RECENT PULL REQUESTS [{{ pullRequests.length }}]</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div v-if="pullRequests.length === 0" class="text-center py-12">
+              <div class="space-y-4">
+                <div class="text-muted-foreground mb-4 text-lg font-mono">
+                  [ NO DATA ]
+                </div>
+                <p class="text-muted-foreground font-mono text-sm">
+                  No pull requests found. Execute sync command to fetch data from GitHub.
+                </p>
+                <Button
+                  @click="syncPullRequests"
+                  :disabled="syncing"
+                  variant="outline"
+                  size="sm"
+                  class="mt-4 btn-neo"
+                >
+                  {{ syncing ? '>> SYNCING...' : '>> SYNC_NOW' }}
+                </Button>
+              </div>
+            </div>
+
+            <div v-else class="space-y-3">
+              <div
+                v-for="(pr, index) in pullRequests"
+                :key="pr.id"
+                class="group"
+              >
+                <Card class="card-cyber border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all duration-200">
+                  <CardContent class="p-4">
+                    <div class="flex items-start justify-between">
+                      <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-2">
+                          <Badge variant="outline" class="font-mono">
+                            {{ pr.state.toUpperCase() }}
+                          </Badge>
+                          <span class="text-muted-foreground font-mono text-xs">
+                            #{{ pr.number }}
+                          </span>
+                        </div>
+                        <h3 class="text-sm font-mono text-foreground group-hover:text-primary transition-colors mb-2">
+                          {{ pr.title }}
+                        </h3>
+                        <div class="flex items-center gap-4 text-xs font-mono text-muted-foreground">
+                          <span class="flex items-center gap-1">
+                            <span class="text-green-400">+{{ pr.lines_added }}</span>
+                            <span>/</span>
+                            <span class="text-red-400">-{{ pr.lines_deleted }}</span>
+                          </span>
+                          <span>{{ pr.files_changed }} files</span>
+                          <span>{{ formatDate(pr.created_at) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Separator
+                  v-if="index < pullRequests.length - 1"
+                  class="my-3"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  </TooltipProvider>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -285,11 +206,9 @@ import { format } from 'date-fns'
 import type { Repository, RepositoryMetrics } from '@shared/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Terminal } from '@/components/ui/terminal'
-import { StatusLED } from '@/components/ui/status'
-import { StatusBadge } from '@/components/ui/badge'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Separator } from '@/components/ui/separator'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 
 const route = useRoute()
 const repositoryStore = useRepositoryStore()
@@ -302,7 +221,7 @@ const loading = ref(true)
 const error = ref('')
 const syncing = ref(false)
 
-const { pullRequests } = pullRequestStore
+const pullRequests = computed(() => pullRequestStore.pullRequests)
 
 onMounted(async () => {
   await loadRepositoryData()
@@ -311,23 +230,17 @@ onMounted(async () => {
 const loadRepositoryData = async () => {
   loading.value = true
   error.value = ''
-  
   try {
-    // Load repository details
     await repositoryStore.fetchRepositories()
     repository.value = repositoryStore.getRepositoryById(repositoryId.value) || null
-    
     if (!repository.value) {
       error.value = 'Repository not found'
       return
     }
-
-    // Load metrics and pull requests
     await Promise.all([
       pullRequestStore.fetchMetrics(repositoryId.value),
       pullRequestStore.fetchPullRequests(repositoryId.value)
     ])
-    
     metrics.value = pullRequestStore.metrics
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to load repository data'
@@ -340,7 +253,7 @@ const syncPullRequests = async () => {
   syncing.value = true
   try {
     await pullRequestStore.syncPullRequests(repositoryId.value)
-    await loadRepositoryData() // Refresh data after sync
+    await loadRepositoryData()
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to sync pull requests'
   } finally {
@@ -348,22 +261,11 @@ const syncPullRequests = async () => {
   }
 }
 
-const formatDate = (dateString: string) => {
-  return format(new Date(dateString), 'MMM d, yyyy')
-}
+const formatDate = (dateString: string) => format(new Date(dateString), 'MMM d, yyyy')
 
 const formatHours = (hours: number) => {
   if (hours < 1) return `${Math.round(hours * 60)}m`
   if (hours < 24) return `${Math.round(hours)}h`
   return `${Math.round(hours / 24)}d`
-}
-
-const getStatusFromState = (state: string) => {
-  switch (state) {
-    case 'open': return 'success'
-    case 'merged': return 'active'
-    case 'closed': return 'error'
-    default: return 'inactive'
-  }
 }
 </script>

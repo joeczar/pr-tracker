@@ -20,110 +20,101 @@
       </div>
     </div>
 
-    <!-- Add Repository Terminal -->
-    <Terminal title="repository-manager@add:~$" class="mb-6">
-      <div class="space-y-4">
-        <!-- Command Header -->
-        <div class="border-l-2 border-primary pl-3 py-2 bg-primary/5 rounded-r">
-          <div class="text-primary font-mono text-sm">
-            > repo-manager add --interactive
+    <!-- Add Repository Card (shadcn) -->
+    <Card class="mb-6 card-cyber glass-panel">
+      <CardHeader>
+        <div class="flex items-center justify-between">
+          <div>
+            <CardTitle class="text-xl neon">Add Repository</CardTitle>
+            <CardDescription>Select from your repos or enter details manually.</CardDescription>
           </div>
-          <div class="text-muted-foreground font-mono text-xs mt-1">
-            Enter GitHub repository details to initialize tracking...
+          <div class="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
+            <span class="font-mono">repo-manager add --interactive</span>
           </div>
         </div>
-        <!-- Terminal Form -->
+      </CardHeader>
+      <CardContent class="card-cyber glass-panel">
         <form @submit.prevent="addRepository" class="space-y-6">
           <div class="space-y-4">
             <!-- Repository Selector -->
-            <div class="terminal-input-group">
-              <div class="terminal-prompt">
-                <span class="text-primary font-mono">select@repo:</span>
-                <span class="text-muted-foreground font-mono">~$</span>
-              </div>
-              <div class="flex-1">
-                <RepositorySelector
-                  v-model="selectedRepoFullName"
-                  placeholder="Choose from your accessible repositories..."
-                  @select="handleRepositorySelect"
-                  :disabled="loading"
-                />
-              </div>
+            <div class="space-y-2">
+              <label for="repo-selector" class="text-sm font-medium">Repository</label>
+              <RepositorySelector
+                id="repo-selector"
+                v-model="selectedRepoFullName"
+                placeholder="Choose from your accessible repositories..."
+                @select="handleRepositorySelect"
+                :disabled="loading"
+              />
             </div>
 
             <!-- Manual Entry Toggle -->
             <div class="flex items-center justify-center">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 @click="showManualEntry = !showManualEntry"
-                class="text-xs text-muted-foreground hover:text-primary font-mono transition-colors"
+                class="text-xs"
               >
-                {{ showManualEntry ? '◀ Use Repository Selector' : '▶ Enter Manually' }}
-              </button>
+                {{ showManualEntry ? 'Use Repository Selector' : 'Enter Manually' }}
+              </Button>
             </div>
 
             <!-- Manual Entry (fallback) -->
-            <div v-if="showManualEntry" class="space-y-4 border-t border-primary/20 pt-4">
-              <!-- Owner Input -->
-              <div class="terminal-input-group">
-                <div class="terminal-prompt">
-                  <span class="text-primary font-mono">owner@github:</span>
-                  <span class="text-muted-foreground font-mono">~$</span>
-                </div>
+            <div v-if="showManualEntry" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div class="space-y-2">
+                <label for="owner" class="text-sm font-medium">Owner</label>
                 <Input
                   id="owner"
                   v-model="newRepo.owner"
                   placeholder="facebook"
                   required
-                  class="terminal-input"
                 />
               </div>
-
-              <!-- Name Input -->
-              <div class="terminal-input-group">
-                <div class="terminal-prompt">
-                  <span class="text-primary font-mono">repo@name:</span>
-                  <span class="text-muted-foreground font-mono">~$</span>
-                </div>
+              <div class="space-y-2">
+                <label for="name" class="text-sm font-medium">Repository Name</label>
                 <Input
                   id="name"
                   v-model="newRepo.name"
                   placeholder="react"
                   required
-                  class="terminal-input"
                 />
               </div>
             </div>
           </div>
-
-          <div class="flex justify-center pt-4">
-            <button
-              type="submit"
-              :disabled="loading"
-              class="terminal-btn primary compact"
-            >
-              {{ loading ? 'Adding...' : 'Add Repository' }}
-            </button>
-          </div>
+          <CardFooter class="px-0">
+            <div class="w-full flex items-center justify-center">
+              <Button
+                type="submit"
+                :disabled="loading"
+                :variant="loading ? 'secondary' : 'default'"
+                class="btn-neo"
+              >
+                {{ loading ? 'Adding...' : 'Add Repository' }}
+              </Button>
+            </div>
+          </CardFooter>
         </form>
 
-        <!-- Terminal Error Display -->
-        <div v-if="error" class="terminal-error">
-          <div class="text-destructive font-mono text-sm">
-            ERROR: {{ error }}
-          </div>
+        <!-- Error Display -->
+        <div v-if="error" class="mt-4">
+          <Alert variant="destructive" role="alert">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{{ error }}</AlertDescription>
+          </Alert>
         </div>
 
-        <div v-if="storeError && storeError.includes('GITHUB_TOKEN')" class="terminal-error">
-          <div class="text-destructive font-mono text-sm">
-            FATAL: GitHub token configuration required
-          </div>
-          <div class="text-muted-foreground font-mono text-xs mt-2">
-            > export GITHUB_TOKEN=your_github_token_here
-          </div>
+        <div v-if="storeError && storeError.includes('GITHUB_TOKEN')" class="mt-4">
+          <Alert variant="destructive" role="alert">
+            <AlertTitle>Configuration Required</AlertTitle>
+            <AlertDescription>
+              GitHub token is missing. Set GITHUB_TOKEN in your environment to enable repository access.
+            </AlertDescription>
+          </Alert>
         </div>
-      </div>
-    </Terminal>
+      </CardContent>
+    </Card>
 
     <!-- Repository List -->
     <div class="space-y-6">
@@ -158,13 +149,13 @@
           v-for="repo in repositories" 
           :key="repo.id"
           variant="glow"
-          class="group cursor-pointer"
+          class="group cursor-pointer repo-card"
           @click="$router.push(`/repositories/${repo.id}`)"
         >
           <CardHeader>
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <div class="repo-icon">
                   <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                   </svg>
@@ -178,7 +169,7 @@
                   </CardDescription>
                 </div>
               </div>
-              <svg class="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="repo-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
               </svg>
             </div>
@@ -186,9 +177,9 @@
           <CardFooter>
             <div class="flex items-center gap-3 w-full">
               <Button
-                variant="terminal"
+                variant="default"
                 size="sm"
-                class="flex-1"
+                class="flex-1 btn-neo"
                 @click.stop="$router.push(`/repositories/${repo.id}`)"
               >
                 View Details
@@ -197,7 +188,7 @@
                 variant="outline"
                 size="sm"
                 @click.stop="deleteRepository(repo.id)"
-                class="border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                class="btn-neo border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground"
               >
                 Remove
               </Button>
@@ -215,8 +206,10 @@ import { useRepositoryStore } from '../stores/repository'
 import { format } from 'date-fns'
 import type { RepositoryOption } from '@shared/types'
 import { Button } from '@/components/ui/button'
-import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+/* Use named exports that exist in this codebase's card index */
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ASCIIArt } from '@/components/ui/ascii'
 import { Terminal } from '@/components/ui/terminal'
 import RepositorySelector from '@/components/RepositorySelector.vue'
@@ -289,62 +282,6 @@ const formatDate = (dateString: string) => {
 </script>
 
 <style scoped>
-/* Terminal Input Styling */
-.terminal-input-group {
-  @apply flex items-center gap-3 bg-muted/20 border border-border/50 rounded-lg p-3;
-  @apply transition-all duration-200;
-}
-
-.terminal-input-group:focus-within {
-  @apply border-primary/50 bg-primary/5;
-}
-
-.terminal-prompt {
-  @apply flex-shrink-0 text-sm;
-}
-
-.terminal-input {
-  @apply bg-transparent border-none outline-none flex-1;
-  @apply font-mono text-sm text-foreground;
-  @apply placeholder:text-muted-foreground;
-}
-
-.terminal-input:focus {
-  @apply ring-0 border-none outline-none;
-}
-
-/* Terminal Button Styling */
-.terminal-btn {
-  @apply px-4 py-2 font-mono text-sm font-medium;
-  @apply border border-border rounded-md;
-  @apply transition-all duration-200;
-  @apply flex items-center gap-1.5;
-  @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
-  @apply disabled:opacity-50 disabled:cursor-not-allowed;
-  letter-spacing: 0.025em;
-}
-
-.terminal-btn.compact {
-  @apply px-3 py-1.5 text-xs;
-  @apply gap-1;
-}
-
-.terminal-btn.primary {
-  @apply bg-primary/10 text-primary border-primary/30;
-  @apply hover:bg-primary/20 hover:border-primary/50;
-  @apply focus:ring-primary;
-}
-
-.terminal-btn.primary:hover {
-  box-shadow: 0 0 15px hsl(var(--primary) / 0.4);
-}
-
-/* Terminal Error Styling */
-.terminal-error {
-  @apply mt-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg;
-  @apply border-l-4 border-l-destructive;
-}
-
 /* Repository Card Styling */
 .repo-terminal-card {
   @apply bg-card/50 border border-border/50 rounded-lg p-4;
@@ -355,20 +292,5 @@ const formatDate = (dateString: string) => {
 
 .repo-terminal-card:hover {
   box-shadow: 0 0 20px hsl(var(--primary) / 0.1);
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .terminal-input-group {
-    @apply flex-col items-start gap-2;
-  }
-
-  .terminal-prompt {
-    @apply text-xs;
-  }
-
-  .terminal-input {
-    @apply w-full;
-  }
 }
 </style>

@@ -1,11 +1,20 @@
 <template>
-  <div id="app">
-    <!-- Main Router View -->
+  <AppShell>
+    <template #title>
+      <h1 class="text-lg md:text-xl font-semibold tracking-tight">
+        <span class="sr-only">PR Tracker</span>
+      </h1>
+    </template>
+
     <router-view />
 
-    <!-- Global Command Palette -->
+    <template #actions>
+      <!-- Reserved for per-page actions (e.g., repo selector) -->
+    </template>
+
+    <!-- Command palette lives globally -->
     <CommandPalette />
-  </div>
+  </AppShell>
 </template>
 
 <script setup lang="ts">
@@ -13,6 +22,7 @@ import { onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useTheme } from '@/composables/useTheme'
+import AppShell from '@/components/layout/AppShell.vue'
 import { CommandPalette } from '@/components/ui/terminal'
 
 const authStore = useAuthStore()

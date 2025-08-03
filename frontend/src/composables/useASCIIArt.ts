@@ -1,5 +1,14 @@
 import { ref, computed } from 'vue'
-import figlet from 'figlet'
+let figlet: any | undefined
+try {
+  // Dynamically import to avoid bundler parsing issues and allow optional presence
+  // Use eval to prevent static analysis from bundling it
+  // eslint-disable-next-line no-eval
+  const req = (eval('require') as any)
+  figlet = req?.('figlet')
+} catch {
+  figlet = undefined
+}
 
 // ASCII Art templates for when figlet is not available
 const ASCII_TEMPLATES = {
@@ -51,11 +60,7 @@ export function useASCIIArt() {
 
   // Check if figlet is available
   const figletAvailable = computed(() => {
-    try {
-      return typeof figlet !== 'undefined'
-    } catch {
-      return false
-    }
+    return typeof figlet !== 'undefined' && figlet !== null
   })
 
   /**
@@ -69,25 +74,38 @@ export function useASCIIArt() {
     error.value = null
 
     try {
-      // Try to use figlet if available
+      // Prefer a known-good font if figlet is available
       if (figletAvailable.value) {
-        return new Promise<string>((resolve, reject) => {
-          const figletOptions = {
-            font: (options.font || 'ANSI Shadow') as any,
-            horizontalLayout: options.horizontalLayout || 'default',
-            verticalLayout: options.verticalLayout || 'default',
-            width: options.width || 80,
-            whitespaceBreak: options.whitespaceBreak || false
-          }
+        const figletOptions = {
+          font: (options.font || 'Standard') as any, // Known stable bundled font
+          horizontalLayout: options.horizontalLayout || 'default',
+          verticalLayout: options.verticalLayout || 'default',
+          width: options.width || 80,
+          whitespaceBreak: options.whitespaceBreak || false
+        }
 
-          figlet(text, figletOptions, (err: Error | null, data: string | undefined) => {
-            if (err) {
-              reject(err)
-            } else {
-              resolve(data || '')
+        // Wrap figlet call in try/catch to avoid noisy console warnings
+        try {
+          const rendered = await new Promise<string>((resolve, reject) => {
+            try {
+              figlet(text, figletOptions, (err: Error | null, data: string | undefined) => {
+                if (err) {
+                  // Swallow error into reject; will be handled below without console noise
+                  reject(err)
+                } else {
+                  resolve(data || '')
+                }
+              })
+            } catch (invokeErr) {
+              reject(invokeErr as Error)
             }
           })
-        })
+          if (rendered && rendered.trim().length > 0) {
+            return rendered
+          }
+        } catch {
+          // Silent failover below
+        }
       }
 
       // Fallback to templates
@@ -99,8 +117,8 @@ export function useASCIIArt() {
       // Simple fallback for unknown text
       return createSimpleASCII(text)
     } catch (err) {
+      // Do not log to console; provide silent, resilient fallback
       error.value = err instanceof Error ? err.message : 'Failed to generate ASCII art'
-      // Return simple fallback on error
       return createSimpleASCII(text)
     } finally {
       isLoading.value = false
