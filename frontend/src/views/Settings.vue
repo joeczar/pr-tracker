@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { qk } from '@/lib/api/queryKeys'
 import { githubApi } from '@/lib/api/github'
 import { repositoriesApi } from '@/lib/api/repositories'
+import ErrorBoundary from '@/components/error/ErrorBoundary.vue'
 
 type GitHubRepo = {
   id: number
@@ -130,7 +131,8 @@ function nextPage() {
     </header>
 
     <!-- GitHub connectivity -->
-    <TerminalWindow>
+    <ErrorBoundary>
+      <TerminalWindow>
       <template #title>
         <TerminalHeader>
           <template #title>
@@ -171,10 +173,12 @@ function nextPage() {
           </div>
         </div>
       </div>
-    </TerminalWindow>
+      </TerminalWindow>
+    </ErrorBoundary>
 
     <!-- Accessible repositories -->
-    <TerminalWindow>
+    <ErrorBoundary>
+      <TerminalWindow>
       <template #title>
         <TerminalHeader>
           <template #title>
@@ -234,6 +238,7 @@ function nextPage() {
           </ul>
         </template>
       </div>
-    </TerminalWindow>
+      </TerminalWindow>
+    </ErrorBoundary>
   </section>
 </template>

@@ -135,10 +135,15 @@ const {
 
 </script>
 
+<script setup lang="ts">
+import ErrorBoundary from "@/components/error/ErrorBoundary.vue";
+</script>
+
 <template>
   <section aria-labelledby="repo-detail-title" class="space-y-6">
-    <TerminalWindow>
-      <template #title>
+    <ErrorBoundary>
+      <TerminalWindow>
+        <template #title>
         <TerminalHeader>
           <template #title>
             <TerminalTitle command="repository-detail" />
@@ -231,11 +236,13 @@ const {
           />
         </div>
       </div>
-    </TerminalWindow>
+      </TerminalWindow>
+    </ErrorBoundary>
 
     <!-- Trends -->
-    <TerminalWindow>
-      <template #title>
+    <ErrorBoundary>
+      <TerminalWindow>
+        <template #title>
         <TerminalHeader>
           <template #title>
             <TerminalTitle command="trends" />
@@ -275,7 +282,8 @@ const {
           </template>
         </TrendChart>
       </div>
-    </TerminalWindow>
+      </TerminalWindow>
+    </ErrorBoundary>
 
     <!-- Filters + PR list -->
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">

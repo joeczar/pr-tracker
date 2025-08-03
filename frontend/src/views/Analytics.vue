@@ -11,6 +11,7 @@ import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
 import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
 import TrendChart from '@/components/analytics/TrendChart.vue'
 import MetricTile from '@/components/analytics/MetricTile.vue'
+import ErrorBoundary from '@/components/error/ErrorBoundary.vue'
 
 type Timeframe = '7d' | '30d' | '90d'
 
@@ -125,55 +126,59 @@ watch(timeframe, (tf) => {
       <!-- Charts Grid -->
       <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TabsContent :value="timeframe">
-          <section aria-label="Comments trend" class="rounded border border-slate-200 dark:border-slate-800 p-4">
-            <template v-if="trendsQuery.isLoading">
-              <Skeleton class="h-56 w-full" />
-            </template>
-            <template v-else-if="trendsQuery.isError || !selectedRepoId">
-              <div class="text-xs text-slate-500">Select a repository to view trends.</div>
-            </template>
-            <TrendChart
-              v-else
-              :type="'line'"
-              :labels="(trendsQuery.data?.value as any)?.labels || []"
-              :datasets="[{ label: 'Comments', data: (trendsQuery.data?.value as any)?.comments || [] }]"
-              :title="'Comments over time'"
-              :description="'Daily review comments for this repository.'"
-              :reduced-motion="false"
-              :height="220"
-            />
-          </section>
+          <ErrorBoundary>
+            <section aria-label="Comments trend" class="rounded border border-slate-200 dark:border-slate-800 p-4">
+              <template v-if="trendsQuery.isLoading">
+                <Skeleton class="h-56 w-full" />
+              </template>
+              <template v-else-if="trendsQuery.isError || !selectedRepoId">
+                <div class="text-xs text-slate-500">Select a repository to view trends.</div>
+              </template>
+              <TrendChart
+                v-else
+                :type="'line'"
+                :labels="(trendsQuery.data?.value as any)?.labels || []"
+                :datasets="[{ label: 'Comments', data: (trendsQuery.data?.value as any)?.comments || [] }]"
+                :title="'Comments over time'"
+                :description="'Daily review comments for this repository.'"
+                :reduced-motion="false"
+                :height="220"
+              />
+            </section>
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent :value="timeframe">
-          <section aria-label="Compare result" class="rounded border border-slate-200 dark:border-slate-800 p-4">
-            <template v-if="compareMutation.isPending">
-              <Skeleton class="h-56 w-full" />
-            </template>
-            <template v-else-if="compareMutation.isError">
-              <div class="text-xs text-red-600">Compare failed.</div>
-            </template>
-            <div v-else class="text-xs text-slate-500">
-              <div class="mb-2">Select repositories to compare (UI stub):</div>
-              <div class="flex flex-wrap gap-2">
-                <label
-                  v-for="r in (repos.data?.value || [])"
-                  :key="r.id"
-                  class="inline-flex items-center gap-2 rounded border border-slate-300 dark:border-slate-700 px-2 py-1"
-                >
-                  <input
-                    type="checkbox"
-                    :value="r.id"
-                    v-model="compareIds"
-                  />
-                  {{ r.owner }}/{{ r.name }}
-                </label>
+          <ErrorBoundary>
+            <section aria-label="Compare result" class="rounded border border-slate-200 dark:border-slate-800 p-4">
+              <template v-if="compareMutation.isPending">
+                <Skeleton class="h-56 w-full" />
+              </template>
+              <template v-else-if="compareMutation.isError">
+                <div class="text-xs text-red-600">Compare failed.</div>
+              </template>
+              <div v-else class="text-xs text-slate-500">
+                <div class="mb-2">Select repositories to compare (UI stub):</div>
+                <div class="flex flex-wrap gap-2">
+                  <label
+                    v-for="r in (repos.data?.value || [])"
+                    :key="r.id"
+                    class="inline-flex items-center gap-2 rounded border border-slate-300 dark:border-slate-700 px-2 py-1"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="r.id"
+                      v-model="compareIds"
+                    />
+                    {{ r.owner }}/{{ r.name }}
+                  </label>
+                </div>
+                <div class="mt-3">
+                  <pre class="text-[10px] whitespace-pre-wrap">{{ JSON.stringify(compareMutation.data?.value, null, 2) }}</pre>
+                </div>
               </div>
-              <div class="mt-3">
-                <pre class="text-[10px] whitespace-pre-wrap">{{ JSON.stringify(compareMutation.data?.value, null, 2) }}</pre>
-              </div>
-            </div>
-          </section>
+            </section>
+          </ErrorBoundary>
         </TabsContent>
       </div>
     </Tabs>

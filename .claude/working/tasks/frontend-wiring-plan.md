@@ -223,7 +223,7 @@ Implementation checklist with embedded testing checkpoints
       - Component: AuthError.vue renders message/error/details and retry/back actions update location as expected
       - E2E (manual): With backend running, full OAuth flow works, session cookie present, and auth persists across refresh
 
-[ ] 2. Repositories page
+[x] 2. Repositories page
     [x] Wire GET /api/repositories to list
     [x] Wire AddRepositoryDialog.vue to POST /api/repositories
     [x] Wire delete on RepositoryCard.vue to DELETE /api/repositories/:id
@@ -241,7 +241,7 @@ Implementation checklist with embedded testing checkpoints
     [x] Load review metrics GET /api/reviews/repository/:id/metrics?days=30
     [x] Load analytics trends GET /api/analytics/repository/:id/trends?days=30
     [x] Add “Sync now” -> POST /api/pull-requests/repository/:id/sync with invalidation of related queries
-    [ ] Optionally show sync history via /api/sync/repository/:id/history
+    [x] Optionally show sync history via /api/sync/repository/:id/history
     [Testing checkpoints]
       - Integration: Detail view renders all queries with loading/error states using Vue Query
       - Data: Stats/metrics/trends display with correct formatting and update after refetch
@@ -256,25 +256,25 @@ Implementation checklist with embedded testing checkpoints
       - Compare: Submitting selected repositories returns comparison and renders charts
       - State: Enabled query or mutation flow doesn’t duplicate requests; cache keys stable
 
-[ ] 5. Settings view
-    [ ] Show GitHub connection test /api/github/test and rate limit
-    [ ] List accessible repositories via /api/github/repositories, with pagination
-    [ ] “Track” action -> POST /api/repositories
+[x] 5. Settings view
+    [x] Show GitHub connection test /api/github/test and rate limit
+    [x] List accessible repositories via /api/github/repositories, with pagination
+    [x] “Track” action -> POST /api/repositories
     [Testing checkpoints]
       - Integration: /api/github/test and /api/github/rate-limit render values and handle errors
       - Pagination: Accessible repositories list paginates correctly and preserves filters
       - Action: “Track” adds repository and invalidates repository lists; handles duplicate/validation errors
 
-[ ] 6. UX polish
-    [ ] Loading states and skeletons
-    [ ] Toast notifications
-    [ ] Error boundary patterns
+[x] 6. UX polish
+    [x] Loading states and skeletons
+    [x] Toast notifications
+    [x] Error boundary patterns
     [Testing checkpoints]
       - Visual: Skeletons appear during loads on key views (repos, detail, analytics, settings)
       - Feedback: Success/error toasts show normalized messages from HttpError payloads
-      - Resilience: Error boundaries prevent app crashes and show recoverable UI
+      - Resilience: Error boundaries prevent app crashes and show recoverable UI (global boundary around router-view + per-view boundaries in RepositoryDetail, Settings, Analytics)
 
-[ ] 7. End-to-end verify with backend running
+[x] 7. End-to-end verify with backend running
     [Testing checkpoints]
       - E2E: Full happy path covering login, listing repos, adding/removing, viewing repo detail stats/metrics/trends, running sync, analytics compare, settings checks
       - Docs: Local runbook validated; environment variables documented and honored (CORS/credentials)
@@ -335,6 +335,10 @@ Changelog
 - 2025-08-03: Fixed login initiation by switching Login.vue to anchor-based OAuth start; centralized auth=success handling in Login.vue; removed duplicate handling from AppShell.vue.
 - 2025-08-03: RepositoryDetail wired with Vue Query (info, PRs, stats, review metrics, trends) and “Sync now” mutation with invalidations.
 - 2025-08-03: Analytics view wired for repo trends and comparison mutation with repository selector.
+- 2025-08-03: Settings view implemented (GitHub test, rate limit, accessible repositories with pagination, and Track action). Added basic charts to Analytics compare.
+- 2025-08-03: Added sync history display in RepositoryDetail and refined skeletons and toasts across views.
+- 2025-08-03: Implemented global ErrorBoundary and integrated per-view boundaries (RepositoryDetail, Settings, Analytics); updated App.vue wrapper.
+- 2025-08-03: Added frontend E2E runbook and local setup to frontend/README.md (auth, repos CRUD, repo detail, sync, analytics compare, settings).
 
 Milestones, owners, and timeline
 Note: Owners are placeholders; adjust as needed.
@@ -417,7 +421,7 @@ Exit criteria:
 Tracking:
 [x] compare wiring (mutation)
 [x] repository selector
-[ ] chart render (follow-up: visualize comparison results)
+[x] chart render (initial charts; further polish in M5)
 
 Milestone M4 — Settings + GitHub integration tools (Vue Query) — 1 day — Owner: FE-2
 Scope:
@@ -460,8 +464,8 @@ Deliverables:
 Exit criteria:
 - “Happy path” and primary error paths work across all features
 Tracking:
-[ ] E2E runbook
-[ ] README updates
+[x] E2E runbook
+[x] README updates
 
 Testing per milestone (expanded checkpoints)
 M0 — Foundations
