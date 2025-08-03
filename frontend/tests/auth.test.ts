@@ -1,0 +1,78 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { authApi } from '@/lib/api/auth';
+import { useAuthStore } from '@/stores/auth';
+import { createPinia, setActivePinia } from 'pinia';
+
+const originalFetch = global.fetch;
+
+describe('authApi', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('status returns authenticated true with user when backend responds so', async () => {
+    const payload = { authenticated: true, user: { id: 1, github_id: 2, login: 'u', name: null, email: null, avatar_url: null } };
+    const spy = vi.fn().mockResolvedValue(new Response(JSON.stringify(payload), { status: 200 }));
+    // @ts-ignore override
+    global.fetch = spy;
+
+    const res = await authApi.status();
+    expect(res).toEqual(payload);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('logout posts to /auth/logout', async () => {
+    const spy = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    // @ts-ignore override
+    global.fetch = spy;
+
+    const res = await authApi.logout();
+    expect(res).toEqual(null);
+    expect(spy).toHaveBeenCalledWith(expect.stringMatching(/\/auth\/logout$/), expect.objectContaining({ method: 'POST' }));
+  });
+});
+
+describe('auth store', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.restoreAllMocks();
+  });
+
+  it('checkStatus sets authenticated and user, calls /me when missing user in status', async () => {
+    const statusSpy = vi.fn().mockResolvedValue(new Response(JSON.stringify({ authenticated: true }), { status: 200 }));
+    const meSpy = vi.fn().mockResolvedValue(new Response(JSON.stringify({ user: { id: 5, github_id: 7, login: 'alice', name: null, email: null, avatar_url: null } }), { status: 200 }));
+    // @ts-ignore override
+    global.fetch = vi.fn((url: string, init?: any) => {
+      if (url.includes('/auth/status')) return statusSpy(url, init);
+      if (url.includes('/auth/me')) return meSpy(url, init);
+      return Promise.reject(new Error('unexpected url ' + url));
+    });
+
+    const store = useAuthStore();
+    await store.checkStatus();
+
+    expect(store.authenticated).toBe(true);
+    expect(store.user?.login).toBe('alice');
+    expect(store.checked).toBe(true);
+  });
+
+  it('logout clears state even if request fails', async () => {
+    const spy = vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: 'oops' }), { status: 500 }));
+    // @ts-ignore override
+    global.fetch = spy;
+
+    const store = useAuthStore();
+    store.setUser({ id: 1, github_id: 2, login: 'x', name: null, email: null, avatar_url: null });
+    expect(store.authenticated).toBe(true);
+
+    // logout propagates error; ensure state is still cleared in finally
+    await expect(store.logout()).rejects.toBeTruthy();
+    expect(store.authenticated).toBe(false);
+    expect(store.user).toBeNull();
+  });
+});
+
+afterAll(() => {
+  // @ts-ignore restore
+  global.fetch = originalFetch;
+});

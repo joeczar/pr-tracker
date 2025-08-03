@@ -19,7 +19,11 @@ const props = withDefaults(defineProps<Props>(), {
   <Primitive
     :as="as"
     :as-child="asChild"
+    role="button"
+    tabindex="0"
     :class="cn(buttonVariants({ variant, size }), props.class)"
+    @keydown.enter="$emit('click', $event)"
+    @keydown.space.prevent="$emit('click', $event)"
   >
     <slot />
   </Primitive>

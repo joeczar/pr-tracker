@@ -1,369 +1,331 @@
-<template>
-  <div class="space-y-8">
-    <!-- Loading State -->
-    <div v-if="loading" class="text-center py-16">
-      <Card class="max-w-md mx-auto" variant="minimal">
-        <div class="p-8">
-          <div class="w-16 h-16 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center">
-            <svg class="w-8 h-8 text-primary animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
-          </div>
-          <h3 class="text-xl font-semibold text-foreground mb-2">Loading Repository</h3>
-          <p class="text-muted-foreground text-mono text-sm">
-            Analyzing repository {{ repositoryId }}...
-          </p>
-        </div>
-      </Card>
-    </div>
-    
-    <!-- Error State -->
-    <div v-else-if="error" class="text-center py-16">
-      <Card class="max-w-md mx-auto" variant="minimal">
-        <div class="p-8">
-          <div class="w-16 h-16 mx-auto mb-6 bg-destructive/10 rounded-full flex items-center justify-center">
-            <svg class="w-8 h-8 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-          </div>
-          <h3 class="text-xl font-semibold text-foreground mb-2">Repository Error</h3>
-          <p class="text-muted-foreground">{{ error }}</p>
-        </div>
-      </Card>
-    </div>
-    
-    <!-- Repository Content -->
-    <div v-else-if="repository" class="space-y-4">
-      <!-- Repository Header -->
-      <Terminal :title="`pr-tracker@${repository.full_name}:~$`" class="min-h-[fit]">
-        <div class="space-y-4">
-          <!-- Command Prompt -->
-          <div class="border-l-2 border-primary pl-4 py-2 bg-primary/5">
-            <div class="text-primary font-terminal text-sm">
-              > pr-tracker repo --details {{ repository.full_name }}
-            </div>
-            <div class="text-muted-foreground font-terminal text-xs mt-1">
-              Repository analysis complete. {{ metrics?.total_prs || 0 }} PRs tracked.
-            </div>
-          </div>
-
-          <!-- Repository Info -->
-          <Card variant="terminal" class="border-primary/30">
-            <CardHeader>
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <StatusLED status="success" size="sm" />
-                  <div>
-                    <CardTitle class="phosphor-text text-xl">{{ repository.full_name }}</CardTitle>
-                    <CardDescription class="font-terminal text-xs">
-                      > init_date: {{ formatDate(repository.created_at) }}
-                    </CardDescription>
-                  </div>
-                </div>
-                <Button
-                  @click="syncPullRequests"
-                  :disabled="syncing"
-                  variant="terminal"
-                  size="terminal"
-                  class="min-w-[150px]"
-                >
-                  {{ syncing ? '>> SYNCING...' : '>> SYNC_PRS' }}
-                </Button>
-              </div>
-            </CardHeader>
-          </Card>
-        </div>
-      </Terminal>
-
-      <!-- Metrics Overview -->
-      <Terminal title="pr-tracker@metrics:~$" class="min-h-[fit]">
-        <div class="space-y-4">
-          <div class="border-l-2 border-primary pl-4 py-2 bg-primary/5">
-            <div class="text-primary font-terminal text-sm">
-              > pr-tracker metrics --overview
-            </div>
-            <div class="text-muted-foreground font-terminal text-xs mt-1">
-              Displaying PR analytics and performance metrics...
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <!-- Total PRs -->
-            <Card variant="terminal" class="group hover:border-primary/60 transition-all">
-              <CardContent class="p-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 bg-blue-500/20 border border-blue-500/30 rounded flex items-center justify-center">
-                    <span class="text-blue-400 text-sm font-terminal">#</span>
-                  </div>
-                  <div class="flex-1">
-                    <Tooltip variant="terminal">
-                      <TooltipTrigger as-child>
-                        <div class="cursor-help">
-                          <p class="text-xs font-terminal text-muted-foreground">TOTAL_PRS</p>
-                          <p class="text-lg font-terminal text-primary">{{ metrics?.total_prs || 0 }}</p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent variant="terminal">
-                        Total number of pull requests tracked for this repository
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <!-- Avg Merge Time -->
-            <Card variant="terminal" class="group hover:border-primary/60 transition-all">
-              <CardContent class="p-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 bg-green-500/20 border border-green-500/30 rounded flex items-center justify-center">
-                    <span class="text-green-400 text-sm font-terminal">⏱</span>
-                  </div>
-                  <div class="flex-1">
-                    <Tooltip variant="terminal">
-                      <TooltipTrigger as-child>
-                        <div class="cursor-help">
-                          <p class="text-xs font-terminal text-muted-foreground">AVG_MERGE_TIME</p>
-                          <p class="text-lg font-terminal text-primary">{{ formatHours(metrics?.avg_merge_time_hours || 0) }}</p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent variant="terminal">
-                        Average time from PR creation to merge
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <!-- Avg Lines Added -->
-            <Card variant="terminal" class="group hover:border-primary/60 transition-all">
-              <CardContent class="p-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 bg-yellow-500/20 border border-yellow-500/30 rounded flex items-center justify-center">
-                    <span class="text-yellow-400 text-sm font-terminal">+</span>
-                  </div>
-                  <div class="flex-1">
-                    <Tooltip variant="terminal">
-                      <TooltipTrigger as-child>
-                        <div class="cursor-help">
-                          <p class="text-xs font-terminal text-muted-foreground">AVG_LINES_ADDED</p>
-                          <p class="text-lg font-terminal text-primary">{{ Math.round(metrics?.avg_lines_added || 0) }}</p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent variant="terminal">
-                        Average number of lines added per pull request
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <!-- Avg Files Changed -->
-            <Card variant="terminal" class="group hover:border-primary/60 transition-all">
-              <CardContent class="p-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 bg-purple-500/20 border border-purple-500/30 rounded flex items-center justify-center">
-                    <span class="text-purple-400 text-sm font-terminal">📁</span>
-                  </div>
-                  <div class="flex-1">
-                    <Tooltip variant="terminal">
-                      <TooltipTrigger as-child>
-                        <div class="cursor-help">
-                          <p class="text-xs font-terminal text-muted-foreground">AVG_FILES_CHANGED</p>
-                          <p class="text-lg font-terminal text-primary">{{ Math.round(metrics?.avg_files_changed || 0) }}</p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent variant="terminal">
-                        Average number of files modified per pull request
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </Terminal>
-
-      <!-- Pull Requests List -->
-      <Terminal title="pr-tracker@pull-requests:~$" class="min-h-[fit]">
-        <div class="space-y-4">
-          <div class="border-l-2 border-primary pl-4 py-2 bg-primary/5">
-            <div class="text-primary font-terminal text-sm">
-              > pr-tracker list --recent
-            </div>
-            <div class="text-muted-foreground font-terminal text-xs mt-1">
-              Displaying recent pull request activity...
-            </div>
-          </div>
-
-          <Card variant="terminal" class="border-primary/30">
-            <CardHeader>
-              <div class="flex items-center gap-3">
-                <StatusLED :status="pullRequests.length > 0 ? 'success' : 'warning'" size="sm" />
-                <CardTitle class="phosphor-text">RECENT PULL REQUESTS [{{ pullRequests.length }}]</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div v-if="pullRequests.length === 0" class="text-center py-12">
-                <div class="space-y-4">
-                  <div class="phosphor-text text-muted-foreground mb-4 text-lg">
-                    [ NO DATA ]
-                  </div>
-                  <p class="text-muted-foreground font-terminal text-sm">
-                    No pull requests found. Execute sync command to fetch data from GitHub.
-                  </p>
-                  <Button
-                    @click="syncPullRequests"
-                    :disabled="syncing"
-                    variant="terminal"
-                    size="sm"
-                    class="mt-4"
-                  >
-                    {{ syncing ? '>> SYNCING...' : '>> SYNC_NOW' }}
-                  </Button>
-                </div>
-              </div>
-              
-              <div v-else class="space-y-3">
-                <div 
-                  v-for="(pr, index) in pullRequests" 
-                  :key="pr.id"
-                  class="group"
-                >
-                  <Card variant="terminal" class="border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all duration-200">
-                    <CardContent class="p-4">
-                      <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                          <div class="flex items-center gap-2 mb-2">
-                            <StatusBadge :status="getStatusFromState(pr.state)" :label="pr.state.toUpperCase()" />
-                            <span class="text-muted-foreground font-terminal text-xs">
-                              #{{ pr.number }}
-                            </span>
-                          </div>
-                          <h3 class="text-sm font-terminal text-foreground group-hover:text-primary transition-colors mb-2">
-                            {{ pr.title }}
-                          </h3>
-                          <div class="flex items-center gap-4 text-xs font-terminal text-muted-foreground">
-                            <span class="flex items-center gap-1">
-                              <span class="text-green-400">+{{ pr.lines_added }}</span>
-                              <span>/</span>
-                              <span class="text-red-400">-{{ pr.lines_deleted }}</span>
-                            </span>
-                            <span>{{ pr.files_changed }} files</span>
-                            <span>{{ formatDate(pr.created_at) }}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <!-- Add separator between PRs, but not after the last one -->
-                  <Separator 
-                    v-if="index < pullRequests.length - 1" 
-                    variant="terminal" 
-                    class="my-3" 
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </Terminal>
-    </div>
-  </TooltipProvider>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useRepositoryStore } from '../stores/repository'
-import { usePullRequestStore } from '../stores/pull-request'
-import { format } from 'date-fns'
-import type { Repository, RepositoryMetrics } from '@shared/types'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Terminal } from '@/components/ui/terminal'
-import { StatusLED } from '@/components/ui/status'
-import { StatusBadge } from '@/components/ui/badge'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Separator } from '@/components/ui/separator'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import TerminalWindow from '@/components/ui/terminal/TerminalWindow.vue'
+import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
+import TerminalHeader from '@/components/ui/terminal/TerminalHeader.vue'
+import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
+import MetricTile from '@/components/analytics/MetricTile.vue'
+import TrendChart from '@/components/analytics/TrendChart.vue'
+import { repositoriesApi } from '@/lib/api/repositories'
+import { pullRequestsApi } from '@/lib/api/pullRequests'
+import { reviewsApi } from '@/lib/api/reviews'
+import { analyticsApi } from '@/lib/api/analytics'
+import { syncApi, type RepoSyncHistoryItem } from '@/lib/api/sync'
+import { qk } from '@/lib/api/queryKeys'
+import ErrorBoundary from "@/components/error/ErrorBoundary.vue"
+
+// Basic env
+const reducedMotion =
+  typeof window !== 'undefined' &&
+  window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 const route = useRoute()
-const repositoryStore = useRepositoryStore()
-const pullRequestStore = usePullRequestStore()
+const repoId = computed(() => Number(route.params.id))
+const days = ref(30)
+const prState = ref<'open' | 'closed' | 'merged' | 'all'>('open')
+const prLimit = ref(50)
 
-const repositoryId = computed(() => parseInt(route.params.id as string))
-const repository = ref<Repository | null>(null)
-const metrics = ref<RepositoryMetrics | null>(null)
-const loading = ref(true)
-const error = ref('')
-const syncing = ref(false)
+const qc = useQueryClient()
 
-const { pullRequests } = pullRequestStore
-
-onMounted(async () => {
-  await loadRepositoryData()
+// Queries
+const repoInfo = useQuery({
+  queryKey: qk.repositories.byId(repoId.value),
+  queryFn: () => repositoriesApi.get(repoId.value),
+  enabled: computed(() => Number.isFinite(repoId.value)),
 })
 
-const loadRepositoryData = async () => {
-  loading.value = true
-  error.value = ''
-  
-  try {
-    // Load repository details
-    await repositoryStore.fetchRepositories()
-    repository.value = repositoryStore.getRepositoryById(repositoryId.value) || null
-    
-    if (!repository.value) {
-      error.value = 'Repository not found'
-      return
-    }
+const prList = useQuery({
+  queryKey: qk.prs.byRepo(repoId.value, { state: prState.value === 'all' ? undefined : prState.value, limit: prLimit.value }),
+  queryFn: () => pullRequestsApi.listByRepo(repoId.value, { state: prState.value === 'all' ? undefined : prState.value, limit: prLimit.value }),
+  enabled: computed(() => Number.isFinite(repoId.value)),
+})
 
-    // Load metrics and pull requests
+const prStats = useQuery({
+  queryKey: qk.prs.stats(repoId.value),
+  queryFn: () => pullRequestsApi.statsByRepo(repoId.value),
+  enabled: computed(() => Number.isFinite(repoId.value)),
+})
+
+const reviewMetrics = useQuery({
+  queryKey: qk.reviews.metrics(repoId.value, days.value),
+  queryFn: () => reviewsApi.metricsByRepo(repoId.value, days.value),
+  enabled: computed(() => Number.isFinite(repoId.value)),
+})
+
+const trends = useQuery({
+  queryKey: qk.analytics.trends(repoId.value, days.value),
+  queryFn: () => analyticsApi.trendsByRepo(repoId.value, days.value),
+  enabled: computed(() => Number.isFinite(repoId.value)),
+})
+
+// Mutation: Sync now
+const { mutate: syncNow, status: syncStatus } = useMutation({
+  mutationFn: () => pullRequestsApi.syncRepo(repoId.value),
+  onSuccess: async () => {
+    // Invalidate related queries
     await Promise.all([
-      pullRequestStore.fetchMetrics(repositoryId.value),
-      pullRequestStore.fetchPullRequests(repositoryId.value)
+      qc.invalidateQueries({ queryKey: qk.prs.byRepo(repoId.value, { state: prState.value === 'all' ? undefined : prState.value, limit: prLimit.value }) }),
+      qc.invalidateQueries({ queryKey: qk.prs.stats(repoId.value) }),
+      qc.invalidateQueries({ queryKey: qk.analytics.trends(repoId.value, days.value) }),
+      // Optional: sync history if used
+      qc.invalidateQueries({ queryKey: qk.sync.history(repoId.value, 20) }),
     ])
-    
-    metrics.value = pullRequestStore.metrics
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load repository data'
-  } finally {
-    loading.value = false
+    // toast success (placeholder)
+    ;(window as any).__toast?.success?.('Sync queued')
+  },
+  onError: (err: any) => {
+    const msg = err?.payload?.message || err?.message || 'Failed to queue sync'
+    ;(window as any).__toast?.error?.(msg)
+  },
+})
+
+// Derived UI state for overview tiles
+const overview = computed(() => {
+  const stats = prStats.data.value as any
+  // last_sync not defined in types; guard access
+  const lastSync = (trends.data.value as any)?.last_sync || null
+  return [
+    { label: 'Total PRs', value: stats?.total ?? '—', trend: 'flat' as const },
+    { label: 'Open', value: stats?.open ?? '—', trend: 'up' as const },
+    { label: 'Merged', value: stats?.merged ?? '—', trend: 'up' as const },
+    { label: 'Closed', value: stats?.closed ?? '—', trend: 'down' as const },
+    { label: 'Merge rate', value: stats?.merge_rate != null ? `${Math.round(stats.merge_rate * 100)}%` : '—', trend: 'flat' as const },
+    { label: 'Last sync', value: lastSync ? new Date(lastSync).toLocaleString() : '—', trend: 'flat' as const },
+  ]
+})
+
+// Trends chart mapping
+const trendTab = ref<'comments' | 'change'>('comments')
+const labels = computed(() => (trends.data.value as any)?.labels ?? [])
+const commentsData = computed(() => (trends.data.value as any)?.comments ?? [])
+const changeRateData = computed(() => (trends.data.value as any)?.change_request_rate ?? [])
+
+const currentTrend = computed(() => {
+  if (trendTab.value === 'comments') {
+    return {
+      title: 'Comments over time',
+      description: 'Daily review comments for this repository.',
+      type: 'line' as const,
+      datasets: [{ label: 'Comments', data: commentsData.value }]
+    }
   }
-}
-
-const syncPullRequests = async () => {
-  syncing.value = true
-  try {
-    await pullRequestStore.syncPullRequests(repositoryId.value)
-    await loadRepositoryData() // Refresh data after sync
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to sync pull requests'
-  } finally {
-    syncing.value = false
+  return {
+    title: 'Change-request rate over time',
+    description: 'Percent of PRs with changes requested.',
+    type: 'bar' as const,
+    datasets: [{ label: 'Change %', data: changeRateData.value, backgroundColor: 'rgba(234,0,217,0.15)', borderColor: '#ea00d9' }]
   }
-}
+})
+/* Optional Sync History wiring */
+const historyLimit = ref(10)
 
-const formatDate = (dateString: string) => {
-  return format(new Date(dateString), 'MMM d, yyyy')
-}
+const {
+  data: syncHistory,
+  isLoading: historyLoading,
+  isError: historyError,
+  error: historyErr,
+  refetch: refetchHistory,
+} = useQuery({
+  queryKey: qk.sync.history(repoId.value, historyLimit.value),
+  queryFn: () => syncApi.repoHistory(repoId.value, historyLimit.value),
+  enabled: computed(() => Number.isFinite(repoId.value) && historyLimit.value > 0),
+})
 
-const formatHours = (hours: number) => {
-  if (hours < 1) return `${Math.round(hours * 60)}m`
-  if (hours < 24) return `${Math.round(hours)}h`
-  return `${Math.round(hours / 24)}d`
-}
-
-const getStatusFromState = (state: string) => {
-  switch (state) {
-    case 'open': return 'success'
-    case 'merged': return 'active'
-    case 'closed': return 'error'
-    default: return 'inactive'
-  }
-}
 </script>
+
+<template>
+  <section aria-labelledby="repo-detail-title" class="space-y-6">
+    <ErrorBoundary>
+      <TerminalWindow>
+        <template #title>
+        <TerminalHeader>
+          <template #title>
+            <TerminalTitle command="repository-detail" />
+            <!-- Optional: Sync History -->
+  <section aria-labelledby="sync-history-title" class="mt-6">
+    <div class="flex items-center justify-between mb-2">
+      <h2 id="sync-history-title" class="text-base font-semibold">Sync history</h2>
+      <div class="flex items-center gap-2">
+        <label class="text-xs text-slate-500" for="history-limit">Limit</label>
+        <select id="history-limit" class="border rounded px-2 py-1 text-sm bg-background"
+                v-model.number="historyLimit" @change="refetchHistory()">
+          <option :value="10">10</option>
+          <option :value="25">25</option>
+          <option :value="50">50</option>
+        </select>
+      </div>
+    </div>
+
+    <div v-if="historyLoading" class="text-sm text-slate-500">Loading history…</div>
+    <div v-else-if="historyError" class="text-sm text-rose-600">
+      Failed to load sync history: {{ (historyErr as any)?.message || 'Unknown error' }}
+    </div>
+    <div v-else>
+      <div v-if="!syncHistory || (syncHistory as RepoSyncHistoryItem[]).length === 0" class="text-sm text-slate-500">
+        No sync events yet.
+      </div>
+      <ul v-else class="divide-y divide-slate-200 dark:divide-slate-800 rounded border border-slate-200 dark:border-slate-800">
+        <li v-for="item in (syncHistory as RepoSyncHistoryItem[])" :key="item.id" class="p-3 flex items-center justify-between text-sm">
+          <div class="flex items-center gap-3">
+            <span class="font-mono text-xs opacity-70">#{{ item.id }}</span>
+            <span class="font-medium">{{ item.type || 'incremental' }}</span>
+            <span class="text-xs px-2 py-0.5 rounded border"
+                  :class="item.status === 'completed' ? 'border-emerald-400 text-emerald-600' :
+                          item.status === 'queued' ? 'border-amber-400 text-amber-600' :
+                          item.status === 'running' ? 'border-sky-400 text-sky-600' :
+                          'border-rose-400 text-rose-600'">
+              {{ item.status }}
+            </span>
+          </div>
+          <div class="flex items-center gap-3 text-xs text-slate-500">
+            <span>{{ new Date(item.started_at || item.finished_at || Date.now()).toLocaleString() }}</span>
+            <a v-if="(item as any).job_id" class="underline hover:no-underline"
+               :href="`/api/sync/job/${(item as any).job_id}`" target="_blank" rel="noreferrer">
+              Job {{ (item as any).job_id }}
+            </a>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+</template>
+          <template #actions>
+            <div class="flex items-center gap-2">
+              <TerminalButton size="sm" variant="secondary" aria-label="Sync repository" :disabled="syncStatus === 'pending'" @click="syncNow">
+                <span v-if="syncStatus === 'pending'">Syncing…</span>
+                <span v-else>Sync</span>
+              </TerminalButton>
+            </div>
+          </template>
+        </TerminalHeader>
+      </template>
+
+      <div class="p-3 space-y-6">
+        <header class="flex items-center justify-between">
+          <h1 id="repo-detail-title" class="text-xl font-semibold tracking-tight">
+            {{ repoInfo.data?.value?.owner }}/{{ repoInfo.data?.value?.name }} • Repository Details
+          </h1>
+          <div class="flex items-center gap-2">
+              <TerminalButton size="sm" variant="secondary" aria-label="Sync repository" :disabled="syncStatus === 'pending'" @click="syncNow">
+                <span v-if="syncStatus === 'pending'">Syncing…</span>
+                <span v-else>Sync</span>
+              </TerminalButton>
+          </div>
+        </header>
+
+        <!-- Overview tiles -->
+        <div v-if="prStats.isLoading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div v-for="i in 6" :key="i" class="h-24 rounded border border-dashed border-cyber-border animate-pulse"></div>
+        </div>
+        <div v-else-if="prStats.isError" class="text-sm text-red-600">
+          Failed to load repository stats.
+        </div>
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+          <MetricTile
+            v-for="(m, i) in overview"
+            :key="i"
+            :label="m.label"
+            :value="m.value as any"
+            :trend="m.trend as any"
+          />
+        </div>
+      </div>
+      </TerminalWindow>
+    </ErrorBoundary>
+
+    <!-- Trends -->
+    <ErrorBoundary>
+      <TerminalWindow>
+        <template #title>
+        <TerminalHeader>
+          <template #title>
+            <TerminalTitle command="trends" />
+          </template>
+        </TerminalHeader>
+      </template>
+      <div class="p-3">
+        <div class="mb-3 flex items-center gap-2">
+          <TerminalButton
+            :variant="trendTab === 'comments' ? 'primary' : 'ghost'"
+            size="sm"
+            @click="trendTab = 'comments'"
+            aria-label="Show comments trend"
+          >Comments</TerminalButton>
+          <TerminalButton
+            :variant="trendTab === 'change' ? 'primary' : 'ghost'"
+            size="sm"
+            @click="trendTab = 'change'"
+            aria-label="Show change-request rate trend"
+          >Change Req</TerminalButton>
+        </div>
+        <div v-if="trends.isLoading" class="h-64 rounded border border-dashed border-cyber-border animate-pulse"></div>
+        <div v-else-if="trends.isError" class="text-sm text-red-600">Failed to load trends.</div>
+        <TrendChart
+          v-else
+          :type="currentTrend.type"
+          :labels="labels"
+          :datasets="currentTrend.datasets as any"
+          :title="currentTrend.title"
+          :description="currentTrend.description"
+          :reduced-motion="reducedMotion"
+          :aria-summary-id="'repo-trend-summary'"
+          :height="260"
+        >
+          <template #summary>
+            {{ currentTrend.title }}. Points: {{ labels.length }}.
+          </template>
+        </TrendChart>
+      </div>
+      </TerminalWindow>
+    </ErrorBoundary>
+
+    <!-- Filters + PR list -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <aside aria-label="Filters" class="rounded border border-cyber-border bg-cyber-surface/40 p-4 space-y-3">
+        <div class="h-9 w-full rounded border border-dashed border-cyber-border"></div>
+        <div class="h-9 w-full rounded border border-dashed border-cyber-border"></div>
+        <div class="h-9 w-full rounded border border-dashed border-cyber-border"></div>
+        <div class="h-9 w-full rounded border border-dashed border-cyber-border"></div>
+        <div class="h-9 w-full rounded border border-dashed border-cyber-border"></div>
+      </aside>
+
+      <section aria-label="Pull requests" class="lg:col-span-3 rounded border border-cyber-border bg-cyber-surface/40 p-4 space-y-3">
+        <template v-if="prList.isLoading">
+          <div v-for="i in 3" :key="i" class="h-16 rounded border border-dashed border-cyber-border animate-pulse"></div>
+        </template>
+        <template v-else-if="prList.isError">
+          <div class="text-sm text-red-600">Failed to load pull requests.</div>
+        </template>
+        <template v-else>
+          <div
+            v-for="pr in prList.data?.value || []"
+            :key="pr.id"
+            class="rounded border border-cyber-border bg-cyber-surface/60 p-3"
+          >
+            <div class="flex items-center justify-between">
+              <div class="font-medium">{{ pr.title }}</div>
+              <div class="text-xs text-cyber-muted">#{{ pr.number }} • {{ pr.state }}</div>
+            </div>
+            <div class="text-xs text-cyber-muted">
+              {{ pr.author_login }} • {{ pr.created_at ? new Date(pr.created_at).toLocaleDateString() : '' }}
+            </div>
+          </div>
+
+          <!-- Pagination placeholder -->
+          <div class="flex items-center justify-between pt-2">
+            <div class="text-xs text-cyber-muted">
+              Showing up to {{ prLimit }} {{ prState }} PRs
+            </div>
+            <div class="flex gap-2">
+              <TerminalButton size="sm" variant="ghost" :disabled="prLimit <= 25" @click="prLimit = Math.max(25, prLimit - 25)">Less</TerminalButton>
+              <TerminalButton size="sm" variant="ghost" @click="prLimit = prLimit + 25">More</TerminalButton>
+            </div>
+          </div>
+        </template>
+      </section>
+    </div>
+  </section>
+</template>

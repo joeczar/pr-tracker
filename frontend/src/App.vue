@@ -1,32 +1,19 @@
-<template>
-  <div id="app">
-    <!-- Main Router View -->
-    <router-view />
+<script setup lang="ts">
+import AppShell from "./components/layout/AppShell.vue"
+import Toaster from "@/components/ui/toast/Toaster.vue"
+import ErrorBoundary from "@/components/error/ErrorBoundary.vue"
+</script>
 
-    <!-- Global Command Palette -->
-    <CommandPalette />
-  </div>
+<template>
+  <AppShell>
+    <ErrorBoundary>
+      <router-view />
+    </ErrorBoundary>
+    <!-- Global toast viewport -->
+    <Toaster />
+  </AppShell>
 </template>
 
-<script setup lang="ts">
-import { onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
-import { useTheme } from '@/composables/useTheme'
-import { CommandPalette } from '@/components/ui/terminal'
-
-const authStore = useAuthStore()
-
-// Initialize keyboard shortcuts
-useKeyboardShortcuts()
-
-// Initialize theme system (happens automatically)
-useTheme()
-
-// Initialize authentication on app startup
-onMounted(async () => {
-  if (!authStore.isInitialized) {
-    await authStore.checkAuthStatus()
-  }
-})
-</script>
+<style>
+/* no-op */
+</style>

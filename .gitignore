@@ -82,6 +82,8 @@ jspm_packages/
 
 # Gatsby files
 .cache/
+# Keep frontend/public in the repo (fonts, static assets)
+!/frontend/public/
 public
 
 # Storybook build outputs

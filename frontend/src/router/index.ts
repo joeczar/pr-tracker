@@ -1,75 +1,60 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import Dashboard from '../views/Dashboard.vue'
-import Repositories from '../views/Repositories.vue'
-import Login from '../views/Login.vue'
+import { createRouter, createWebHistory } from "vue-router";
+import { useAuthStore } from "../stores/auth";
+import { authApi } from "@/lib/api/auth";
 
-const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
-    {
-      path: '/login',
-      name: 'login',
-      component: Login,
-      meta: {
-        requiresAuth: false,
-        hideFromAuthenticatedUsers: true
-      },
-    },
-    {
-      path: '/',
-      name: 'dashboard',
-      component: Dashboard,
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/repositories',
-      name: 'repositories',
-      component: Repositories,
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/repositories/:id',
-      name: 'repository-detail',
-      component: () => import('../views/RepositoryDetail.vue'),
-      props: true,
-      meta: { requiresAuth: true },
-    },
-  ],
-})
+const routes = [
+  { path: "/", name: "dashboard", component: () => import("../views/Dashboard.vue") },
+  { path: "/repositories", name: "repositories", component: () => import("../views/Repositories.vue") },
+  { path: "/repositories/:id", name: "repository-detail", component: () => import("../views/RepositoryDetail.vue") },
+  { path: "/analytics", name: "analytics", component: () => import("../views/Analytics.vue") },
+  { path: "/settings", name: "settings", component: () => import("../views/Settings.vue") },
+  { path: "/login", name: "login", component: () => import("../views/Login.vue") },
+  { path: "/auth/error", name: "auth-error", component: () => import("../views/AuthError.vue") },
+];
 
-// Global navigation guard for authentication
+export const router = createRouter({
+  history: createWebHistory(),
+  routes,
+});
+
+/**
+ * Global auth guard:
+ * - Allows public routes: /login and /auth/error
+ * - Ensures status is checked once
+ * - Redirects unauthenticated users to /login with a redirect back to intended path
+ * - If returning from OAuth with ?auth=success on /login, Login.vue handles redirect to target
+ */
 router.beforeEach(async (to, _from, next) => {
-  const authStore = useAuthStore()
+  const publicRoutes = ["/login", "/auth/error"];
 
-  // Initialize auth store if not already done
-  if (!authStore.isInitialized) {
-    await authStore.checkAuthStatus()
+  // Handle OAuth callback hint (?auth=success) first
+  if (to.query.auth === "success") {
+    // After OAuth, validate session and then redirect to target (or /)
+    const target = (to.query.redirect as string) || "/";
+    const auth = useAuthStore();
+    if (!auth.initialized && !auth.loading) {
+      await auth.bootstrap();
+    }
+    return next({ path: target, query: {} });
   }
 
-  const requiresAuth = to.meta.requiresAuth !== false
-  const hideFromAuthenticatedUsers = to.meta.hideFromAuthenticatedUsers === true
-
-  // If route requires auth and user is not authenticated
-  if (requiresAuth && !authStore.isAuthenticated) {
-    // Redirect to login with the intended destination
-    next({
-      name: 'login',
-      query: { redirect: to.fullPath }
-    })
-    return
+  // Allow navigation to public routes
+  if (publicRoutes.includes(to.path)) {
+    return next();
   }
 
-  // If user is authenticated and trying to access login page
-  if (hideFromAuthenticatedUsers && authStore.isAuthenticated) {
-    // Redirect to dashboard or the intended destination
-    const redirectPath = (to.query.redirect as string) || '/'
-    next(redirectPath)
-    return
+  // Ensure session bootstrap has occurred
+  const auth = useAuthStore();
+  if (!auth.initialized && !auth.loading) {
+    await auth.bootstrap();
   }
 
-  // Allow navigation
-  next()
-})
+  // Gate protected routes
+  if (!auth.isAuthenticated) {
+    return next({ path: "/login", query: { redirect: to.fullPath } });
+  }
 
-export default router
+  next();
+});
+
+export default router;

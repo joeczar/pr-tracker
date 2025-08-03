@@ -1,374 +1,244 @@
-<template>
-  <div class="max-w-4xl mx-auto px-4 py-6 space-y-6">
-    <!-- ASCII Header -->
-    <div class="mb-6">
-      <ASCIIArt
-        text="REPOSITORIES"
-        variant="glow"
-        color="primary"
-        size="md"
-        :animate="true"
-        class="mb-3"
-      />
-      <div class="text-center">
-        <div class="font-mono text-primary text-sm">
-          > user@pr-tracker:~$ repositories --list --count={{ repositories.length }}
-        </div>
-        <div class="font-mono text-muted-foreground text-xs mt-1">
-          Repository management system initialized. Status: ONLINE
-        </div>
-      </div>
-    </div>
-
-    <!-- Add Repository Terminal -->
-    <Terminal title="repository-manager@add:~$" class="mb-6">
-      <div class="space-y-4">
-        <!-- Command Header -->
-        <div class="border-l-2 border-primary pl-3 py-2 bg-primary/5 rounded-r">
-          <div class="text-primary font-mono text-sm">
-            > repo-manager add --interactive
-          </div>
-          <div class="text-muted-foreground font-mono text-xs mt-1">
-            Enter GitHub repository details to initialize tracking...
-          </div>
-        </div>
-        <!-- Terminal Form -->
-        <form @submit.prevent="addRepository" class="space-y-6">
-          <div class="space-y-4">
-            <!-- Repository Selector -->
-            <div class="terminal-input-group">
-              <div class="terminal-prompt">
-                <span class="text-primary font-mono">select@repo:</span>
-                <span class="text-muted-foreground font-mono">~$</span>
-              </div>
-              <div class="flex-1">
-                <RepositorySelector
-                  v-model="selectedRepoFullName"
-                  placeholder="Choose from your accessible repositories..."
-                  @select="handleRepositorySelect"
-                  :disabled="loading"
-                />
-              </div>
-            </div>
-
-            <!-- Manual Entry Toggle -->
-            <div class="flex items-center justify-center">
-              <button
-                type="button"
-                @click="showManualEntry = !showManualEntry"
-                class="text-xs text-muted-foreground hover:text-primary font-mono transition-colors"
-              >
-                {{ showManualEntry ? '◀ Use Repository Selector' : '▶ Enter Manually' }}
-              </button>
-            </div>
-
-            <!-- Manual Entry (fallback) -->
-            <div v-if="showManualEntry" class="space-y-4 border-t border-primary/20 pt-4">
-              <!-- Owner Input -->
-              <div class="terminal-input-group">
-                <div class="terminal-prompt">
-                  <span class="text-primary font-mono">owner@github:</span>
-                  <span class="text-muted-foreground font-mono">~$</span>
-                </div>
-                <Input
-                  id="owner"
-                  v-model="newRepo.owner"
-                  placeholder="facebook"
-                  required
-                  class="terminal-input"
-                />
-              </div>
-
-              <!-- Name Input -->
-              <div class="terminal-input-group">
-                <div class="terminal-prompt">
-                  <span class="text-primary font-mono">repo@name:</span>
-                  <span class="text-muted-foreground font-mono">~$</span>
-                </div>
-                <Input
-                  id="name"
-                  v-model="newRepo.name"
-                  placeholder="react"
-                  required
-                  class="terminal-input"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div class="flex justify-center pt-4">
-            <button
-              type="submit"
-              :disabled="loading"
-              class="terminal-btn primary compact"
-            >
-              {{ loading ? 'Adding...' : 'Add Repository' }}
-            </button>
-          </div>
-        </form>
-
-        <!-- Terminal Error Display -->
-        <div v-if="error" class="terminal-error">
-          <div class="text-destructive font-mono text-sm">
-            ERROR: {{ error }}
-          </div>
-        </div>
-
-        <div v-if="storeError && storeError.includes('GITHUB_TOKEN')" class="terminal-error">
-          <div class="text-destructive font-mono text-sm">
-            FATAL: GitHub token configuration required
-          </div>
-          <div class="text-muted-foreground font-mono text-xs mt-2">
-            > export GITHUB_TOKEN=your_github_token_here
-          </div>
-        </div>
-      </div>
-    </Terminal>
-
-    <!-- Repository List -->
-    <div class="space-y-6">
-      <div class="flex items-center justify-between">
-        <h2 class="text-2xl font-semibold text-foreground">Tracked Repositories</h2>
-        <div class="flex items-center gap-2">
-          <div class="w-2 h-2 bg-success rounded-full"></div>
-          <span class="text-sm text-muted-foreground">{{ repositories.length }} active</span>
-        </div>
-      </div>
-
-      <!-- Empty State -->
-      <div v-if="repositories.length === 0" class="text-center py-16">
-        <Card class="max-w-md mx-auto" variant="minimal">
-          <div class="p-8">
-            <div class="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-6">
-              <svg class="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-              </svg>
-            </div>
-            <h3 class="text-xl font-semibold text-foreground mb-2">No repositories yet</h3>
-            <p class="text-muted-foreground">
-              Add your first repository above to start tracking pull requests and collaboration metrics.
-            </p>
-          </div>
-        </Card>
-      </div>
-      
-      <!-- Repository Grid -->
-      <div v-else class="content-grid">
-        <Card 
-          v-for="repo in repositories" 
-          :key="repo.id"
-          variant="glow"
-          class="group cursor-pointer"
-          @click="$router.push(`/repositories/${repo.id}`)"
-        >
-          <CardHeader>
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                  </svg>
-                </div>
-                <div>
-                  <CardTitle class="text-lg text-foreground group-hover:text-primary transition-colors">
-                    {{ repo.full_name }}
-                  </CardTitle>
-                  <CardDescription class="text-mono text-xs">
-                    Added {{ formatDate(repo.created_at) }}
-                  </CardDescription>
-                </div>
-              </div>
-              <svg class="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-              </svg>
-            </div>
-          </CardHeader>
-          <CardFooter>
-            <div class="flex items-center gap-3 w-full">
-              <Button
-                variant="terminal"
-                size="sm"
-                class="flex-1"
-                @click.stop="$router.push(`/repositories/${repo.id}`)"
-              >
-                View Details
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                @click.stop="deleteRepository(repo.id)"
-                class="border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              >
-                Remove
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRepositoryStore } from '../stores/repository'
-import { format } from 'date-fns'
-import type { RepositoryOption } from '@shared/types'
+import { ref, computed, getCurrentInstance } from 'vue'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import TerminalWindow from '@/components/ui/terminal/TerminalWindow.vue'
+import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
+import TerminalHeader from '@/components/ui/terminal/TerminalHeader.vue'
+import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
+import RepositoryCard from '@/components/repositories/RepositoryCard.vue'
+import AddRepositoryDialog from '@/components/repositories/AddRepositoryDialog.vue'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { ASCIIArt } from '@/components/ui/ascii'
-import { Terminal } from '@/components/ui/terminal'
-import RepositorySelector from '@/components/RepositorySelector.vue'
+import Dialog from '@/components/ui/dialog/Dialog.vue'
+import DialogContent from '@/components/ui/dialog/DialogContent.vue'
+import DialogHeader from '@/components/ui/dialog/DialogHeader.vue'
+import DialogTitle from '@/components/ui/dialog/DialogTitle.vue'
+import DialogDescription from '@/components/ui/dialog/DialogDescription.vue'
+import DialogFooter from '@/components/ui/dialog/DialogFooter.vue'
+import DialogClose from '@/components/ui/dialog/DialogClose.vue'
+import { useToast } from '@/components/ui/toast'
+import { repositoriesApi, type Repository } from '@/lib/api/repositories'
+import { qk } from '@/lib/api/queryKeys'
 
-const repositoryStore = useRepositoryStore()
-const { repositories, error: storeError } = repositoryStore
+const search = ref('')
+const showAdd = ref(false)
+const showDelete = ref(false)
+const toDelete = ref<{ id?: number; owner: string; name: string } | null>(null)
+const { toast } = useToast?.() ?? { toast: (args: any) => console.log('[toast]', args) }
 
-const newRepo = ref({
-  owner: '',
-  name: ''
+const qc = useQueryClient()
+
+// Query: repositories list
+const { data, isLoading, isError, error } = useQuery({
+  queryKey: qk.repositories.list(),
+  queryFn: () => repositoriesApi.list(),
+  staleTime: 30_000,
+  retry: (failureCount, err: any) => {
+    // avoid retrying on 401
+    if (err?.status === 401) return false
+    return failureCount < 2
+  },
 })
 
-const selectedRepoFullName = ref('')
-const selectedRepository = ref<RepositoryOption | null>(null)
-const showManualEntry = ref(false)
-const loading = ref(false)
-const error = ref('')
-
-onMounted(async () => {
-  await repositoryStore.fetchRepositories()
+// Mutations
+const createRepo = useMutation({
+  mutationFn: (input: { owner: string; name: string }) => repositoriesApi.create(input),
+  onSuccess: () => {
+    qc.invalidateQueries({ queryKey: qk.repositories.list() })
+    showAdd.value = false
+    toast?.({ title: 'Repository added' })
+  },
+  onError: (e: any) => {
+    const msg = e?.payload?.message || e?.message || 'Failed to add repository'
+    toast?.({ title: 'Add failed', description: msg })
+  },
 })
 
-const handleRepositorySelect = (repository: RepositoryOption) => {
-  selectedRepository.value = repository
-  // Parse owner and name from full_name for the existing addRepository function
-  const [owner, name] = repository.full_name.split('/')
-  newRepo.value = { owner, name }
+const deleteRepo = useMutation({
+  mutationFn: (id: number) => repositoriesApi.remove(id),
+  onSuccess: () => {
+    qc.invalidateQueries({ queryKey: qk.repositories.list() })
+    toast?.({ title: 'Repository deleted' })
+    toDelete.value = null
+    showDelete.value = false
+  },
+  onError: (e: any) => {
+    const msg = e?.payload?.message || e?.message || 'Failed to delete repository'
+    toast?.({ title: 'Delete failed', description: msg })
+  },
+})
+
+const repos = computed<Repository[]>(() => data?.value ?? [])
+
+const filtered = computed(() => {
+  const list = repos.value
+  const q = search.value.trim().toLowerCase()
+  if (!q) return list
+  return list.filter(r =>
+    `${r.owner}/${r.name}`.toLowerCase().includes(q)
+  )
+})
+
+function handleAddSubmit(payload: { owner: string; name: string; url?: string }) {
+  createRepo.mutate({ owner: payload.owner, name: payload.name })
 }
 
-const addRepository = async () => {
-  // Check if we have repository data from either selector or manual entry
-  const owner = newRepo.value.owner
-  const name = newRepo.value.name
-
-  if (!owner || !name) {
-    error.value = 'Please select a repository or enter owner and name manually'
-    return
-  }
-
-  loading.value = true
-  error.value = ''
-
-  try {
-    await repositoryStore.addRepository(owner, name)
-    // Reset form
-    newRepo.value = { owner: '', name: '' }
-    selectedRepoFullName.value = ''
-    selectedRepository.value = null
-    showManualEntry.value = false
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to add repository'
-  } finally {
-    loading.value = false
-  }
-}
-
-const deleteRepository = async (id: number) => {
-  if (confirm('Are you sure you want to delete this repository?')) {
-    try {
-      await repositoryStore.deleteRepository(id)
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to delete repository'
-    }
+function openRepo(r: { owner: string; name: string }) {
+  const inst = getCurrentInstance()
+  const router = inst?.proxy?.$router as any | undefined
+  if (router) {
+    // Note: backend repository detail route expects numeric id; here we navigate by owner/name string as placeholder
+    router.push({ name: 'repository-detail', params: { id: `${r.owner}/${r.name}` } })
   }
 }
 
-const formatDate = (dateString: string) => {
-  return format(new Date(dateString), 'MMM d, yyyy')
+function syncRepo(_r: { owner?: string; name?: string }) {
+  // Placeholder; will be wired in RepositoryDetail via pullRequestsApi.syncRepo
+  toast?.({
+    title: 'Sync queued',
+    description: _r.owner && _r.name ? `${_r.owner}/${_r.name}` : 'Repository sync requested.',
+  })
+}
+
+function requestDeleteRepo(r: Repository) {
+  toDelete.value = { id: r.id, owner: r.owner, name: r.name }
+  showDelete.value = true
+}
+
+function confirmDeleteRepo() {
+  if (!toDelete.value?.id) return
+  deleteRepo.mutate(toDelete.value.id)
+}
+
+function cancelDeleteRepo() {
+  toDelete.value = null
+  showDelete.value = false
 }
 </script>
 
-<style scoped>
-/* Terminal Input Styling */
-.terminal-input-group {
-  @apply flex items-center gap-3 bg-muted/20 border border-border/50 rounded-lg p-3;
-  @apply transition-all duration-200;
-}
+<template>
+  <section aria-labelledby="repos-title" class="space-y-6">
+    <TerminalWindow>
+      <template #title>
+        <TerminalHeader>
+          <template #title>
+            <TerminalTitle command="repositories" />
+          </template>
+          <template #actions>
+            <div class="flex items-center gap-2">
+              <input
+                v-model="search"
+                type="text"
+                placeholder="Search repos..."
+                aria-label="Search repositories"
+                class="h-9 w-56 rounded border border-cyber-border bg-black/30 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-cyber-accent"
+              />
+              <TerminalButton size="md" variant="primary" aria-label="Add repository" @click="showAdd = true">
+                + Add Repository
+              </TerminalButton>
+            </div>
+          </template>
+        </TerminalHeader>
+      </template>
 
-.terminal-input-group:focus-within {
-  @apply border-primary/50 bg-primary/5;
-}
+      <div class="p-3 space-y-6">
+        <header class="flex items-center justify-between">
+          <h1 id="repos-title" class="text-xl font-semibold tracking-tight">Repositories</h1>
+          <div class="text-xs text-cyber-muted">Search and manage repositories</div>
+        </header>
+        <!-- Repo cards grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <template v-if="isLoading">
+            <div v-for="i in 6" :key="i" class="space-y-3">
+              <Skeleton class="h-40 w-full" />
+              <div class="flex items-center gap-2">
+                <Skeleton class="h-4 w-24" />
+                <Skeleton class="h-4 w-12" />
+              </div>
+              <Skeleton class="h-4 w-3/4" />
+            </div>
+          </template>
+          <template v-else>
+            <div v-if="isError" class="col-span-full text-sm font-mono text-red-600">
+              Failed to load repositories: {{ (error as any)?.message || 'Unknown error' }}
+            </div>
+            <div v-for="r in filtered" :key="r.id ?? `${r.owner}/${r.name}`" class="relative group">
+              <!-- Actions dropdown -->
+              <div class="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <Button size="sm" variant="outline" class="h-8 px-2">
+                      •••
+                      <span class="sr-only">Open actions</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" class="w-40">
+                    <DropdownMenuLabel class="text-xs">{{ r.owner }}/{{ r.name }}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem @click="openRepo(r)">Open</DropdownMenuItem>
+                    <DropdownMenuItem @click="syncRepo(r)">Sync Now</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem class="text-red-600 dark:text-red-400" @click="requestDeleteRepo(r as any)">Delete</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <RepositoryCard
+                :owner="r.owner"
+                :name="r.name"
+                :description="(r as any).description"
+                :stats="(r as any).stats"
+                :recent="(r as any).recent"
+                :status="'ok'"
+                @view="openRepo(r)"
+                @sync="syncRepo(r)"
+                @remove="requestDeleteRepo(r as any)"
+              />
+            </div>
+            <div v-if="filtered.length === 0" class="col-span-full text-sm font-mono text-slate-400">
+              No repositories match “{{ search }}”.
+            </div>
+          </template>
+        </div>
+      </div>
+    </TerminalWindow>
 
-.terminal-prompt {
-  @apply flex-shrink-0 text-sm;
-}
+    <AddRepositoryDialog v-model="showAdd" @submit="handleAddSubmit" :loading="createRepo.isPending" />
 
-.terminal-input {
-  @apply bg-transparent border-none outline-none flex-1;
-  @apply font-mono text-sm text-foreground;
-  @apply placeholder:text-muted-foreground;
-}
-
-.terminal-input:focus {
-  @apply ring-0 border-none outline-none;
-}
-
-/* Terminal Button Styling */
-.terminal-btn {
-  @apply px-4 py-2 font-mono text-sm font-medium;
-  @apply border border-border rounded-md;
-  @apply transition-all duration-200;
-  @apply flex items-center gap-1.5;
-  @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
-  @apply disabled:opacity-50 disabled:cursor-not-allowed;
-  letter-spacing: 0.025em;
-}
-
-.terminal-btn.compact {
-  @apply px-3 py-1.5 text-xs;
-  @apply gap-1;
-}
-
-.terminal-btn.primary {
-  @apply bg-primary/10 text-primary border-primary/30;
-  @apply hover:bg-primary/20 hover:border-primary/50;
-  @apply focus:ring-primary;
-}
-
-.terminal-btn.primary:hover {
-  box-shadow: 0 0 15px hsl(var(--primary) / 0.4);
-}
-
-/* Terminal Error Styling */
-.terminal-error {
-  @apply mt-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg;
-  @apply border-l-4 border-l-destructive;
-}
-
-/* Repository Card Styling */
-.repo-terminal-card {
-  @apply bg-card/50 border border-border/50 rounded-lg p-4;
-  @apply hover:border-primary/30 hover:bg-card/80;
-  @apply transition-all duration-200;
-  @apply cursor-pointer;
-}
-
-.repo-terminal-card:hover {
-  box-shadow: 0 0 20px hsl(var(--primary) / 0.1);
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .terminal-input-group {
-    @apply flex-col items-start gap-2;
-  }
-
-  .terminal-prompt {
-    @apply text-xs;
-  }
-
-  .terminal-input {
-    @apply w-full;
-  }
-}
-</style>
+    <!-- Delete confirmation dialog -->
+    <Dialog :open="showDelete" @update:open="val => showDelete = val">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete repository</DialogTitle>
+          <DialogDescription>
+            This action cannot be undone. This will permanently remove
+            <span class="font-mono">{{ toDelete ? `${toDelete.owner}/${toDelete.name}` : '' }}</span>
+            from this list.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose as-child>
+            <TerminalButton variant="ghost" @click="cancelDeleteRepo">Cancel</TerminalButton>
+          </DialogClose>
+          <!-- Use a supported variant and add destructive styling via classes -->
+          <TerminalButton
+            :disabled="deleteRepo.isPending.value"
+            variant="primary"
+            class="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+            @click="confirmDeleteRepo"
+          >
+            <span v-if="deleteRepo.isPending">Deleting…</span>
+            <span v-else>Delete</span>
+          </TerminalButton>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </section>
+</template>

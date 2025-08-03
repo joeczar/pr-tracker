@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite';
 import { DatabaseManager } from '../db/database.js';
-import { User, GitHubUser, UserSession, OAuthState } from '../types/auth.js';
+import { User, GitHubUser, UserSession } from '../types/auth.js';
 import { v4 as uuidv4 } from 'uuid';
 import CryptoJS from 'crypto-js';
 
@@ -62,7 +62,11 @@ export class UserService {
         githubUser.id
       );
 
-      return this.getUserByGitHubId(githubUser.id)!;
+      const updated = await this.getUserByGitHubId(githubUser.id);
+      if (!updated) {
+        throw new Error('User not found after update');
+      }
+      return updated;
     } else {
       // Create new user
       const stmt = this.db.prepare(`
@@ -82,7 +86,11 @@ export class UserService {
         scopesJson
       );
 
-      return this.getUserById(Number(result.lastInsertRowid))!;
+      const created = await this.getUserById(Number(result.lastInsertRowid));
+      if (!created) {
+        throw new Error('User not found after insert');
+      }
+      return created;
     }
   }
 

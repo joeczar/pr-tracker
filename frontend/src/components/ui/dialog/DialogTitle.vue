@@ -3,14 +3,10 @@ import type { HTMLAttributes } from 'vue'
 import { reactiveOmit } from '@vueuse/core'
 import { DialogTitle, type DialogTitleProps, useForwardProps } from 'reka-ui'
 import { cn } from '@/lib/utils'
-import { type DialogVariants, dialogTitleVariants } from '.'
 
-const props = defineProps<DialogTitleProps & {
-  class?: HTMLAttributes['class']
-  variant?: DialogVariants['variant']
-}>()
+const props = defineProps<DialogTitleProps & { class?: HTMLAttributes['class'] }>()
 
-const delegatedProps = reactiveOmit(props, 'class', 'variant')
+const delegatedProps = reactiveOmit(props, 'class')
 
 const forwardedProps = useForwardProps(delegatedProps)
 </script>
@@ -18,10 +14,12 @@ const forwardedProps = useForwardProps(delegatedProps)
 <template>
   <DialogTitle
     v-bind="forwardedProps"
-    :class="cn(
-      dialogTitleVariants({ variant: props.variant }),
-      props.class,
-    )"
+    :class="
+      cn(
+        'text-lg font-semibold leading-none tracking-tight',
+        props.class,
+      )
+    "
   >
     <slot />
   </DialogTitle>

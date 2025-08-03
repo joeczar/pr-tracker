@@ -27,4 +27,20 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: [],
+    alias: [
+      { find: '@', replacement: resolve(__dirname, 'src') },
+      { find: '@shared', replacement: resolve(__dirname, '../shared') },
+      { find: '@/components', replacement: resolve(__dirname, 'src/components') },
+      { find: '@/composables', replacement: resolve(__dirname, 'src/composables') },
+      { find: '@/lib', replacement: resolve(__dirname, 'src/lib') },
+    ],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+    },
+  },
 })

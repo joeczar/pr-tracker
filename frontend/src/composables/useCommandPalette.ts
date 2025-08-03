@@ -1,274 +1,133 @@
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import Fuse from 'fuse.js'
+import { useRouter } from 'vue-router'
 
-export interface Command {
+export type Command = {
   id: string
   name: string
-  description?: string
   icon?: string
-  category?: string
   keywords?: string[]
-  action: () => void | Promise<void>
-  shortcut?: string
+  // Allow navigation promises from vue-router (which can resolve to NavigationFailure|undefined)
+  action: () => void | Promise<void | unknown>
+  group?: string
 }
 
-export function useCommandPalette() {
+type Options = {
+  initialOpen?: boolean
+  enableGlobalHotkey?: boolean // Cmd/Ctrl+K
+}
+
+export function useCommandPalette(allCommands?: Command[], opts: Options = {}) {
   const router = useRouter()
-  const isOpen = ref(false)
-  const searchQuery = ref('')
-  const selectedIndex = ref(0)
-  const isLoading = ref(false)
 
-  // Default commands
-  const defaultCommands = ref<Command[]>([
-    {
-      id: 'dashboard',
-      name: 'Go to Dashboard',
-      description: 'Navigate to the main dashboard',
-      icon: '📊',
-      category: 'Navigation',
-      keywords: ['home', 'main', 'overview'],
-      action: () => router.push('/'),
-      shortcut: 'Ctrl+D'
-    },
-    {
-      id: 'repositories',
-      name: 'Go to Repositories',
-      description: 'View all tracked repositories',
-      icon: '📁',
-      category: 'Navigation',
-      keywords: ['repos', 'projects'],
-      action: () => router.push('/repositories'),
-      shortcut: 'Ctrl+R'
-    },
-    {
-      id: 'add-repository',
-      name: 'Add Repository',
-      description: 'Add a new repository to track',
-      icon: '➕',
-      category: 'Actions',
-      keywords: ['new', 'create', 'track'],
-      action: () => {
-        router.push('/repositories')
-        // TODO: Open add repository dialog
-      }
-    },
-    {
-      id: 'toggle-theme',
-      name: 'Toggle Theme',
-      description: 'Switch between light and dark themes',
-      icon: '🌙',
-      category: 'Settings',
-      keywords: ['dark', 'light', 'appearance'],
-      action: () => {
-        // TODO: Implement theme toggle
-        console.log('Toggle theme')
-      },
-      shortcut: 'Ctrl+Shift+T'
-    },
-    {
-      id: 'help',
-      name: 'Show Help',
-      description: 'View keyboard shortcuts and help',
-      icon: '❓',
-      category: 'Help',
-      keywords: ['shortcuts', 'guide', 'documentation'],
-      action: () => {
-        // TODO: Open help dialog
-        console.log('Show help')
-      },
-      shortcut: 'Ctrl+?'
-    },
-    {
-      id: 'logout',
-      name: 'Logout',
-      description: 'Sign out of your account',
-      icon: '🚪',
-      category: 'Account',
-      keywords: ['sign out', 'exit'],
-      action: () => {
-        // TODO: Implement logout
-        console.log('Logout')
-      }
+  const isOpen = ref<boolean>(!!opts.initialOpen)
+  const query = ref<string>('')
+  const selectedIndex = ref<number>(0)
+
+  // Default navigation commands to ensure utility out of the box
+  const baseCommands: Command[] = [
+    { id: 'nav:dashboard', name: 'Go to Dashboard', icon: '📊', keywords: ['home', 'main'], action: () => void router.push('/'), group: 'Navigation' },
+    { id: 'nav:repositories', name: 'Go to Repositories', icon: '📁', keywords: ['repos'], action: () => void router.push('/repositories'), group: 'Navigation' },
+    { id: 'nav:analytics', name: 'Open Analytics', icon: '📈', action: () => void router.push('/analytics'), group: 'Navigation' },
+    { id: 'nav:settings', name: 'Open Settings', icon: '⚙️', action: () => void router.push('/settings'), group: 'Navigation' }
+  ]
+
+  const commands = computed<Command[]>(() => {
+    const user = allCommands ?? []
+    // Deduplicate by id with user commands taking precedence
+    const map = new Map(user.map(c => [c.id, c]))
+    for (const c of baseCommands) {
+      if (!map.has(c.id)) map.set(c.id, c)
     }
-  ])
-
-  // Additional commands that can be added dynamically
-  const additionalCommands = ref<Command[]>([])
-
-  // All available commands
-  const allCommands = computed(() => [
-    ...defaultCommands.value,
-    ...additionalCommands.value
-  ])
-
-  // Fuse.js instance for fuzzy search
-  const fuse = computed(() => new Fuse(allCommands.value, {
-    keys: [
-      { name: 'name', weight: 0.4 },
-      { name: 'description', weight: 0.3 },
-      { name: 'keywords', weight: 0.2 },
-      { name: 'category', weight: 0.1 }
-    ],
-    threshold: 0.3,
-    includeScore: true
-  }))
-
-  // Filtered commands based on search query
-  const filteredCommands = computed(() => {
-    if (!searchQuery.value.trim()) {
-      return allCommands.value.map(command => ({ item: command, score: 0 }))
-    }
-
-    return fuse.value.search(searchQuery.value)
+    return Array.from(map.values())
   })
 
-  // Currently selected command
-  const selectedCommand = computed(() => {
-    const commands = filteredCommands.value
-    if (commands.length === 0) return null
-    return commands[selectedIndex.value]?.item || null
+  const fuse = computed(() => {
+    return new Fuse(commands.value, {
+      keys: [
+        { name: 'name', weight: 0.7 },
+        { name: 'id', weight: 0.2 },
+        { name: 'keywords', weight: 0.1 }
+      ],
+      threshold: 0.3,
+      ignoreLocation: true
+    })
   })
 
-  // Open the command palette
-  const open = () => {
+  const results = computed<Command[]>(() => {
+    const q = query.value.trim()
+    if (!q) return commands.value
+    return fuse.value.search(q).map(r => r.item)
+  })
+
+  function open() {
     isOpen.value = true
-    searchQuery.value = ''
+    // reset selection on open
     selectedIndex.value = 0
   }
 
-  // Close the command palette
-  const close = () => {
+  function close() {
     isOpen.value = false
-    searchQuery.value = ''
+    query.value = ''
     selectedIndex.value = 0
   }
 
-  // Toggle the command palette
-  const toggle = () => {
-    if (isOpen.value) {
+  async function execute(cmd?: Command) {
+    const target = cmd ?? results.value[selectedIndex.value]
+    if (!target) return
+    await Promise.resolve(target.action())
+    close()
+  }
+
+  function move(delta: number) {
+    const len = results.value.length
+    if (!len) return
+    selectedIndex.value = (selectedIndex.value + delta + len) % len
+  }
+
+  // Global hotkey: Cmd/Ctrl + K
+  function onKeydown(e: KeyboardEvent) {
+    if (!opts.enableGlobalHotkey) return
+    const isCmdK = (e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'k')
+    if (isCmdK) {
+      e.preventDefault()
+      isOpen.value ? close() : open()
+    }
+    if (!isOpen.value) return
+
+    if (e.key === 'Escape') {
+      e.preventDefault()
       close()
-    } else {
-      open()
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      move(1)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      move(-1)
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      execute()
     }
   }
 
-  // Navigate selection up
-  const selectPrevious = () => {
-    const maxIndex = filteredCommands.value.length - 1
-    selectedIndex.value = selectedIndex.value > 0 ? selectedIndex.value - 1 : maxIndex
-  }
-
-  // Navigate selection down
-  const selectNext = () => {
-    const maxIndex = filteredCommands.value.length - 1
-    selectedIndex.value = selectedIndex.value < maxIndex ? selectedIndex.value + 1 : 0
-  }
-
-  // Execute the selected command
-  const executeSelected = async () => {
-    const command = selectedCommand.value
-    if (!command) return
-
-    isLoading.value = true
-    try {
-      await command.action()
-      close()
-    } catch (error) {
-      console.error('Failed to execute command:', error)
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Execute a specific command by ID
-  const executeCommand = async (commandId: string) => {
-    const command = allCommands.value.find(cmd => cmd.id === commandId)
-    if (!command) return
-
-    isLoading.value = true
-    try {
-      await command.action()
-    } catch (error) {
-      console.error('Failed to execute command:', error)
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Add a new command
-  const addCommand = (command: Command) => {
-    additionalCommands.value.push(command)
-  }
-
-  // Remove a command
-  const removeCommand = (commandId: string) => {
-    additionalCommands.value = additionalCommands.value.filter(cmd => cmd.id !== commandId)
-  }
-
-  // Keyboard event handler
-  const handleKeydown = (event: KeyboardEvent) => {
-    // Open command palette with Ctrl/Cmd + K
-    if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
-      event.preventDefault()
-      toggle()
-      return
-    }
-
-    // Handle navigation when palette is open
-    if (isOpen.value) {
-      switch (event.key) {
-        case 'Escape':
-          event.preventDefault()
-          close()
-          break
-        case 'ArrowUp':
-          event.preventDefault()
-          selectPrevious()
-          break
-        case 'ArrowDown':
-          event.preventDefault()
-          selectNext()
-          break
-        case 'Enter':
-          event.preventDefault()
-          executeSelected()
-          break
-      }
-    }
-  }
-
-  // Set up keyboard listeners
   onMounted(() => {
-    document.addEventListener('keydown', handleKeydown)
+    window.addEventListener('keydown', onKeydown)
   })
 
-  onUnmounted(() => {
-    document.removeEventListener('keydown', handleKeydown)
+  onBeforeUnmount(() => {
+    window.removeEventListener('keydown', onKeydown)
   })
 
   return {
-    // State
+    // state
     isOpen,
-    searchQuery,
+    query,
     selectedIndex,
-    isLoading,
-    
-    // Computed
-    allCommands,
-    filteredCommands,
-    selectedCommand,
-    
-    // Actions
+    results,
+    // actions
     open,
     close,
-    toggle,
-    selectPrevious,
-    selectNext,
-    executeSelected,
-    executeCommand,
-    addCommand,
-    removeCommand
+    execute,
+    move
   }
 }

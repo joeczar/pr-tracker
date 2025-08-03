@@ -8,6 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+test-results/
 dist
 dist-ssr
 *.local
@@ -87,3 +88,6 @@ public
 # Temporary folders
 tmp/
 temp/
+
+# Keep public assets for production
+!public/
