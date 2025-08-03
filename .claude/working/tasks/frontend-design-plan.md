@@ -1,8 +1,303 @@
-# PR Tracker Frontend Design Plan
+# PR Tracker Frontend Design Plan (Actionable)
 
-## Executive Summary
+This is an implementation-ready design and build plan to deliver a sleek, modern, cyberpunk-terminal themed Vue 3 app with first-class accessibility and ADHD-friendly UX. It maps directly to the current repo (Vue + Tailwind + Pinia + Vite) and prioritizes the primary KPIs: PR review comments and change-requests trends.
 
-This document outlines the comprehensive frontend design plan for the PR Progress Tracker application, a Vue.js-based system designed to help ADHD/bipolar developers improve code review skills through data visualization and gamified progress tracking. The frontend features a cyberpunk terminal-themed interface with full accessibility compliance (WCAG 2.1 AA).
+Key outcomes:
+- Terminal chrome aesthetic with neon cyberpunk palette, accessible at WCAG 2.1 AA.
+- Dashboard that surfaces “comment volume” and “change-request rate” trends with celebratory progress feedback loops.
+- Fast keyboard-driven navigation and command palette for minimal cognitive overhead.
+- Performance targets that keep FCP/LCP within tight budgets.
+
+## 0) Current Frontend Snapshot (from repo)
+
+- Vue 3 + Vite + Tailwind + Pinia structure present.
+- Existing views: Dashboard.vue, Repositories.vue, RepositoryDetail.vue.
+- UI terminal bits exist: components/ui/terminal/{CommandPalette.vue, TerminalIcon.vue}.
+- AppShell.vue wrapper and router already configured.
+
+This plan respects existing files and extends them with focused, concrete additions.
+
+## 1) Architecture & Component Map
+
+High-level structure:
+```
+App.vue
+└─ components/layout/AppShell.vue
+   ├─ GlobalNav (terminal chrome)
+   ├─ CommandPalette (Ctrl/Cmd+K)
+   └─ RouterView
+      ├─ views/Dashboard.vue
+      ├─ views/Repositories.vue
+      └─ views/RepositoryDetail.vue
+```
+
+New/updated components (paths reflect current repo layout):
+```
+frontend/src/components/ui/terminal/
+- TerminalWindow.vue        # window chrome with dots + title slot
+- TerminalHeader.vue        # header bar with controls/title
+- TerminalCard.vue          # metrics/info cards with terminal styling
+- TerminalButton.vue        # CTA/action with glow states
+
+frontend/src/components/analytics/
+- TrendChart.vue            # Wrapper for vue-chartjs + theme
+- MetricTile.vue            # Single metric with trend arrow/sparkline
+- ProgressRadial.vue        # Circular progress for goals
+
+frontend/src/components/repositories/
+- RepositoryCard.vue        # Repo summary + recent PRs
+- AddRepositoryDialog.vue   # Modal with validations
+
+frontend/src/components/accessibility/
+- SkipToContent.vue         # Skip links
+- LiveRegion.vue            # aria-live assertive for status updates
+```
+
+Composables:
+```
+frontend/src/composables/
+- useASCIIArt.ts            # already present
+- useCommandPalette.ts      # keyboard-driven fuzzy actions
+- useCyberpunkTheme.ts      # theme tokens/toggles
+- useTerminalEffects.ts     # glow/scanline helpers
+- useA11y.ts                # focus trap, hotkeys, live region helpers
+```
+
+## 2) Visual System: Tokens and Theme
+
+Tailwind tokens (extend in frontend/tailwind.config.js):
+- Colors
+  - cyber.primary: #00ff9f
+  - cyber.secondary: #0abdc6
+  - cyber.accent: #ea00d9
+  - cyber.bg: #0a0f1f
+  - cyber.surface: #0b1228
+  - cyber.border: #10223f
+  - cyber.muted: #9ae8d6
+- Fonts
+  - font-terminal: ["Fira Code", "Cascadia Code", "Monaco", "monospace"]
+- Effects
+  - shadow-cyber: layered neon glow
+  - animate-cyber-glow, animate-terminal-typing
+
+CSS utilities (frontend/src/style.css):
+- .scanlines: subtle repeating-linear-gradient overlay
+- .cyber-glow: multi-stop text glow using currentColor
+- .kbd: accessible keyboard key style
+
+Accessibility contrast:
+- Ensure text on cyber.bg/surface ≥ 4.5:1. Prefer #d2fff1 for body text, #00ff9f for highlights. Verify with tooling.
+
+## 3) Interaction & ADHD-friendly UX
+
+Principles:
+- Immediate feedback: every action yields a visible and auditory (aria-live) confirmation.
+- Chunked info: summary-first dashboards; details only on click.
+- Clear progress indicators: goals and streaks visible above the fold.
+- Keyboard-first: shortcuts for core navigation and actions.
+- Low motion: respects prefers-reduced-motion, reducing glow/scanline/animation intensity.
+
+Keyboard shortcuts:
+- Ctrl/Cmd+D: Dashboard
+- Ctrl/Cmd+R: Repositories
+- Ctrl/Cmd+K: Command Palette
+- Ctrl/Cmd+H: Help/Shortcuts
+- Esc: Close modals
+- Alt+C: Toggle Console/Terminal overlay (optional)
+
+Focus management:
+- Focus trap in dialogs
+- Visible 3px outline in cyber.accent for :focus-visible
+- Skip links before AppShell header
+
+ARIA/live:
+- aria-live="polite/assertive" for sync/events (“Repository synced”, “Added repository”, “Error …”)
+- Label roles on chart containers; provide data table fallback for SRs
+
+## 4) Data Visualization
+
+Chart wrapper: TrendChart.vue (vue-chartjs)
+- Register global chart defaults with cyberpunk theme:
+  - gridColor rgba(10, 189, 198, 0.2)
+  - borderColor #00ff9f
+  - point radius 2, hover radius 4
+  - fonts: monospace
+- Provide “reducedMotion” prop to disable animations.
+
+Primary charts:
+- Comment volume over time (daily/weekly)
+- Change-request rate (% of PRs with “changes requested”) over time
+- Avg comments per PR over rolling windows (7/30/90 days)
+- Streak chart: consecutive PRs below comment threshold
+
+Accessibility:
+- Provide aria-describedby linking to data summary
+- Offer “View Data Table” toggle that renders a <table> aligned to chart dataset
+
+## 5) Pages: Concrete Layouts
+
+Dashboard.vue:
+- Hero TerminalWindow with ASCII logo (Figlet via useASCIIArt)
+- Quick Metrics row (MetricTile x 4):
+  - Total comments (period), Avg comments/PR, Change-request rate, Active repos
+- Trend window:
+  - Tabs: Comments, Change Requests, Avg Comments/PR
+  - Each shows TrendChart + concise text summary (“Down 12% vs last 30d”)
+- Progress & Goals window:
+  - ProgressRadial goals (e.g., < 3 comments/PR avg), streak counter
+- Recent Activity window:
+  - List of last 5 PRs with comments count badges
+
+Repositories.vue:
+- Header TerminalWindow with search/input and “+ Add Repository”
+- Grid of RepositoryCard:
+  - Stats mini-tiles (PRs, Avg Comments/PR, Change-request %)
+  - Actions: View Details, Sync, Remove
+- AddRepositoryDialog with validation and live repo preview (if backend supports)
+
+RepositoryDetail.vue:
+- Header with repo name and actions (Sync, Export, Back)
+- Overview tiles (Total PRs, Avg comments, Change-request rate, Last sync)
+- Trend windows:
+  - Comments over time
+  - Change-request rate over time
+- PR List:
+  - Each PR card shows title, status, +/− lines, comments, review outcome, time to merge
+  - Filters: state, author, date range, size; search text
+  - Pagination
+
+## 6) Implementation Steps (Sprint-ready)
+
+Phase 1: Foundation (days 1-3)
+1. Tailwind token extensions (colors, fonts, animations)
+2. Base terminal components:
+   - TerminalWindow.vue, TerminalHeader.vue, TerminalCard.vue, TerminalButton.vue
+3. Accessibility scaffolding:
+   - SkipToContent.vue
+   - LiveRegion.vue
+   - Focus styles and :focus-visible utilities
+4. Command Palette baseline:
+   - Ctrl/Cmd+K to open, list primary commands, use fuse.js
+
+Phase 2: Analytics & Dashboard (days 4-7)
+1. TrendChart.vue with global chart theme registration
+2. MetricTile.vue, ProgressRadial.vue
+3. Dashboard.vue composition:
+   - ASCII header, quick metrics, trends, progress, recent activity
+4. SR-friendly data tables toggles on charts
+
+Phase 3: Repositories & Detail (days 8-12)
+1. RepositoryCard.vue + grid layout
+2. AddRepositoryDialog.vue (focus trap, validation)
+3. RepositoryDetail.vue:
+   - Overview + trend windows + PR list with filters
+
+Phase 4: Polish, Performance, A11y (days 13-15)
+1. prefers-reduced-motion adjustments
+2. Axe automated checks + manual keyboard/reader passes
+3. Lighthouse perf: bundle/code-split route-based, lazy charts
+4. Microinteractions: button hover/click glow, success toasts via LiveRegion
+
+Exit criteria:
+- Keyboard-only usable end-to-end
+- WCAG AA contrast validated
+- Dashboard charts render with theme and table fallbacks
+- Repos CRUD and PR lists functional with filters
+
+## 7) Dependencies and Config
+
+Add (frontend/package.json):
+- dependencies: terminal.css, figlet, fuse.js, vue-chartjs, chart.js
+- devDependencies: @types/figlet, @axe-core/vue, focus-trap-vue
+
+Tailwind (frontend/tailwind.config.js):
+- extend theme with “cyber-*” tokens and font-terminal
+- animations: terminal-typing, cyber-glow
+
+Global styles (frontend/src/style.css):
+- import 'terminal.css'
+- define .scanlines, .cyber-glow, .kbd utilities
+- focus-visible styles with strong outline
+
+Chart init (frontend/src/main.ts or a plugin):
+- register Chart.js defaults matching cyber theme
+- export a helper to apply reduced motion
+
+## 8) State & Services
+
+Pinia stores (align with backend endpoints):
+- repositories store:
+  - list, add, remove, sync, summary metrics
+- pullRequests store:
+  - list by repo, filters, pagination
+- analytics store:
+  - comments trend, change-request rate trend, streaks
+- ui store:
+  - theme (dark/cyber), keyboard shortcuts enabled, command palette open state, reducedMotion
+
+Caching:
+- memoize analytic series by repo+range; TTL 5 minutes
+- optimistic UI on add/remove repo with rollback on failure
+
+Errors:
+- Normalize HTTP errors to user-friendly messages in LiveRegion + toast
+
+## 9) Accessibility Checklist (Definition of Done)
+
+- All interactive components reachable and operable via keyboard
+- Focus order logical, trap in dialogs, Esc closes
+- Visible focus styles ≥ 3:1 contrast
+- Motion reduced under prefers-reduced-motion
+- Charts provide data table alternatives
+- Color is not sole carrier of information; text labels provided
+- aria-live announcements for async ops
+- Screen reader labels for buttons, inputs, and cards
+- Axe automated checks pass; manual VO/NVDA smoke pass
+
+## 10) Performance Targets
+
+- FCP < 1.5s, LCP < 2.5s on mid-tier laptop
+- Hydration work minimized: avoid heavy charts until visible
+- Code split routes; lazy-load chart libs on demand
+- Keep chart datasets pruned to windowed ranges (e.g., last 90 days default)
+- Images/svg optimized; avoid large font files (use system/Google fonts with swap)
+
+## 11) Concrete File Plan
+
+Create:
+- src/components/ui/terminal/TerminalWindow.vue
+- src/components/ui/terminal/TerminalHeader.vue
+- src/components/ui/terminal/TerminalCard.vue
+- src/components/ui/terminal/TerminalButton.vue
+- src/components/analytics/TrendChart.vue
+- src/components/analytics/MetricTile.vue
+- src/components/analytics/ProgressRadial.vue
+- src/components/repositories/RepositoryCard.vue
+- src/components/repositories/AddRepositoryDialog.vue
+- src/components/accessibility/SkipToContent.vue
+- src/components/accessibility/LiveRegion.vue
+- src/composables/useCommandPalette.ts
+- src/composables/useCyberpunkTheme.ts
+- src/composables/useTerminalEffects.ts
+- src/composables/useA11y.ts
+
+Modify:
+- src/style.css (tokens/utilities/import terminal.css)
+- src/views/Dashboard.vue (compose new sections)
+- src/views/Repositories.vue (card grid + add dialog)
+- src/views/RepositoryDetail.vue (overview + trends + PR list)
+- src/components/layout/AppShell.vue (skip links, keyboard shortcuts, command palette)
+
+## 12) Demo Scenarios (for boss)
+
+- Scenario 1: “Comment volume trending down”
+  - Dashboard shows -12% comments vs prior 30d, celebratory glow on ProgressRadial
+- Scenario 2: “Change-request rate spikes”
+  - Trend tab highlights spike; tooltip text explains dates; actionable tip displayed
+- Scenario 3: “Repository sync success”
+  - LiveRegion announces “Sync complete”; RepositoryCard updates Last Sync in real-time
+
+This blueprint is ready to implement directly in the existing codebase with minimal friction while delivering the requested sleek, modern, cyberpunk aesthetic and ADHD-friendly UX without compromising accessibility.
 
 ## 1. Component Architecture & Hierarchy
 
