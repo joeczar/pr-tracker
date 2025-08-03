@@ -166,8 +166,10 @@ Mappings
 - Normalize backend errors to { error, message?, details? }
 - Show form errors in AddRepositoryDialog.vue for zod validation responses (400)
 - Global 401 handler: redirect to /login unless on auth endpoints
-- Loading spinners for list fetches; skeletons in repository cards
-- Rate limit display component reading /api/github/rate-limit
+- Vue Query driven loading/error states with suspense-friendly components
+- Configure query defaults: staleTime ~30s, refetchOnWindowFocus false, retry <=2 except 401
+- Loading spinners and skeletons for queries (repositories, PRs, analytics, github repos)
+- Rate limit display component reading /api/github/rate-limit via useQuery
 
 7) Environment configuration
 - frontend/.env.example add:
@@ -277,6 +279,135 @@ router.beforeEach(async (to, from, next) => {
 Notes/assumptions
 - Some backend routes like reviews/pull-requests aren’t protected; rely on DB-level filtering where appropriate. If protection is required, add requireAuth in backend later.
 - For pagination and filters, start with simplest defaults; extend UI later.
+- Auth/session should not be stored in Vue Query; keep in auth store and clear/invalidate queries on auth change.
 
 Changelog
 - 2025-08-03: Initial backend review and frontend wiring plan created.
+
+Milestones, owners, and timeline
+Note: Owners are placeholders; adjust as needed.
+
+Milestone M0 — Foundations (API client + Auth + Vue Query) — 1-2 days — Owner: FE-1
+Scope:
+- Implement API base module (http.ts) with credentials + error normalization
+- Decide and adopt @tanstack/vue-query for server state management (repositories, PRs, metrics, analytics, GitHub lists)
+- Implement domain API clients (auth, repositories, pullRequests, reviews, analytics, github, sync)
+- Add VITE_API_URL to frontend/.env.example
+- Create auth store/composable and router guard (auth remains outside Vue Query cache)
+- Provide Vue Query in main.ts with a QueryClient and sane defaults (staleTime, retries, focus refetch behavior)
+Deliverables:
+- src/lib/api/*.ts modules
+- src/stores/auth.ts (or src/composables/useAuth.ts)
+- src/lib/api/queryKeys.ts with typed query keys
+- Vue Query provider wired in main.ts
+- Router guard integrated
+Exit criteria:
+- Visiting app with an active session shows authenticated UI without manual refresh
+- Hitting protected routes without session redirects to /login
+- Server-state queries in Repositories.vue are powered by Vue Query with cache and proper loading/error states
+Tracking:
+[ ] http.ts done
+[ ] domain clients done
+[ ] env example updated
+[ ] auth store done
+[ ] guards wired
+[ ] Vue Query installed and provider set up
+[ ] queryKeys.ts scaffolded
+[ ] Repositories.vue migrated to useQuery/useMutation
+
+Milestone M1 — Repositories CRUD wiring (Vue Query) — 1 day — Owner: FE-2
+Scope:
+- Wire Repositories.vue to list tracked repos using useQuery(queryKey: qk.repositories.list()) and repositoriesApi.list
+- Implement AddRepositoryDialog.vue to add repo via useMutation(repositoriesApi.create) with invalidateQueries on success
+- Implement delete action in RepositoryCard.vue via useMutation(repositoriesApi.remove) with invalidateQueries
+- Toast and error states for zod 400s and server errors using normalized HttpError payload
+Deliverables:
+- Working repositories page with add/delete and error handling
+Exit criteria:
+- Add repository shows in list; delete removes it; errors visible to user
+- Network calls are deduped/cached and refresh correctly
+Tracking:
+[ ] list (useQuery)
+[ ] add (useMutation + invalidate)
+[ ] delete (useMutation + invalidate)
+[ ] toasts/errors
+
+Milestone M2 — Repository Detail + PR/Review/Analytics (Vue Query) — 2-3 days — Owner: FE-1
+Scope:
+- RepositoryDetail.vue loads with Vue Query:
+  - PR list: useQuery(qk.prs.byRepo(id, { state, limit }), pullRequestsApi.listByRepo)
+  - PR stats: useQuery(qk.prs.stats(id), pullRequestsApi.statsByRepo)
+  - Review metrics: useQuery(qk.reviews.metrics(id, 30), reviewsApi.metricsByRepo)
+  - Analytics trends: useQuery(qk.analytics.trends(id, 30), analyticsApi.trendsByRepo)
+- Add “Sync now” (useMutation pullRequestsApi.syncRepo) and refetch related queries on success; optional sync history useQuery(qk.sync.history(id, limit))
+Deliverables:
+- Populated detail page; sync button flows with proper query invalidation
+Exit criteria:
+- Stats/metrics/trends render for a repo with data; sync enqueues and user receives feedback
+- Related queries are invalidated/refetched appropriately after sync
+Tracking:
+[ ] PR list (useQuery)
+[ ] PR stats (useQuery)
+[ ] Review metrics (useQuery)
+[ ] Analytics trends (useQuery)
+[ ] Sync now (useMutation + invalidate)
+[ ] Sync history (optional, useQuery)
+
+Milestone M3 — Global Analytics Compare (Vue Query) — 1 day — Owner: FE-3
+Scope:
+- Analytics.vue compare flow:
+  - Either useMutation(analyticsApi.compare) for submit-driven compare
+  - Or useQuery(qk.analytics.compare(repoIds, days), enabled when form has selection)
+- Multi-select repositories UX; basic charts using existing components
+Deliverables:
+- Comparison view with basic visualizations
+Exit criteria:
+- Submitting selected repositories renders comparison results without errors
+Tracking:
+[ ] compare wiring (mutation or enabled query)
+[ ] repository selector
+[ ] chart render
+
+Milestone M4 — Settings + GitHub integration tools (Vue Query) — 1 day — Owner: FE-2
+Scope:
+- Settings.vue shows:
+  - GitHub connection test: useQuery(qk.github.test(), githubApi.test)
+  - Rate limit: useQuery(qk.github.rateLimit(), githubApi.rateLimit) with shorter staleTime
+- List accessible repos with pagination: useQuery(qk.github.repositories({ page, per_page, sort, direction, affiliation, visibility }), githubApi.listAccessibleRepositories)
+- “Track” action: useMutation(repositoriesApi.create) and invalidate repositories list queries
+Deliverables:
+- Functional settings page to bootstrap tracking
+Exit criteria:
+- User can discover a repo from GitHub list and track it from UI
+Tracking:
+[ ] connection test
+[ ] rate limit
+[ ] list repos (paginated query)
+[ ] track action (mutation + invalidate)
+
+Milestone M5 — UX polish, errors, loading states — 1 day — Owner: FE-1
+Scope:
+- Loading skeletons for lists/cards
+- Centralized error toasts (normalized backend errors)
+- Auth error page (/auth/error) and inline form errors (zod)
+Deliverables:
+- Consistent UX across flows
+Exit criteria:
+- No raw exceptions; meaningful user feedback on failures
+Tracking:
+[ ] skeletons
+[ ] toasts
+[ ] auth error page
+[ ] form errors
+
+Milestone M6 — End-to-end validation and docs — 0.5-1 day — Owner: FE-Lead
+Scope:
+- Run backend + frontend, validate all checklists
+- Add README sections for local setup, env, and flows
+Deliverables:
+- Verified integration; updated docs
+Exit criteria:
+- “Happy path” and primary error paths work across all features
+Tracking:
+[ ] E2E runbook
+[ ] README updates
