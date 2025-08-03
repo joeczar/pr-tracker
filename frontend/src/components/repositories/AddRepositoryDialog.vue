@@ -20,10 +20,7 @@ import DialogClose from '@/components/ui/dialog/DialogClose.vue'
  * shadcn-vue input/label + form primitives
  */
 import Input from '@/components/ui/input/Input.vue'
-import FormItem from '@/components/ui/form/FormItem.vue'
-import FormLabel from '@/components/ui/form/FormLabel.vue'
-import FormControl from '@/components/ui/form/FormControl.vue'
-import FormMessage from '@/components/ui/form/FormMessage.vue'
+import { Label } from '@/components/ui/label'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean
@@ -132,8 +129,10 @@ onMounted(() => {
   watch(open, v => {
     if (v) {
       requestAnimationFrame(() => {
-        const el = dialogEl.value?.querySelector<HTMLInputElement>('#repo-input')
-        el?.focus()
+        if (dialogEl.value && typeof dialogEl.value.querySelector === 'function') {
+          const el = dialogEl.value.querySelector<HTMLInputElement>('#repo-input')
+          el?.focus()
+        }
       })
     }
   }, { immediate: true })
@@ -165,31 +164,25 @@ onBeforeUnmount(() => {
           </template>
 
           <div class="p-4 space-y-4">
-            <div>
-              <FormItem>
-                <FormLabel as="label" for="repo-input" class="block text-sm font-mono text-slate-300 mb-1">
-                  Repository URL or Owner/Name
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    id="repo-input"
-                    v-model="input"
-                    type="text"
-                    placeholder="e.g. joeczar/pr-tracker or https://github.com/joeczar/pr-tracker"
-                    class="font-mono"
-                    aria-describedby="repo-examples repo-error"
-                    :aria-invalid="!!zodError"
-                  />
-                </FormControl>
-                <p id="repo-examples" class="mt-2 text-xs text-slate-400 font-mono">
-                  Examples: owner/repository or full GitHub URL
-                </p>
-                <FormMessage v-if="zodError">
-                  <p id="repo-error" class="mt-1 text-xs font-mono text-rose-400">
-                    {{ zodError }}
-                  </p>
-                </FormMessage>
-              </FormItem>
+            <div class="space-y-2">
+              <Label for="repo-input" class="block text-sm font-mono text-slate-300">
+                Repository URL or Owner/Name
+              </Label>
+              <Input
+                id="repo-input"
+                v-model="input"
+                type="text"
+                placeholder="e.g. joeczar/pr-tracker or https://github.com/joeczar/pr-tracker"
+                class="font-mono"
+                aria-describedby="repo-examples repo-error"
+                :aria-invalid="!!zodError"
+              />
+              <p id="repo-examples" class="text-xs text-slate-400 font-mono">
+                Examples: owner/repository or full GitHub URL
+              </p>
+              <p v-if="zodError" id="repo-error" class="text-xs font-mono text-rose-400">
+                {{ zodError }}
+              </p>
             </div>
 
             <div class="rounded border border-cyber-border bg-black/20 p-3">

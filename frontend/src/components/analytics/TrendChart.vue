@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
+import { computed, onMounted, ref, markRaw } from "vue"
 /**
  * shadcn-vue primitives
  */
@@ -166,7 +166,7 @@ onMounted(async () => {
   ])
   chartModule.value = { Line, Bar, ChartJS }
   cyberThemeDefaults(ChartJS)
-  ChartComp.value = props.type === "bar" ? Bar : Line
+  ChartComp.value = markRaw(props.type === "bar" ? Bar : Line)
 })
 </script>
 

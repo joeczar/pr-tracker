@@ -38,10 +38,10 @@ interface RecentPR {
 }
 
 const props = defineProps<{
-  owner: string
+  owner?: string
   name: string
   description?: string
-  stats: {
+  stats?: {
     prs: number
     avgCommentsPerPR: number
     changeRequestRate: number // percent 0-100
@@ -57,7 +57,7 @@ const emit = defineEmits<{
   (e: 'remove'): void
 }>()
 
-const repoFullName = computed(() => `${props.owner}/${props.name}`)
+const repoFullName = computed(() => props.owner ? `${props.owner}/${props.name}` : props.name)
 const statusLabel = computed(() => {
   switch (props.status) {
     case 'syncing':

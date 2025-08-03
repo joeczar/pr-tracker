@@ -45,33 +45,36 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown)
  * Wire with composable if available to allow external control and dynamic items
  * Fallback to static items when composable not present.
  */
-let composable: { open: { value: boolean }; items: { value: Array<{ group: string; value: string; label: string }> } } | null = null
-onMounted(async () => {
-  try {
-    // Prefer alias path under src. This is optional and will be tree-shaken if not used.
-    const mod = await import('@/composables/useCommandPalette')
-    composable = (mod as any)?.useCommandPalette?.() ?? null
+let composable: { isOpen: { value: boolean }; results: { value: Array<{ id: string; name: string; group?: string }> } } | null = null
 
-    if (composable?.open) {
-      // Sync external open state -> local
-      watch(
-        () => composable!.open.value,
-        (v: boolean) => (open.value = v),
-        { immediate: true }
-      )
-      // Sync local -> external
-      watch(open, (v) => (composable!.open.value = v))
-    }
-  } catch {
-    // ignore; fallback to local state
+// Initialize composable synchronously during setup
+try {
+  const { useCommandPalette } = require('@/composables/useCommandPalette')
+  composable = useCommandPalette() ?? null
+  
+  if (composable?.isOpen) {
+    // Sync external open state -> local
+    watch(
+      () => composable!.isOpen.value,
+      (v: boolean) => (open.value = v),
+      { immediate: true }
+    )
+    // Sync local -> external
+    watch(open, (v) => (composable!.isOpen.value = v))
   }
-})
+} catch {
+  // ignore; fallback to local state
+}
 
 
 const items = computed(() => {
-  const fromComposable = composable?.items?.value
+  const fromComposable = composable?.results?.value
   if (fromComposable && Array.isArray(fromComposable) && fromComposable.length) {
-    return fromComposable
+    return fromComposable.map(cmd => ({
+      group: cmd.group || 'Commands',
+      value: cmd.id,
+      label: cmd.name
+    }))
   }
   return [
     { group: 'Navigation', value: 'dashboard', label: 'Go to Dashboard' },
