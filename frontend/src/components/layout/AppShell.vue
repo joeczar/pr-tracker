@@ -1,9 +1,37 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 
+const showCommandPalette = ref(false)
+
+// Sidebar state for mobile
 const sidebarOpen = ref(false)
 const toggleSidebar = () => (sidebarOpen.value = !sidebarOpen.value)
+
+function toggleCommandPalette(next?: boolean) {
+  showCommandPalette.value = typeof next === 'boolean' ? next : !showCommandPalette.value
+}
+
+function handleGlobalKeydown(e: KeyboardEvent) {
+  // Cmd/Ctrl+K toggles command palette
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    toggleCommandPalette()
+  }
+  // ESC closes palette
+  if (e.key === 'Escape' && showCommandPalette.value) {
+    e.preventDefault()
+    toggleCommandPalette(false)
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleGlobalKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
+})
 </script>
 
 <template>
@@ -89,4 +117,39 @@ const toggleSidebar = () => (sidebarOpen.value = !sidebarOpen.value)
       </div>
     </footer>
   </div>
+  <!-- Command Palette Mount Point -->
+  <Teleport to="body">
+    <div
+      v-if="showCommandPalette"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command Palette"
+      class="fixed inset-0 z-50 flex items-start justify-center p-4"
+    >
+      <!-- backdrop -->
+      <div class="absolute inset-0 bg-black/70" @click="toggleCommandPalette(false)"></div>
+      <!-- terminal-styled panel -->
+      <div class="relative z-10 w-full max-w-2xl">
+        <div class="rounded-lg border border-cyber-border bg-cyber-surface shadow-cyber scanlines">
+          <div class="flex items-center justify-between border-b border-cyber-border px-3 py-2">
+            <div class="text-cyber-muted text-sm font-terminal">user@pr-tracker:~$</div>
+            <div class="text-xs text-cyber-muted"><span class="kbd">Esc</span> to close</div>
+          </div>
+          <div class="p-3">
+            <!-- Lightweight inline input; actual fuzzy list is in CommandPalette.vue if present -->
+            <input
+              autofocus
+              type="text"
+              placeholder="Type a command…"
+              class="w-full rounded border border-cyber-border bg-black/30 px-3 py-2 font-terminal text-cyber-muted outline-none focus-visible:ring-2 focus-visible:ring-cyber-accent"
+              @keydown.escape.prevent="toggleCommandPalette(false)"
+            />
+            <div class="mt-2 text-xs text-cyber-muted">
+              Try: dashboard, repositories, settings…
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>

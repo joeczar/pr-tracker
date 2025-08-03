@@ -40,7 +40,8 @@ App.vue
 Next components to introduce (theme + UX):
 ```
 components/ui/terminal/
-- TerminalWindow.vue        # window chrome with dots + title slot
+- TerminalWindow.vue        # window chrome with dots + title/actions slots (reusable)
+- TerminalTitle.vue         # standardized prompt title (e.g., user@pr-tracker:~$ trends)
 - TerminalHeader.vue        # header bar with controls/title
 - TerminalCard.vue          # terminal-styled cards
 - TerminalButton.vue        # terminal-styled buttons
@@ -58,7 +59,8 @@ components/accessibility/
 New/updated components (paths reflect current repo layout):
 ```
 frontend/src/components/ui/terminal/
-- TerminalWindow.vue        # window chrome with dots + title slot
+- TerminalWindow.vue        # window chrome with dots + title/actions slots (reusable)
+- TerminalTitle.vue         # prompt-style title component (user@pr-tracker:~$ <command>)
 - TerminalHeader.vue        # header bar with controls/title
 - TerminalCard.vue          # metrics/info cards with terminal styling
 - TerminalButton.vue        # CTA/action with glow states
@@ -205,8 +207,8 @@ Phase 1: Theme foundation (days 1-2)
 3. prefers-reduced-motion support in global CSS and transitions
 
 Phase 2: Terminal components (days 3-4)
-1. TerminalWindow.vue, TerminalHeader.vue, TerminalCard.vue, TerminalButton.vue
-2. Integrate TerminalWindow into each view to frame sections (e.g., wrap Trends, PR lists)
+1. TerminalWindow.vue, TerminalTitle.vue, TerminalHeader.vue, TerminalCard.vue, TerminalButton.vue
+2. Replace ad-hoc chrome with TerminalWindow + TerminalTitle across views (Dashboard, Repositories, RepositoryDetail)
 
 Phase 3: Analytics visuals (days 5-7)
 1. TrendChart.vue with Chart.js global theme registration
@@ -303,6 +305,7 @@ Errors:
 
 Create:
 - src/components/ui/terminal/TerminalWindow.vue
+- src/components/ui/terminal/TerminalTitle.vue
 - src/components/ui/terminal/TerminalHeader.vue
 - src/components/ui/terminal/TerminalCard.vue
 - src/components/ui/terminal/TerminalButton.vue
@@ -407,6 +410,7 @@ src/components/
 - **Atomic Design**: Base UI components → Feature components → Page layouts
 - **Single Responsibility**: Each component has one clear purpose
 - **Composition over Inheritance**: Use Vue 3 Composition API and composables
+- **Smart Componentization**: Extract repeatable UI (e.g., terminal chrome and prompt titles) into primitives like TerminalWindow and TerminalTitle, then reuse across pages to reduce duplication and keep styling/a11y consistent.
 - **Accessibility First**: All components include ARIA labels and keyboard navigation
 - **Terminal Aesthetic**: Consistent cyberpunk styling across all components
 
@@ -1443,9 +1447,10 @@ This combination of libraries gives us everything needed to create that stunning
 ### 14.1 Immediate Next Steps
 1. **Install Terminal.css**: `npm install terminal.css`
 2. **Install Figlet.js**: `npm install figlet @types/figlet`
-3. **Install additional utilities**: `npm install fuse.js @axe-core/vue focus-trap-vue`
+3. **Install additional utilities**: `npm install fuse.js focus-trap-vue` (use axe-core programmatically instead of @axe-core/vue)
 4. **Create terminal components directory**: `src/components/terminal/`
 5. **Set up cyberpunk color variables** in your Tailwind config
+6. **Implement primitives first**: Start with TerminalWindow and TerminalTitle, then replace ad-hoc UI blocks across views.
 
 ### 14.2 First Component to Build
 **TerminalWindow.vue** - This will be your foundation component that wraps all other content:

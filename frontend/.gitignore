@@ -87,3 +87,6 @@ public
 # Temporary folders
 tmp/
 temp/
+
+# Keep public assets for production
+!public/
