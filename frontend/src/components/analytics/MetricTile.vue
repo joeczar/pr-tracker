@@ -45,16 +45,21 @@ const ariaLabel = computed(() => {
 
 <template>
   <div
-    class="rounded-lg border border-[var(--cyber-border,#10223f)] bg-[var(--cyber-surface,#0b1228)] p-4"
+    class="rounded-lg p-4"
+    :class="[
+      'border',
+      'bg-white text-slate-900 border-slate-200',
+      'dark:bg-[var(--cyber-surface,#0b1228)] dark:text-[var(--cyber-text,#d2fff1)] dark:border-[var(--cyber-border,#10223f)]'
+    ]"
     role="group"
     :aria-label="ariaLabel"
   >
     <div class="flex items-start justify-between gap-3">
       <div class="space-y-1">
-        <p class="text-xs font-terminal text-[var(--cyber-muted,#9ae8d6)]">
+        <p class="text-xs font-terminal text-slate-500 dark:text-[var(--cyber-muted,#9ae8d6)]">
           {{ label }}
         </p>
-        <p class="text-2xl font-mono text-[var(--cyber-text,#d2fff1)] tracking-tight">
+        <p class="text-2xl font-mono text-slate-900 dark:text-[var(--cyber-text,#d2fff1)] tracking-tight">
           {{ value }}
         </p>
       </div>
@@ -63,7 +68,7 @@ const ariaLabel = computed(() => {
           <span :class="trendColor" aria-hidden="true">{{ trendIcon }}</span>
           <span :class="trendColor">{{ deltaText }}</span>
         </div>
-        <p v-if="helpText" class="mt-1 text-[10px] text-[var(--cyber-muted,#9ae8d6)]">
+        <p v-if="helpText" class="mt-1 text-[10px] text-slate-500 dark:text-[var(--cyber-muted,#9ae8d6)]">
           {{ helpText }}
         </p>
       </div>

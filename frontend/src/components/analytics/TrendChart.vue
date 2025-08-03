@@ -29,6 +29,7 @@ const props = withDefaults(
     showLegend?: boolean
     ariaSummaryId?: string
     height?: number
+    hideChartTitle?: boolean
   }>(),
   {
     id: undefined,
@@ -41,6 +42,7 @@ const props = withDefaults(
     showLegend: true,
     ariaSummaryId: undefined,
     height: 220,
+    hideChartTitle: false,
   }
 )
 
@@ -74,10 +76,12 @@ const chartOptions = computed(() => {
     animation: noMotion ? false : { duration: 300 },
     plugins: {
       legend: {
-        display: props.showLegend,
+        // Hide legend by default to avoid duplicate labels when a title slot/text is shown.
+        display: props.showLegend ?? false,
         labels: {
           boxWidth: 12,
-          color: "#9ae8d6",
+          // Improve contrast in light mode
+          color: "#334155", // slate-700
           font: { family: `Fira Code, Cascadia Code, Monaco, monospace` },
         },
       },
@@ -94,13 +98,14 @@ const chartOptions = computed(() => {
     scales: {
       x: {
         grid: { color: "rgba(10, 189, 198, 0.2)" },
-        ticks: { color: "#9ae8d6" },
-        border: { color: "#10223f" },
+        // Improve tick contrast in light mode while keeping dark mode cyber theme readable
+        ticks: { color: "#475569" }, // slate-600
+        border: { color: "#cbd5e1" }, // slate-300
       },
       y: {
         grid: { color: "rgba(10, 189, 198, 0.2)" },
-        ticks: { color: "#9ae8d6" },
-        border: { color: "#10223f" },
+        ticks: { color: "#475569" }, // slate-600
+        border: { color: "#cbd5e1" }, // slate-300
       },
     },
   }
@@ -163,12 +168,18 @@ onMounted(async () => {
     :aria-labelledby="ariaSummaryId || undefined"
   >
     <div
-      class="relative rounded-lg border border-[var(--cyber-border,#10223f)] bg-[var(--cyber-surface,#0b1228)] p-3"
+      class="relative rounded-lg p-3"
+      :class="[
+        'border',
+        'bg-white text-slate-900 border-slate-200',
+        'dark:bg-[var(--cyber-surface,#0b1228)] dark:text-[var(--cyber-text,#d2fff1)] dark:border-[var(--cyber-border,#10223f)]'
+      ]"
       role="img"
       :aria-label="title || 'Trend chart'"
     >
-      <header v-if="title || $slots.title" class="mb-2 flex items-center justify-between">
-        <h3 class="font-terminal text-sm text-[var(--cyber-muted,#9ae8d6)]">
+      <header v-if="(title || $slots.title) && !props.hideChartTitle" class="mb-2 flex items-center justify-between">
+        <h3 class="font-terminal text-sm text-slate-700 dark:text-[var(--cyber-muted,#9ae8d6)]">
+          <!-- Prefer slot; if using title prop, we render it here and hide legend by default to avoid duplication -->
           <slot name="title">{{ title }}</slot>
         </h3>
         <slot name="actions" />
@@ -182,11 +193,13 @@ onMounted(async () => {
           :options="chartOptions"
           :id="canvasId"
           aria-hidden="true"
+          role="img"
+          :aria-label="title || 'Chart visualization'"
         />
         <div v-else class="h-full w-full animate-pulse bg-[rgba(0,255,159,0.05)]" />
       </div>
 
-      <p v-if="description" class="mt-2 text-xs text-[var(--cyber-muted,#9ae8d6)]">
+      <p v-if="description" class="mt-2 text-xs text-slate-500 dark:text-[var(--cyber-muted,#9ae8d6)]">
         {{ description }}
       </p>
     </div>
@@ -196,13 +209,13 @@ onMounted(async () => {
     </figcaption>
 
     <details class="mt-2">
-      <summary class="cursor-pointer text-xs text-[var(--cyber-primary,#00ff9f)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cyber-accent,#ea00d9)] rounded">
+      <summary class="cursor-pointer text-xs text-slate-700 dark:text-[var(--cyber-primary,#00ff9f)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:focus-visible:ring-[var(--cyber-accent,#ea00d9)] rounded">
         View Data Table
       </summary>
       <div class="overflow-x-auto pt-2">
-        <table class="w-full min-w-[480px] border-collapse text-xs">
+        <table class="w-full min-w-[480px] border-collapse text-xs text-slate-800 dark:text-[var(--cyber-text,#d2fff1)]">
           <thead>
-            <tr class="text-left text-[var(--cyber-muted,#9ae8d6)]">
+            <tr class="text-left text-slate-600 dark:text-[var(--cyber-muted,#9ae8d6)]">
               <th class="border-b border-[var(--cyber-border,#10223f)] p-2">Label</th>
               <th
                 v-for="(ds, i) in normalizedData.datasets"
@@ -219,11 +232,11 @@ onMounted(async () => {
               :key="r"
               class="text-[var(--cyber-text,#d2fff1)] odd:bg-[rgba(10,189,198,0.04)]"
             >
-              <td class="border-b border-[var(--cyber-border,#10223f)] p-2">{{ label }}</td>
+              <td class="border-b p-2 border-slate-200 dark:border-[var(--cyber-border,#10223f)]">{{ label }}</td>
               <td
                 v-for="(ds, c) in normalizedData.datasets"
                 :key="c"
-                class="border-b border-[var(--cyber-border,#10223f)] p-2"
+                class="border-b p-2 border-slate-200 dark:border-[var(--cyber-border,#10223f)]"
               >
                 {{ Array.isArray(ds.data) ? (ds.data as any)[r] : '' }}
               </td>
