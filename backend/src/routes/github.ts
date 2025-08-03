@@ -259,6 +259,69 @@ githubRoutes.get('/debug/token-info', requireAuth, async (c) => {
   }
 })
 
+// Debug: Test direct GitHub orgs API call
+githubRoutes.get('/debug/orgs-raw', requireAuth, async (c) => {
+  try {
+    const user = getUser(c)
+    if (!user) {
+      return c.json({ error: 'User not found' }, 401)
+    }
+
+    const githubService = GitHubService.forUser(user)
+    
+    console.log('🔍 Making direct GitHub API call for organizations...')
+    
+    // Try different organization endpoints
+    const endpoints = [
+      { name: 'listForAuthenticatedUser', call: () => githubService.octokit.rest.orgs.listForAuthenticatedUser() },
+      { name: 'direct /user/orgs', call: () => githubService.octokit.request('GET /user/orgs') },
+      { name: 'direct /user/orgs with per_page', call: () => githubService.octokit.request('GET /user/orgs', { per_page: 100 }) }
+    ]
+    
+    const results = {}
+    
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`📡 Testing endpoint: ${endpoint.name}`)
+        const response = await endpoint.call()
+        console.log(`✅ ${endpoint.name} - Status: ${response.status}, Count: ${response.data.length}`)
+        console.log(`📊 ${endpoint.name} - Data:`, response.data.map((org: any) => ({ login: org.login, id: org.id })))
+        console.log(`🔐 ${endpoint.name} - Headers:`, {
+          scopes: response.headers['x-oauth-scopes'],
+          rateLimit: response.headers['x-ratelimit-remaining']
+        })
+        
+        results[endpoint.name] = {
+          status: response.status,
+          count: response.data.length,
+          organizations: response.data.map((org: any) => ({ login: org.login, id: org.id, avatar_url: org.avatar_url })),
+          headers: {
+            scopes: response.headers['x-oauth-scopes'],
+            rateLimit: response.headers['x-ratelimit-remaining']
+          }
+        }
+      } catch (error: any) {
+        console.error(`❌ ${endpoint.name} failed:`, error.status, error.message)
+        results[endpoint.name] = {
+          error: error.message,
+          status: error.status
+        }
+      }
+    }
+    
+    return c.json({
+      message: 'Direct GitHub API test results',
+      user_login: user.login,
+      results
+    })
+  } catch (error) {
+    console.error('Failed to test GitHub orgs API:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to test GitHub API'
+    }, 500)
+  }
+})
+
 // Get rate limit information
 githubRoutes.get('/rate-limit', requireAuth, async (c) => {
   try {

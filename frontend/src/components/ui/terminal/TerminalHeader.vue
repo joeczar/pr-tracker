@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import TerminalTitle from './TerminalTitle.vue'
+
 defineProps<{
   title?: string
 }>()
@@ -15,13 +17,7 @@ defineProps<{
           <slot name="title" />
         </template>
         <template v-else-if="title">
-          <span class="font-mono">
-            <span class="text-slate-500 dark:text-cyber-muted">user</span>
-            <span class="text-slate-400 dark:text-cyber-muted">@</span>
-            <span class="text-slate-500 dark:text-cyber-muted">pr-tracker</span>
-            <span class="text-slate-400">:~$</span>
-            <span class="text-cyber-muted">{{ title }}</span>
-          </span>
+          <TerminalTitle :command="title" />
         </template>
 
     </div>
