@@ -190,7 +190,7 @@ Mappings
 - Sync queue and history
 - GitHub test and rate limit
 
-Implementation checklist
+Implementation checklist with embedded testing checkpoints
 [x] 0. Create API base and modules
     [x] src/lib/api/http.ts with fetchJson and error normalization
     [x] src/lib/api/auth.ts
@@ -201,19 +201,38 @@ Implementation checklist
     [x] src/lib/api/github.ts
     [x] src/lib/api/sync.ts
     [x] frontend/.env.example add VITE_API_URL
+    [Testing checkpoints]
+      - Unit: http.ts error normalization and safe 204 handling (frontend/tests/http.test.ts)
+      - Unit: API base URL fallback when env absent (frontend/tests/http.test.ts)
+      - Unit: authApi status/me/logout/refresh call shapes (frontend/tests/auth.test.ts)
+      - Lint/typecheck: pnpm -C frontend typecheck && pnpm -C frontend lint
+
 [ ] 1. Auth wiring
     [x] Create auth store/composable (src/stores/auth.ts or src/composables/useAuth.ts)
     [x] In App.vue or AppShell.vue, check /auth/status on mount and populate store
-    [ ] Implement Login.vue button -> /auth/github/login?redirect=currentPath
+    [x] Implement Login.vue button -> /auth/github/login?redirect=currentPath
     [x] Handle auth=success query on return and re-check status
     [x] Implement logout action calling POST /auth/logout
     [x] Route guards for protected routes (router.beforeEach)
-    [ ] Auth error page for /auth/error
+    [x] Auth error page for /auth/error
+    [Testing checkpoints]
+      - Integration: unauthenticated navigation to protected route redirects to /login with ?redirect
+      - Integration: clicking “Sign in with GitHub” navigates to /auth/github/login with redirect param
+      - Integration: returning with ?auth=success triggers status check and navigates to redirect or /dashboard
+      - Component: AuthError.vue renders message/error/details and retry/back actions update location as expected
+      - E2E (manual): With backend running, full OAuth flow works and session persists across refresh
+
 [ ] 2. Repositories page
     [x] Wire GET /api/repositories to list
     [x] Wire AddRepositoryDialog.vue to POST /api/repositories
     [x] Wire delete on RepositoryCard.vue to DELETE /api/repositories/:id
     [x] Toasts and error handling
+    [Testing checkpoints]
+      - Integration: Repositories.vue shows loading skeleton, then list on success; error state visible on failure
+      - Mutation: Adding repository invalidates list and renders new item; zod 400 shows inline/form error
+      - Mutation: Deleting repository disables confirm during request; invalidates/reloads list
+      - Accessibility: Dialog focus trap smoke test and keyboard navigation for actions menu
+
 [ ] 3. Repository detail
     [ ] Load repository info GET /api/repositories/:id
     [ ] Load PR list GET /api/pull-requests/repository/:id
@@ -222,18 +241,43 @@ Implementation checklist
     [ ] Load analytics trends GET /api/analytics/repository/:id/trends?days=30
     [ ] Add “Sync now” -> POST /api/pull-requests/repository/:id/sync
     [ ] Optionally show sync history via /api/sync/repository/:id/history
+    [Testing checkpoints]
+      - Integration: Detail view renders all queries with loading/error states using Vue Query
+      - Data: Stats/metrics/trends display with correct formatting and update after refetch
+      - Mutation: “Sync now” enqueues sync; success toast; invalidates PR list/stats/trends/history
+      - Optional: Sync history list paginates/limits; empty state handled
+
 [ ] 4. Analytics view
     [ ] Trends for selected repository
     [ ] Compare multiple repositories via POST /api/analytics/compare
+    [Testing checkpoints]
+      - Integration: Trends query respects selected repo and days; loading/error handled
+      - Compare: Submitting selected repositories returns comparison and renders charts
+      - State: Enabled query or mutation flow doesn’t duplicate requests; cache keys stable
+
 [ ] 5. Settings view
     [ ] Show GitHub connection test /api/github/test and rate limit
     [ ] List accessible repositories via /api/github/repositories, with pagination
     [ ] “Track” action -> POST /api/repositories
+    [Testing checkpoints]
+      - Integration: /api/github/test and /api/github/rate-limit render values and handle errors
+      - Pagination: Accessible repositories list paginates correctly and preserves filters
+      - Action: “Track” adds repository and invalidates repository lists; handles duplicate/validation errors
+
 [ ] 6. UX polish
     [ ] Loading states and skeletons
     [ ] Toast notifications
     [ ] Error boundary patterns
+    [Testing checkpoints]
+      - Visual: Skeletons appear during loads on key views (repos, detail, analytics, settings)
+      - Feedback: Success/error toasts show normalized messages from HttpError payloads
+      - Resilience: Error boundaries prevent app crashes and show recoverable UI
+
 [ ] 7. End-to-end verify with backend running
+    [Testing checkpoints]
+      - E2E: Full happy path covering login, listing repos, adding/removing, viewing repo detail stats/metrics/trends, running sync, analytics compare, settings checks
+      - Docs: Local runbook validated; environment variables documented and honored (CORS/credentials)
+      - Session: Auth persists via httpOnly cookie; logout clears state and redirects to /login
 
 Reference snippets
 
@@ -416,16 +460,40 @@ Tracking:
 [ ] E2E runbook
 [ ] README updates
 
-Testing per milestone
+Testing per milestone (expanded checkpoints)
 M0 — Foundations
-- Unit: http.ts error normalization and JSON parsing (safeJson), API_BASE fallback when env absent. [tests/http.test.ts]
-- Unit: authApi.status/me/logout/refresh call shapes (mock fetch). [tests/auth.test.ts]
-- Unit: auth store checkStatus sets authenticated/user correctly on status and on me() fallback; logout clears state even when logout API fails (error propagates but state cleared). [tests/auth.test.ts]
-- Integration (todo): router guard redirects unauthenticated users to /login; allows access when authenticated (mock store).
-- Component (todo): AppShell handles auth=success param and updates URL without reload, shows user login in dropdown.
+- Unit: http.ts error normalization and JSON parsing (safeJson), API_BASE fallback when env absent. [frontend/tests/http.test.ts]
+- Unit: authApi.status/me/logout/refresh call shapes (mock fetch). [frontend/tests/auth.test.ts]
+- Unit: auth store checkStatus sets authenticated/user correctly on status and on me() fallback; logout clears state even when logout API fails (error propagates but state cleared). [frontend/tests/auth.test.ts]
+- Integration: router guard redirects unauthenticated users to /login; allows access when authenticated (mock store).
+- Component: AppShell handles auth=success param and updates URL without reload; shows user identity in dropdown.
 
 M1 — Repositories
-- Integration: Repositories.vue calls repositoriesApi.list and renders items; shows skeleton while loading; shows error on failure. [implemented in code; test todo]
-- Mutation: AddRepositoryDialog submit triggers repositoriesApi.create and invalidates qk.repositories.list on success; shows toast on error with HttpError payload message. [implemented in code; test todo]
-- Mutation: Delete action triggers repositoriesApi.remove, disables confirm button while pending, invalidates list on success, and shows toast; shows error toast on failure. [implemented in code; test todo]
-- Accessibility (todo): actions menu keyboard navigable and dialog focus trap smoke test.
+- Integration: Repositories.vue calls repositoriesApi.list and renders items; shows skeleton while loading; shows error on failure.
+- Mutation: AddRepositoryDialog submit triggers repositoriesApi.create and invalidates qk.repositories.list on success; shows toast on error with HttpError payload message.
+- Mutation: Delete action triggers repositoriesApi.remove, disables confirm button while pending, invalidates list on success, and shows toast; shows error toast on failure.
+- Accessibility: actions menu keyboard navigable and dialog focus trap smoke test.
+
+M2 — Repository Detail
+- Integration: Renders repository info, PR list, stats, review metrics, analytics trends; shows skeletons and error states.
+- Mutation: Sync now invalidates relevant queries and shows success toast; handles error toast.
+- Optional: Sync history fetch, paging/limit, empty state.
+
+M3 — Analytics Compare
+- Integration: Compare flow returns data for selected repositories; charts render; handles empty selection and errors.
+- Caching: Query keys stable; no duplicate network calls; respects enabled flag.
+
+M4 — Settings + GitHub tools
+- Integration: GitHub test and rate limit values render; errors surfaced.
+- Pagination: Accessible repos paginated; filters preserved on navigation.
+- Action: “Track” mutation adds repo and invalidates repository list; handles duplicates/zod errors.
+
+M5 — UX/Errors/Loading
+- Visual: Skeletons implemented across key data surfaces.
+- Feedback: Toasts for success/errors standardized to normalized backend payload.
+- Stability: Error boundaries prevent crashes and present retry affordances.
+
+M6 — E2E + Docs
+- End-to-end: Full flow validation with backend running; includes auth, CRUD, metrics, sync, analytics, and settings.
+- Documentation: README sections for local setup, env config, and usage validated by running steps.
+- Cross-origin/session: Credentialed requests succeed; cookie SameSite behavior vetted in local config.
