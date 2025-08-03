@@ -3,6 +3,8 @@ import { PullRequestService } from './pull-request.js'
 import { ReviewService } from './review.js'
 import { RepositoryService } from './repository.js'
 import { GitHubService } from './github.js'
+import { UserService } from './user.js'
+import { User } from '../types/auth.js'
 import type { SyncResult } from '@shared/types/index.js'
 
 interface SyncJob {
@@ -18,10 +20,7 @@ interface SyncJob {
 
 export class SyncService {
   private db = DatabaseManager.getInstance().getDatabase()
-  private pullRequestService = new PullRequestService()
-  private reviewService = new ReviewService()
-  private repositoryService = new RepositoryService()
-  private githubService = new GitHubService()
+  private userService = new UserService()
   
   private activeJobs = new Map<string, SyncJob>()
   private rateLimitInfo = {
@@ -185,21 +184,37 @@ export class SyncService {
       job.startedAt = new Date()
       await this.updateJobInDatabase(job)
 
+      // Get the repository to find the owner user
+      const repository = this.db.prepare('SELECT * FROM repositories WHERE id = ?').get(job.repositoryId) as any
+      if (!repository) {
+        throw new Error(`Repository ${job.repositoryId} not found`)
+      }
+
+      // Get the user who owns this repository
+      const user = await this.userService.getUserByLogin(repository.owner)
+      if (!user) {
+        throw new Error(`User ${repository.owner} not found`)
+      }
+
+      // Create user-specific services
+      const pullRequestService = PullRequestService.forUser(user)
+      const reviewService = ReviewService.forUser(user)
+
       // Wait if we're rate limited
       await this.waitForRateLimit()
 
       // Sync pull requests
-      const prResult = await this.pullRequestService.syncPullRequests(job.repositoryId)
+      const prResult = await pullRequestService.syncPullRequests(job.repositoryId)
       
       // Sync reviews for each PR
-      const pullRequests = await this.pullRequestService.getPullRequestsByRepository(job.repositoryId, { limit: 100 })
+      const pullRequests = await pullRequestService.getPullRequestsByRepository(job.repositoryId, { limit: 100 })
       let totalReviewsCreated = 0
       let totalReviewsUpdated = 0
       const reviewErrors: string[] = []
 
       for (const pr of pullRequests) {
         try {
-          const reviewResult = await this.reviewService.syncReviewsForPullRequest(pr.id)
+          const reviewResult = await reviewService.syncReviewsForPullRequest(pr.id)
           totalReviewsCreated += reviewResult.created
           totalReviewsUpdated += reviewResult.updated
           reviewErrors.push(...reviewResult.errors)

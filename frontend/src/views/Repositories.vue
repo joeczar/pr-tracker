@@ -8,6 +8,7 @@ import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
 import RepositoryCard from '@/components/repositories/RepositoryCard.vue'
 import AddRepositoryView from '@/components/repositories/AddRepositoryView.vue'
 import { Skeleton } from '@/components/ui/skeleton'
+import { pullRequestsApi } from '@/lib/api/pullRequests'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -36,10 +37,10 @@ const { toast } = useToast?.() ?? { toast: (args: any) => console.log('[toast]',
 
 const qc = useQueryClient()
 
-// Query: repositories list
+// Query: repositories list with enhanced data
 const { data, isLoading, isError, error } = useQuery({
   queryKey: qk.repositories.list(),
-  queryFn: () => repositoriesApi.list(),
+  queryFn: () => repositoriesApi.listWithDetails(),
   staleTime: 30_000,
   retry: (failureCount, err: any) => {
     // avoid retrying on 401
@@ -73,6 +74,19 @@ const deleteRepo = useMutation({
   onError: (e: any) => {
     const msg = e?.payload?.message || e?.message || 'Failed to delete repository'
     toast?.({ title: 'Delete failed', description: msg })
+  },
+})
+
+const syncRepoMutation = useMutation({
+  mutationFn: (repo: { id: number; owner: string; name: string }) =>
+    pullRequestsApi.syncRepo(repo.id),
+  onSuccess: (_, variables) => {
+    qc.invalidateQueries({ queryKey: qk.repositories.list() })
+    toast?.({ title: `Sync started for ${variables.owner}/${variables.name}` })
+  },
+  onError: (e: any, variables) => {
+    const msg = e?.payload?.message || e?.message || 'Failed to sync repository'
+    toast?.({ title: `Sync failed for ${variables.owner}/${variables.name}`, description: msg })
   },
 })
 
@@ -123,12 +137,12 @@ function openRepo(r: { owner: string; name: string }) {
   }
 }
 
-function syncRepo(_r: { owner?: string; name?: string }) {
-  // Placeholder; will be wired in RepositoryDetail via pullRequestsApi.syncRepo
-  toast?.({
-    title: 'Sync queued',
-    description: _r.owner && _r.name ? `${_r.owner}/${_r.name}` : 'Repository sync requested.',
-  })
+function syncRepo(r: { id?: number; owner: string; name: string }) {
+  if (!r.id) {
+    toast?.({ title: 'Sync failed', description: 'Repository ID not found' })
+    return
+  }
+  syncRepoMutation.mutate({ id: r.id, owner: r.owner, name: r.name })
 }
 
 function requestDeleteRepo(r: Repository) {
@@ -220,20 +234,20 @@ function cancelDeleteRepo() {
                     <DropdownMenuItem @click="openRepo(r)">Open</DropdownMenuItem>
                     <DropdownMenuItem @click="syncRepo(r)">Sync Now</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem class="text-red-600 dark:text-red-400" @click="requestDeleteRepo(r as any)">Delete</DropdownMenuItem>
+                    <DropdownMenuItem class="text-red-600 dark:text-red-400" @click="requestDeleteRepo(r)">Delete</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
               <RepositoryCard
                 :owner="r.owner"
                 :name="r.name"
-                :description="(r as any).description"
-                :stats="(r as any).stats"
-                :recent="(r as any).recent"
+                :description="r.description"
+                :stats="r.stats"
+                :recent="r.recent"
                 :status="'ok'"
                 @view="openRepo(r)"
                 @sync="syncRepo(r)"
-                @remove="requestDeleteRepo(r as any)"
+                @remove="requestDeleteRepo(r)"
               />
             </div>
             <div v-if="filtered.length === 0" class="col-span-full text-sm font-mono text-slate-400">
