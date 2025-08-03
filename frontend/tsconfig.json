@@ -4,7 +4,8 @@
     "env.d.ts",
     "src/**/*",
     "src/**/*.vue",
-    "../shared/**/*"
+    "../shared/**/*",
+    "tests/**/*"
   ],
   "exclude": [
     "src/**/__tests__/*"
@@ -12,6 +13,7 @@
   "compilerOptions": {
     "composite": true,
     "baseUrl": ".",
+    "types": ["vite/client", "vitest/globals"],
     "paths": {
       "@/*": ["./src/*"],
       "@shared/*": ["../shared/*"],

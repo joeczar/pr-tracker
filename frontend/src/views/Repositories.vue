@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, getCurrentInstance } from 'vue'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import TerminalWindow from '@/components/ui/terminal/TerminalWindow.vue'
 import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
 import TerminalHeader from '@/components/ui/terminal/TerminalHeader.vue'
@@ -24,152 +25,100 @@ import DialogDescription from '@/components/ui/dialog/DialogDescription.vue'
 import DialogFooter from '@/components/ui/dialog/DialogFooter.vue'
 import DialogClose from '@/components/ui/dialog/DialogClose.vue'
 import { useToast } from '@/components/ui/toast'
+import { repositoriesApi, type Repository } from '@/lib/api/repositories'
+import { qk } from '@/lib/api/queryKeys'
 
 const search = ref('')
 const showAdd = ref(false)
-const loading = ref(true)
 const showDelete = ref(false)
-const toDelete = ref<{ owner: string; name: string } | null>(null)
+const toDelete = ref<{ id?: number; owner: string; name: string } | null>(null)
 const { toast } = useToast?.() ?? { toast: (args: any) => console.log('[toast]', args) }
 
-// Simulate initial load; replace with real fetch wiring
-setTimeout(() => {
-  loading.value = false
-}, 600)
+const qc = useQueryClient()
 
-// Mock repositories until store wiring
-const repos = ref([
-  {
-    owner: 'joeczar',
-    name: 'frontend',
-    description: 'Frontend Repository',
-    stats: { prs: 23, avgCommentsPerPR: 2.1, changeRequestRate: 16, lastSync: '5m' },
-    status: 'ok',
-    progress: 100,
-    recent: [
-      { id: 156, title: 'feat: add dashboard', state: 'merged' as const, comments: 3, updatedAt: '2h ago' },
-      { id: 155, title: 'fix: auth redirect', state: 'review' as const, comments: 1, updatedAt: '6h ago' }
-    ]
+// Query: repositories list
+const { data, isLoading, isError, error } = useQuery({
+  queryKey: qk.repositories.list(),
+  queryFn: () => repositoriesApi.list(),
+  staleTime: 30_000,
+  retry: (failureCount, err: any) => {
+    // avoid retrying on 401
+    if (err?.status === 401) return false
+    return failureCount < 2
   },
-  {
-    owner: 'joeczar',
-    name: 'backend-api',
-    description: 'Backend API',
-    stats: { prs: 15, avgCommentsPerPR: 3.2, changeRequestRate: 24, lastSync: '12m' },
-    status: 'idle',
-    progress: 0,
-    recent: [
-      { id: 89, title: 'feat: add auth routes', state: 'open' as const, comments: 2, updatedAt: '1d ago' }
-    ]
+})
+
+// Mutations
+const createRepo = useMutation({
+  mutationFn: (input: { owner: string; name: string }) => repositoriesApi.create(input),
+  onSuccess: () => {
+    qc.invalidateQueries({ queryKey: qk.repositories.list() })
+    showAdd.value = false
+    toast?.({ title: 'Repository added' })
   },
-  {
-    owner: 'utils',
-    name: 'library',
-    description: 'Utility Library',
-    stats: { prs: 9, avgCommentsPerPR: 1.4, changeRequestRate: 8, lastSync: '1h' },
-    status: 'syncing',
-    progress: 35,
-    recent: [
-      { id: 23, title: 'feat: add date helpers', state: 'draft' as const, comments: 0, updatedAt: '3d ago' }
-    ]
-  }
-])
+  onError: (e: any) => {
+    const msg = e?.payload?.message || e?.message || 'Failed to add repository'
+    toast?.({ title: 'Add failed', description: msg })
+  },
+})
+
+const deleteRepo = useMutation({
+  mutationFn: (id: number) => repositoriesApi.remove(id),
+  onSuccess: () => {
+    qc.invalidateQueries({ queryKey: qk.repositories.list() })
+    toast?.({ title: 'Repository deleted' })
+    toDelete.value = null
+    showDelete.value = false
+  },
+  onError: (e: any) => {
+    const msg = e?.payload?.message || e?.message || 'Failed to delete repository'
+    toast?.({ title: 'Delete failed', description: msg })
+  },
+})
+
+const repos = computed<Repository[]>(() => data?.value ?? [])
 
 const filtered = computed(() => {
+  const list = repos.value
   const q = search.value.trim().toLowerCase()
-  if (!q) return repos.value
-  return repos.value.filter(r =>
-    `${r.owner}/${r.name}`.toLowerCase().includes(q) ||
-    (r.description?.toLowerCase().includes(q))
+  if (!q) return list
+  return list.filter(r =>
+    `${r.owner}/${r.name}`.toLowerCase().includes(q)
   )
 })
 
 function handleAddSubmit(payload: { owner: string; name: string; url?: string }) {
-  // optimistic add with placeholder stats
-  const id = `${payload.owner}/${payload.name}`
-  const exists = repos.value.some(r => `${r.owner}/${r.name}`.toLowerCase() === id.toLowerCase())
-  if (exists) {
-    toast?.({
-      title: 'Add failed',
-      description: `Repository ${id} already exists.`,
-    })
-    return
-  }
-
-  repos.value.unshift({
-    owner: payload.owner,
-    name: payload.name,
-    description: 'Newly added repository',
-    stats: { prs: 0, avgCommentsPerPR: 0, changeRequestRate: 0, lastSync: '—' },
-    status: 'idle',
-    progress: 0,
-    recent: []
-  })
-  showAdd.value = false
-
-  toast?.({
-    title: 'Repository added',
-    description: id
-  })
+  createRepo.mutate({ owner: payload.owner, name: payload.name })
 }
 
 function openRepo(r: { owner: string; name: string }) {
   const inst = getCurrentInstance()
   const router = inst?.proxy?.$router as any | undefined
   if (router) {
+    // Note: backend repository detail route expects numeric id; here we navigate by owner/name string as placeholder
     router.push({ name: 'repository-detail', params: { id: `${r.owner}/${r.name}` } })
   }
 }
 
-function syncRepo(r: { status: string; owner?: string; name?: string; progress?: number }) {
-  r.status = 'syncing'
-  r.progress = 0
+function syncRepo(_r: { owner?: string; name?: string }) {
+  // Placeholder; will be wired in RepositoryDetail via pullRequestsApi.syncRepo
   toast?.({
-    title: 'Sync started',
-    description: r.owner && r.name ? `${r.owner}/${r.name} is syncing…` : 'Repository sync started.',
+    title: 'Sync queued',
+    description: _r.owner && _r.name ? `${_r.owner}/${_r.name}` : 'Repository sync requested.',
   })
-  // Simulated progress; replace with real service events
-  const step = () => {
-    if (r.status !== 'syncing') return
-    r.progress = Math.min(100, (r.progress ?? 0) + Math.floor(Math.random() * 20) + 10)
-    if ((r.progress ?? 0) >= 100) {
-      r.status = 'ok'
-      toast?.({
-        title: 'Sync completed',
-        description: r.owner && r.name ? `${r.owner}/${r.name} is up to date.` : 'Repository sync completed.',
-      })
-      return
-    }
-    setTimeout(step, 500 + Math.random() * 700)
-  }
-  setTimeout(step, 500)
 }
 
-function requestDeleteRepo(r: { owner: string; name: string }) {
-  toDelete.value = { owner: r.owner, name: r.name }
+function requestDeleteRepo(r: Repository) {
+  toDelete.value = { id: r.id, owner: r.owner, name: r.name }
   showDelete.value = true
 }
 
 function confirmDeleteRepo() {
-  if (!toDelete.value) return
-  const id = `${toDelete.value.owner}/${toDelete.value.name}`
-  repos.value = repos.value.filter(x => `${x.owner}/${x.name}` !== id)
-  // Some toast implementations use variant enums; fall back to styling via title/description only.
-  toast?.({
-    title: 'Repository deleted',
-    description: id
-  })
-  toDelete.value = null
-  showDelete.value = false
+  if (!toDelete.value?.id) return
+  deleteRepo.mutate(toDelete.value.id)
 }
 
 function cancelDeleteRepo() {
-  if (toDelete.value) {
-    toast?.({
-      title: 'Deletion canceled',
-      description: `${toDelete.value.owner}/${toDelete.value.name}`
-    })
-  }
   toDelete.value = null
   showDelete.value = false
 }
@@ -207,7 +156,7 @@ function cancelDeleteRepo() {
         </header>
         <!-- Repo cards grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          <template v-if="loading">
+          <template v-if="isLoading">
             <div v-for="i in 6" :key="i" class="space-y-3">
               <Skeleton class="h-40 w-full" />
               <div class="flex items-center gap-2">
@@ -218,7 +167,10 @@ function cancelDeleteRepo() {
             </div>
           </template>
           <template v-else>
-            <div v-for="r in filtered" :key="`${r.owner}/${r.name}`" class="relative group">
+            <div v-if="isError" class="col-span-full text-sm font-mono text-red-600">
+              Failed to load repositories: {{ (error as any)?.message || 'Unknown error' }}
+            </div>
+            <div v-for="r in filtered" :key="r.id ?? `${r.owner}/${r.name}`" class="relative group">
               <!-- Actions dropdown -->
               <div class="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity">
                 <DropdownMenu>
@@ -234,20 +186,20 @@ function cancelDeleteRepo() {
                     <DropdownMenuItem @click="openRepo(r)">Open</DropdownMenuItem>
                     <DropdownMenuItem @click="syncRepo(r)">Sync Now</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem class="text-red-600 dark:text-red-400" @click="requestDeleteRepo(r)">Delete</DropdownMenuItem>
+                    <DropdownMenuItem class="text-red-600 dark:text-red-400" @click="requestDeleteRepo(r as any)">Delete</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
               <RepositoryCard
                 :owner="r.owner"
                 :name="r.name"
-                :description="r.description"
-                :stats="r.stats"
-                :recent="r.recent"
-                :status="r.status as any"
+                :description="(r as any).description"
+                :stats="(r as any).stats"
+                :recent="(r as any).recent"
+                :status="'ok'"
                 @view="openRepo(r)"
                 @sync="syncRepo(r)"
-                @remove="requestDeleteRepo(r)"
+                @remove="requestDeleteRepo(r as any)"
               />
             </div>
             <div v-if="filtered.length === 0" class="col-span-full text-sm font-mono text-slate-400">
@@ -258,7 +210,7 @@ function cancelDeleteRepo() {
       </div>
     </TerminalWindow>
 
-    <AddRepositoryDialog v-model="showAdd" @submit="handleAddSubmit" />
+    <AddRepositoryDialog v-model="showAdd" @submit="handleAddSubmit" :loading="createRepo.isPending" />
 
     <!-- Delete confirmation dialog -->
     <Dialog :open="showDelete" @update:open="val => showDelete = val">
@@ -276,8 +228,14 @@ function cancelDeleteRepo() {
             <TerminalButton variant="ghost" @click="cancelDeleteRepo">Cancel</TerminalButton>
           </DialogClose>
           <!-- Use a supported variant and add destructive styling via classes -->
-          <TerminalButton variant="primary" class="bg-red-600 hover:bg-red-700 text-white" @click="confirmDeleteRepo">
-            Delete
+          <TerminalButton
+            :disabled="deleteRepo.isPending.value"
+            variant="primary"
+            class="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+            @click="confirmDeleteRepo"
+          >
+            <span v-if="deleteRepo.isPending">Deleting…</span>
+            <span v-else>Delete</span>
           </TerminalButton>
         </DialogFooter>
       </DialogContent>

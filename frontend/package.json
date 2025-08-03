@@ -57,6 +57,7 @@
     "class-variance-authority": "^0.7.1",
     "eslint": "^8.57.1",
     "eslint-plugin-vue": "^9.33.0",
+    "jsdom": "^26.1.0",
     "postcss": "^8.4.0",
     "shadcn-vue": "^2.2.0",
     "tailwind-merge": "^3.3.1",

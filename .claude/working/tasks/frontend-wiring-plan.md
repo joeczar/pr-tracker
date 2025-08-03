@@ -191,29 +191,29 @@ Mappings
 - GitHub test and rate limit
 
 Implementation checklist
-[ ] 0. Create API base and modules
-    [ ] src/lib/api/http.ts with fetchJson and error normalization
-    [ ] src/lib/api/auth.ts
-    [ ] src/lib/api/repositories.ts
-    [ ] src/lib/api/pullRequests.ts
-    [ ] src/lib/api/reviews.ts
-    [ ] src/lib/api/analytics.ts
-    [ ] src/lib/api/github.ts
-    [ ] src/lib/api/sync.ts
-    [ ] frontend/.env.example add VITE_API_URL
+[x] 0. Create API base and modules
+    [x] src/lib/api/http.ts with fetchJson and error normalization
+    [x] src/lib/api/auth.ts
+    [x] src/lib/api/repositories.ts
+    [x] src/lib/api/pullRequests.ts
+    [x] src/lib/api/reviews.ts
+    [x] src/lib/api/analytics.ts
+    [x] src/lib/api/github.ts
+    [x] src/lib/api/sync.ts
+    [x] frontend/.env.example add VITE_API_URL
 [ ] 1. Auth wiring
-    [ ] Create auth store/composable (src/stores/auth.ts or src/composables/useAuth.ts)
-    [ ] In App.vue or AppShell.vue, check /auth/status on mount and populate store
+    [x] Create auth store/composable (src/stores/auth.ts or src/composables/useAuth.ts)
+    [x] In App.vue or AppShell.vue, check /auth/status on mount and populate store
     [ ] Implement Login.vue button -> /auth/github/login?redirect=currentPath
-    [ ] Handle auth=success query on return and re-check status
-    [ ] Implement logout action calling POST /auth/logout
-    [ ] Route guards for protected routes (router.beforeEach)
+    [x] Handle auth=success query on return and re-check status
+    [x] Implement logout action calling POST /auth/logout
+    [x] Route guards for protected routes (router.beforeEach)
     [ ] Auth error page for /auth/error
 [ ] 2. Repositories page
-    [ ] Wire GET /api/repositories to list
-    [ ] Wire AddRepositoryDialog.vue to POST /api/repositories
-    [ ] Wire delete on RepositoryCard.vue to DELETE /api/repositories/:id
-    [ ] Toasts and error handling
+    [x] Wire GET /api/repositories to list
+    [x] Wire AddRepositoryDialog.vue to POST /api/repositories
+    [x] Wire delete on RepositoryCard.vue to DELETE /api/repositories/:id
+    [x] Toasts and error handling
 [ ] 3. Repository detail
     [ ] Load repository info GET /api/repositories/:id
     [ ] Load PR list GET /api/pull-requests/repository/:id
@@ -283,6 +283,10 @@ Notes/assumptions
 
 Changelog
 - 2025-08-03: Initial backend review and frontend wiring plan created.
+- 2025-08-03: Adopted @tanstack/vue-query, added query keys, configured provider, and created http/auth API modules.
+- 2025-08-03: Implemented domain API clients (repositories, pullRequests, reviews, analytics, github, sync) and added frontend/.env.example with VITE_API_URL.
+- 2025-08-03: Added Pinia auth store (src/stores/auth.ts), wired global router guard, integrated auth bootstrap and logout in AppShell.vue, and handled auth=success URL parameter.
+- 2025-08-03: Wired Repositories.vue with Vue Query (list, add, delete) including toasts and loading/error states. Added Vitest config, TS config for tests, and implemented tests for http.ts and auth flows; CI green locally.
 
 Milestones, owners, and timeline
 Note: Owners are placeholders; adjust as needed.
@@ -306,14 +310,14 @@ Exit criteria:
 - Hitting protected routes without session redirects to /login
 - Server-state queries in Repositories.vue are powered by Vue Query with cache and proper loading/error states
 Tracking:
-[ ] http.ts done
-[ ] domain clients done
-[ ] env example updated
-[ ] auth store done
-[ ] guards wired
-[ ] Vue Query installed and provider set up
-[ ] queryKeys.ts scaffolded
-[ ] Repositories.vue migrated to useQuery/useMutation
+[x] http.ts done
+[x] domain clients done
+[x] env example updated
+[x] auth store done
+[x] guards wired
+[x] Vue Query installed and provider set up
+[x] queryKeys.ts scaffolded
+[x] Repositories.vue migrated to useQuery/useMutation
 
 Milestone M1 — Repositories CRUD wiring (Vue Query) — 1 day — Owner: FE-2
 Scope:
@@ -327,10 +331,10 @@ Exit criteria:
 - Add repository shows in list; delete removes it; errors visible to user
 - Network calls are deduped/cached and refresh correctly
 Tracking:
-[ ] list (useQuery)
-[ ] add (useMutation + invalidate)
-[ ] delete (useMutation + invalidate)
-[ ] toasts/errors
+[x] list (useQuery)
+[x] add (useMutation + invalidate)
+[x] delete (useMutation + invalidate)
+[x] toasts/errors
 
 Milestone M2 — Repository Detail + PR/Review/Analytics (Vue Query) — 2-3 days — Owner: FE-1
 Scope:
@@ -411,3 +415,17 @@ Exit criteria:
 Tracking:
 [ ] E2E runbook
 [ ] README updates
+
+Testing per milestone
+M0 — Foundations
+- Unit: http.ts error normalization and JSON parsing (safeJson), API_BASE fallback when env absent. [tests/http.test.ts]
+- Unit: authApi.status/me/logout/refresh call shapes (mock fetch). [tests/auth.test.ts]
+- Unit: auth store checkStatus sets authenticated/user correctly on status and on me() fallback; logout clears state even when logout API fails (error propagates but state cleared). [tests/auth.test.ts]
+- Integration (todo): router guard redirects unauthenticated users to /login; allows access when authenticated (mock store).
+- Component (todo): AppShell handles auth=success param and updates URL without reload, shows user login in dropdown.
+
+M1 — Repositories
+- Integration: Repositories.vue calls repositoriesApi.list and renders items; shows skeleton while loading; shows error on failure. [implemented in code; test todo]
+- Mutation: AddRepositoryDialog submit triggers repositoriesApi.create and invalidates qk.repositories.list on success; shows toast on error with HttpError payload message. [implemented in code; test todo]
+- Mutation: Delete action triggers repositoriesApi.remove, disables confirm button while pending, invalidates list on success, and shows toast; shows error toast on failure. [implemented in code; test todo]
+- Accessibility (todo): actions menu keyboard navigable and dialog focus trap smoke test.

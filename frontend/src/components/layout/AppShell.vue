@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref } from 'vue'
-import { RouterLink, RouterView } from 'vue-router'
+import { useRouter, RouterLink, RouterView } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -11,8 +11,12 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
 import CommandPalette from '@/components/ui/command/CommandPalette.vue'
+import { useAuthStore } from '@/stores/auth'
+import { authApi } from '@/lib/api/auth'
 
 const showCommandPalette = ref(false)
+const auth = useAuthStore()
+const router = useRouter()
 
 // Sidebar state for mobile
 const sidebarOpen = ref(false)
@@ -35,8 +39,19 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('keydown', handleGlobalKeydown)
+  // On shell mount, ensure we checked auth at least once
+  if (!auth.checked && !auth.loading) {
+    await auth.checkStatus()
+  }
+  // Handle auth=success query by re-checking status, then clean URL
+  const url = new URL(window.location.href)
+  if (url.searchParams.get('auth') === 'success') {
+    await auth.checkStatus()
+    url.searchParams.delete('auth')
+    window.history.replaceState({}, '', url.pathname + url.search)
+  }
 })
 
 onBeforeUnmount(() => {
@@ -95,19 +110,42 @@ onBeforeUnmount(() => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent class="w-40" align="end">
-              <DropdownMenuLabel class="text-xs">Signed in as user</DropdownMenuLabel>
+              <DropdownMenuLabel class="text-xs">
+                <span v-if="auth.user">Signed in as {{ auth.user.login }}</span>
+                <span v-else>Not signed in</span>
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem as-child>
                 <RouterLink to="/settings">Settings</RouterLink>
               </DropdownMenuItem>
               <DropdownMenuItem @click="$router.push('/')">Dashboard</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem class="text-red-600 dark:text-red-400">Logout</DropdownMenuItem>
+              <DropdownMenuItem
+                class="text-red-600 dark:text-red-400"
+                @click="async () => { await auth.logout(); router.push('/login') }"
+              >
+                Logout
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <!-- Fallback login link (if not authenticated) -->
-          <RouterLink to="/login" class="text-sm hover:underline underline-offset-4 md:hidden">Login</RouterLink>
+          <!-- Auth-aware action -->
+          <RouterLink
+            v-if="!auth.authenticated"
+            to="/login"
+            class="text-sm hover:underline underline-offset-4 md:hidden"
+          >
+            Login
+          </RouterLink>
+          <Button
+            v-else
+            variant="outline"
+            size="sm"
+            class="hidden md:inline-flex"
+            @click="async () => { await auth.logout(); router.push('/login') }"
+          >
+            Logout
+          </Button>
         </div>
       </div>
     </header>
