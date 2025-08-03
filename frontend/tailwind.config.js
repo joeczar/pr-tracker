@@ -1,1 +1,8 @@
-/* Tailwind baseline config (clean) */\n/** @type {import('tailwindcss').Config} */\nmodule.exports = {\n  content: [\n    './index.html',\n    './src/**/*.{vue,js,ts,jsx,tsx}',\n  ],\n  theme: { extend: {} },\n  plugins: [],\n}
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html", "./src/**/*.{vue,js,ts,jsx,tsx}"],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
