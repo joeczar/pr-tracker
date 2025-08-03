@@ -1,4 +1,7 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import TerminalWindow from '@/components/ui/terminal/TerminalWindow.vue'
+import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
+</script>
 
 <template>
   <section aria-labelledby="dashboard-title" class="space-y-6">
@@ -16,17 +19,25 @@
     </div>
 
     <!-- Trends -->
-    <section aria-label="Trends" class="rounded border border-slate-200 dark:border-slate-800 p-4">
-      <div class="h-56 rounded border border-dashed border-slate-300 dark:border-slate-700"></div>
-    </section>
+    <TerminalWindow>
+      <template #title>
+        <TerminalTitle command="trends" />
+      </template>
+      <div class="scanlines">
+        <div class="h-56 rounded border border-dashed border-slate-300 dark:border-slate-700"></div>
+      </div>
+    </TerminalWindow>
 
     <!-- Recent Activity -->
-    <section aria-label="Recent activity" class="rounded border border-slate-200 dark:border-slate-800 p-4">
+    <TerminalWindow>
+      <template #title>
+        <TerminalTitle command="recent-activity" />
+      </template>
       <div class="space-y-3">
         <div class="h-12 rounded border border-dashed border-slate-300 dark:border-slate-700"></div>
         <div class="h-12 rounded border border-dashed border-slate-300 dark:border-slate-700"></div>
         <div class="h-12 rounded border border-dashed border-slate-300 dark:border-slate-700"></div>
       </div>
-    </section>
+    </TerminalWindow>
   </section>
 </template>

@@ -11,24 +11,48 @@ Key outcomes:
 ## 0) Current Frontend Snapshot (from repo)
 
 - Vue 3 + Vite + Tailwind + Pinia structure present.
-- Existing views: Dashboard.vue, Repositories.vue, RepositoryDetail.vue.
-- UI terminal bits exist: components/ui/terminal/{CommandPalette.vue, TerminalIcon.vue}.
-- AppShell.vue wrapper and router already configured.
+- App-level shell implemented: components/layout/AppShell.vue with sticky top nav, mobile sidebar toggle, md+ fixed sidebar, skip-to-content link, aria landmarks.
+- Routing configured in frontend/src/router/index.ts for:
+  - / (Dashboard), /repositories, /repositories/:id, /analytics, /settings, /login
+- Skeleton views implemented (placeholders, Tailwind primitives, aria structure):
+  - Dashboard.vue, Repositories.vue, RepositoryDetail.vue, Analytics.vue, Settings.vue, Login.vue
+- App.vue wraps all routes with AppShell.
 
-This plan respects existing files and extends them with focused, concrete additions.
+This plan now shifts from “scaffold” to “enhance and theme,” leveraging the confirmed layout skeleton.
 
 ## 1) Architecture & Component Map
 
-High-level structure:
+High-level structure (implemented):
 ```
 App.vue
 └─ components/layout/AppShell.vue
-   ├─ GlobalNav (terminal chrome)
-   ├─ CommandPalette (Ctrl/Cmd+K)
-   └─ RouterView
+   ├─ TopNav (primary navigation)
+   ├─ Sidebar (collapsible on mobile, fixed on md+)
+   └─ RouterView (page content)
       ├─ views/Dashboard.vue
       ├─ views/Repositories.vue
-      └─ views/RepositoryDetail.vue
+      ├─ views/RepositoryDetail.vue
+      ├─ views/Analytics.vue
+      ├─ views/Settings.vue
+      └─ views/Login.vue
+```
+
+Next components to introduce (theme + UX):
+```
+components/ui/terminal/
+- TerminalWindow.vue        # window chrome with dots + title slot
+- TerminalHeader.vue        # header bar with controls/title
+- TerminalCard.vue          # terminal-styled cards
+- TerminalButton.vue        # terminal-styled buttons
+
+components/analytics/
+- TrendChart.vue            # vue-chartjs wrapper + theme
+- MetricTile.vue            # metric with trend indicator
+- ProgressRadial.vue        # goals progress
+
+components/accessibility/
+- SkipToContent.vue         # already satisfied via AppShell inline link (optional componentization)
+- LiveRegion.vue            # aria-live assertive region for async updates
 ```
 
 New/updated components (paths reflect current repo layout):
@@ -168,35 +192,43 @@ RepositoryDetail.vue:
 
 ## 6) Implementation Steps (Sprint-ready)
 
-Phase 1: Foundation (days 1-3)
+Phase 0 (done): Layout skeleton and routes
+- AppShell with top nav, sidebar, main, footer
+- Routes and all views’ minimal skeletons
+- Verified via Playwright MCP across core routes
+
+Phase 1: Theme foundation (days 1-2)
 1. Tailwind token extensions (colors, fonts, animations)
-2. Base terminal components:
-   - TerminalWindow.vue, TerminalHeader.vue, TerminalCard.vue, TerminalButton.vue
-3. Accessibility scaffolding:
-   - SkipToContent.vue
-   - LiveRegion.vue
-   - Focus styles and :focus-visible utilities
-4. Command Palette baseline:
-   - Ctrl/Cmd+K to open, list primary commands, use fuse.js
+2. Global styles in src/style.css:
+   - import 'terminal.css'
+   - .scanlines, .cyber-glow, .kbd, focus-visible outline
+3. prefers-reduced-motion support in global CSS and transitions
 
-Phase 2: Analytics & Dashboard (days 4-7)
-1. TrendChart.vue with global chart theme registration
+Phase 2: Terminal components (days 3-4)
+1. TerminalWindow.vue, TerminalHeader.vue, TerminalCard.vue, TerminalButton.vue
+2. Integrate TerminalWindow into each view to frame sections (e.g., wrap Trends, PR lists)
+
+Phase 3: Analytics visuals (days 5-7)
+1. TrendChart.vue with Chart.js global theme registration
 2. MetricTile.vue, ProgressRadial.vue
-3. Dashboard.vue composition:
-   - ASCII header, quick metrics, trends, progress, recent activity
-4. SR-friendly data tables toggles on charts
+3. Dashboard composition:
+   - Swap placeholders for MetricTiles + TrendChart + ProgressRadial
+   - Add “View Data Table” toggle for SRs
 
-Phase 3: Repositories & Detail (days 8-12)
-1. RepositoryCard.vue + grid layout
-2. AddRepositoryDialog.vue (focus trap, validation)
-3. RepositoryDetail.vue:
-   - Overview + trend windows + PR list with filters
+Phase 4: Repo pages polish (days 8-10)
+1. Repositories.vue:
+   - RepositoryCard.vue (skeleton → component)
+   - AddRepositoryDialog.vue (skeleton with focus trap)
+2. RepositoryDetail.vue:
+   - Overview tiles → MetricTiles
+   - Trends → TrendChart
+   - PR list skeleton → table/list shell with filters wired
 
-Phase 4: Polish, Performance, A11y (days 13-15)
-1. prefers-reduced-motion adjustments
+Phase 5: A11y + performance (days 11-12)
+1. LiveRegion.vue and async status announcements
 2. Axe automated checks + manual keyboard/reader passes
-3. Lighthouse perf: bundle/code-split route-based, lazy charts
-4. Microinteractions: button hover/click glow, success toasts via LiveRegion
+3. Route-based code splitting and lazy chart imports
+4. Small microinteractions (hover/click with reduced-motion awareness)
 
 Exit criteria:
 - Keyboard-only usable end-to-end
@@ -205,6 +237,10 @@ Exit criteria:
 - Repos CRUD and PR lists functional with filters
 
 ## 7) Dependencies and Config
+
+Status:
+- Layout and views require no new deps (done).
+- Next steps will require:
 
 Add (frontend/package.json):
 - dependencies: terminal.css, figlet, fuse.js, vue-chartjs, chart.js
@@ -218,10 +254,11 @@ Global styles (frontend/src/style.css):
 - import 'terminal.css'
 - define .scanlines, .cyber-glow, .kbd utilities
 - focus-visible styles with strong outline
+- root CSS variables for cyber colors to ensure contrast
 
 Chart init (frontend/src/main.ts or a plugin):
 - register Chart.js defaults matching cyber theme
-- export a helper to apply reduced motion
+- reduced motion: disable animations if prefers-reduced-motion
 
 ## 8) State & Services
 
@@ -290,12 +327,18 @@ Modify:
 
 ## 12) Demo Scenarios (for boss)
 
+Validated with Playwright MCP (layout level):
+- Route smoke: /, /repositories, /repositories/:id, /analytics, /settings, /login
+- Landmark/heading presence and nav links detected
+- Sidebar toggle on mobile (manual check), fixed on md+ via CSS
+
+Upcoming feature demos:
 - Scenario 1: “Comment volume trending down”
   - Dashboard shows -12% comments vs prior 30d, celebratory glow on ProgressRadial
 - Scenario 2: “Change-request rate spikes”
-  - Trend tab highlights spike; tooltip text explains dates; actionable tip displayed
+  - Trend tab highlights spike; tooltip explains dates; actionable tip displayed
 - Scenario 3: “Repository sync success”
-  - LiveRegion announces “Sync complete”; RepositoryCard updates Last Sync in real-time
+  - LiveRegion announces “Sync complete”; RepositoryCard “Last Sync” updates in real-time
 
 This blueprint is ready to implement directly in the existing codebase with minimal friction while delivering the requested sleek, modern, cyberpunk aesthetic and ADHD-friendly UX without compromising accessibility.
 

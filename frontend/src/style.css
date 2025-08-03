@@ -1,3 +1,57 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Import terminal.css base */
+@import 'terminal.css';
+
+/* Terminal utilities */
+.scanlines { position: relative; }
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.03),
+    rgba(255,255,255,0.03) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+  pointer-events: none;
+}
+
+.cyber-glow {
+  text-shadow:
+    0 0 2px currentColor,
+    0 0 4px currentColor,
+    0 0 6px currentColor;
+}
+
+/* Accessible keyboard key style */
+.kbd {
+  @apply inline-flex items-center justify-center rounded border px-1.5 py-0.5 text-xs font-mono;
+  border-color: theme('colors.cyber-border');
+  background: theme('colors.cyber-surface');
+  color: theme('colors.cyber-muted');
+}
+
+/* Root CSS variables for theme tokens (for non-TW contexts) */
+:root {
+  --cyber-primary: #00ff9f;
+  --cyber-secondary: #0abdc6;
+  --cyber-accent: #ea00d9;
+  --cyber-bg: #0a0f1f;
+  --cyber-surface: #0b1228;
+  --cyber-border: #10223f;
+  --cyber-muted: #9ae8d6;
+}
+
+/* Strong focus styles */
+*,:focus-visible { outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--cyber-accent); }
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
