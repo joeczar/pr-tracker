@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import Card from '@/components/ui/card/Card.vue'
+import CardContent from '@/components/ui/card/CardContent.vue'
+import Badge from '@/components/ui/badge/Badge.vue'
 
 type Trend = 'up' | 'down' | 'flat'
 
@@ -23,10 +26,10 @@ const trendIcon = computed(() => {
   return '■'
 })
 
-const trendColor = computed(() => {
-  if (props.trend === 'up') return 'text-[var(--cyber-primary,#00ff9f)]'
-  if (props.trend === 'down') return 'text-[var(--cyber-accent,#ea00d9)]'
-  return 'text-[var(--cyber-muted,#9ae8d6)]'
+const trendVariant = computed(() => {
+  if (props.trend === 'up') return 'default'
+  if (props.trend === 'down') return 'destructive'
+  return 'secondary'
 })
 
 const deltaText = computed(() => {
@@ -44,36 +47,31 @@ const ariaLabel = computed(() => {
 </script>
 
 <template>
-  <div
-    class="rounded-lg p-4"
-    :class="[
-      'border',
-      'bg-white text-slate-900 border-slate-200',
-      'dark:bg-[var(--cyber-surface,#0b1228)] dark:text-[var(--cyber-text,#d2fff1)] dark:border-[var(--cyber-border,#10223f)]'
-    ]"
-    role="group"
-    :aria-label="ariaLabel"
-  >
-    <div class="flex items-start justify-between gap-3">
-      <div class="space-y-1">
-        <p class="text-xs font-terminal text-slate-500 dark:text-[var(--cyber-muted,#9ae8d6)]">
-          {{ label }}
-        </p>
-        <p class="text-2xl font-mono text-slate-900 dark:text-[var(--cyber-text,#d2fff1)] tracking-tight">
-          {{ value }}
-        </p>
-      </div>
-      <div class="text-right">
-        <div class="flex items-center gap-1 text-sm font-mono">
-          <span :class="trendColor" aria-hidden="true">{{ trendIcon }}</span>
-          <span :class="trendColor">{{ deltaText }}</span>
+  <Card role="group" :aria-label="ariaLabel">
+    <CardContent class="p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div class="space-y-1">
+          <p class="text-xs font-terminal text-slate-500 dark:text-[var(--cyber-muted,#9ae8d6)]">
+            {{ label }}
+          </p>
+          <p class="text-2xl font-mono text-slate-900 dark:text-[var(--cyber-text,#d2fff1)] tracking-tight">
+            {{ value }}
+          </p>
         </div>
-        <p v-if="helpText" class="mt-1 text-[10px] text-slate-500 dark:text-[var(--cyber-muted,#9ae8d6)]">
-          {{ helpText }}
-        </p>
+        <div class="text-right">
+          <div class="flex items-center gap-2 text-sm font-mono">
+            <Badge :variant="trendVariant">
+              <span aria-hidden="true">{{ trendIcon }}</span>
+              <span class="ml-1">{{ deltaText }}</span>
+            </Badge>
+          </div>
+          <p v-if="helpText" class="mt-1 text-[10px] text-slate-500 dark:text-[var(--cyber-muted,#9ae8d6)]">
+            {{ helpText }}
+          </p>
+        </div>
       </div>
-    </div>
-  </div>
+    </CardContent>
+  </Card>
 </template>
 
 <style scoped>

@@ -233,15 +233,25 @@ Phase 3: Analytics visuals (days 5-7)
    - Add “View Data Table” toggle for SRs
 
 STATUS:
-- In progress.
+- Completed (UI wiring with mock data).
 - Implemented:
   - TrendChart.vue present and verified: lazy-loads chart.js + vue-chartjs, applies cyber theme defaults, supports reduced motion, and includes an accessible “View Data Table” fallback.
   - MetricTile.vue CREATED at frontend/src/components/analytics/MetricTile.vue (metric display with trend arrow, delta, and aria labeling).
   - ProgressRadial.vue CREATED at frontend/src/components/analytics/ProgressRadial.vue (SVG radial progress with reduced-motion handling and cyber styling).
-- Next:
-  - Install vue-chartjs and chart.js to render charts (component already lazy-loads them).
-  - Wire MetricTile + TrendChart + ProgressRadial into Dashboard.vue sections (Quick Metrics, Trend tabs, Goals).
-  - Provide mock data in Dashboard.vue until stores/analytics endpoints are connected.
+  - Dashboard.vue UPDATED to compose:
+    - Quick Metrics row using MetricTile (4 tiles: Total comments, Avg comments/PR, Change-request rate, Active repos)
+    - Trend window with TerminalWindow + TerminalHeader tabs (Comments, Change Req, Avg/PR) powered by TrendChart, with aria summary slot and reduced-motion handling
+    - Goals window using ProgressRadial (Smaller PRs, Faster Reviews)
+    - Recent Activity terminal window scaffold with refresh action
+  - Mock data provided in Dashboard.vue to visualize until stores are wired.
+- Notes:
+  - Dependencies already present in frontend/package.json: "chart.js" and "vue-chartjs".
+  - Reduced-motion respected via media query and prop plumbing.
+  - Controls have aria-labels and accessible summaries for charts.
+
+Next:
+  - Wire Pinia stores for analytics and metrics when backend endpoints are ready (Phase 8 alignment).
+  - Replace mock data in Dashboard.vue with store-driven data.
 
 Phase 4: Repo pages polish (days 8-10)
 1. Repositories.vue:
@@ -297,7 +307,7 @@ Add (frontend/package.json):
 PROGRESS (installed):
 - terminal.css, figlet, fuse.js, focus-trap-vue installed
 - @types/figlet installed as devDependency
-- vue-chartjs and chart.js pending (to be installed at Phase 3)
+- vue-chartjs and chart.js INSTALLED (confirmed in package.json)
 
 Tailwind (frontend/tailwind.config.js):
 - extend theme with “cyber-*” tokens and font-terminal
@@ -385,6 +395,11 @@ Validated with Playwright MCP (layout level):
 - Route smoke: /, /repositories, /repositories/:id, /analytics, /settings, /login
 - Landmark/heading presence and nav links detected
 - Sidebar toggle on mobile (manual check), fixed on md+ via CSS
+
+Newly validated (Phase 3 UI wiring):
+- Dashboard renders MetricTiles, TrendChart with tabs, and ProgressRadial with mock data.
+- TrendChart exposes "View Data Table" fallback and aria summary content.
+- Prefers-reduced-motion disables chart animations and softens effects.
 
 Upcoming feature demos:
 - Scenario 1: “Comment volume trending down”
