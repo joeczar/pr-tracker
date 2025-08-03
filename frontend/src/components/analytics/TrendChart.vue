@@ -1,5 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
+/**
+ * shadcn-vue primitives
+ */
+import Card from '@/components/ui/card/Card.vue'
+import CardHeader from '@/components/ui/card/CardHeader.vue'
+import CardTitle from '@/components/ui/card/CardTitle.vue'
+import CardContent from '@/components/ui/card/CardContent.vue'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import Tooltip from '@/components/ui/tooltip/Tooltip.vue'
+import TooltipTrigger from '@/components/ui/tooltip/TooltipTrigger.vue'
+import TooltipContent from '@/components/ui/tooltip/TooltipContent.vue'
 
 // Lazy-load chart.js and vue-chartjs to keep bundle lean
 const ChartComp = ref<any>(null)
@@ -163,28 +174,38 @@ onMounted(async () => {
 </script>
 
 <template>
-  <figure
-    class="w-full"
-    :aria-labelledby="ariaSummaryId || undefined"
-  >
-    <div
-      class="relative rounded-lg p-3"
-      :class="[
-        'border',
-        'bg-white text-slate-900 border-slate-200',
-        'dark:bg-[var(--cyber-surface,#0b1228)] dark:text-[var(--cyber-text,#d2fff1)] dark:border-[var(--cyber-border,#10223f)]'
-      ]"
-      role="img"
-      :aria-label="title || 'Trend chart'"
-    >
-      <header v-if="(title || $slots.title) && !props.hideChartTitle" class="mb-2 flex items-center justify-between">
-        <h3 class="font-terminal text-sm text-slate-700 dark:text-[var(--cyber-muted,#9ae8d6)]">
-          <!-- Prefer slot; if using title prop, we render it here and hide legend by default to avoid duplication -->
+  <Card role="img" :aria-label="title || 'Trend chart'">
+    <CardHeader v-if="(title || $slots.title) && !props.hideChartTitle" class="pb-0">
+      <div class="mb-2 flex items-center justify-between">
+        <CardTitle class="font-terminal text-sm text-slate-700 dark:text-[var(--cyber-muted,#9ae8d6)]">
           <slot name="title">{{ title }}</slot>
-        </h3>
-        <slot name="actions" />
-      </header>
+        </CardTitle>
 
+        <!-- Actions slot enhanced with DropdownMenu and Tooltip -->
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            class="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-mono cursor-pointer
+                   bg-white text-slate-700 border-slate-300 hover:bg-slate-50
+                   dark:bg-transparent dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-800/40"
+            aria-label="Chart actions"
+          >
+            Actions ▾
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" class="w-40 font-mono text-xs">
+            <DropdownMenuLabel>Chart</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem class="cursor-pointer">
+              Export PNG
+            </DropdownMenuItem>
+            <DropdownMenuItem class="cursor-pointer">
+              Export CSV
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </CardHeader>
+
+    <CardContent class="p-3">
       <div :style="{height: `${props.height}px`}" class="relative">
         <component
           v-if="ChartComp"
@@ -202,50 +223,50 @@ onMounted(async () => {
       <p v-if="description" class="mt-2 text-xs text-slate-500 dark:text-[var(--cyber-muted,#9ae8d6)]">
         {{ description }}
       </p>
-    </div>
 
-    <figcaption v-if="$slots.summary" :id="ariaSummaryId" class="sr-only">
-      <slot name="summary" />
-    </figcaption>
+      <figcaption v-if="$slots.summary" :id="ariaSummaryId" class="sr-only">
+        <slot name="summary" />
+      </figcaption>
 
-    <details class="mt-2">
-      <summary class="cursor-pointer text-xs text-slate-700 dark:text-[var(--cyber-primary,#00ff9f)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:focus-visible:ring-[var(--cyber-accent,#ea00d9)] rounded">
-        View Data Table
-      </summary>
-      <div class="overflow-x-auto pt-2">
-        <table class="w-full min-w-[480px] border-collapse text-xs text-slate-800 dark:text-[var(--cyber-text,#d2fff1)]">
-          <thead>
-            <tr class="text-left text-slate-600 dark:text-[var(--cyber-muted,#9ae8d6)]">
-              <th class="border-b border-[var(--cyber-border,#10223f)] p-2">Label</th>
-              <th
-                v-for="(ds, i) in normalizedData.datasets"
-                :key="i"
-                class="border-b border-[var(--cyber-border,#10223f)] p-2"
+      <details class="mt-2">
+        <summary class="cursor-pointer text-xs text-slate-700 dark:text-[var(--cyber-primary,#00ff9f)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:focus-visible:ring-[var(--cyber-accent,#ea00d9)] rounded">
+          View Data Table
+        </summary>
+        <div class="overflow-x-auto pt-2">
+          <table class="w-full min-w-[480px] border-collapse text-xs text-slate-800 dark:text-[var(--cyber-text,#d2fff1)]">
+            <thead>
+              <tr class="text-left text-slate-600 dark:text-[var(--cyber-muted,#9ae8d6)]">
+                <th class="border-b border-[var(--cyber-border,#10223f)] p-2">Label</th>
+                <th
+                  v-for="(ds, i) in normalizedData.datasets"
+                  :key="i"
+                  class="border-b border-[var(--cyber-border,#10223f)] p-2"
+                >
+                  {{ ds.label }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(label, r) in normalizedData.labels"
+                :key="r"
+                class="text-[var(--cyber-text,#d2fff1)] odd:bg-[rgba(10,189,198,0.04)]"
               >
-                {{ ds.label }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(label, r) in normalizedData.labels"
-              :key="r"
-              class="text-[var(--cyber-text,#d2fff1)] odd:bg-[rgba(10,189,198,0.04)]"
-            >
-              <td class="border-b p-2 border-slate-200 dark:border-[var(--cyber-border,#10223f)]">{{ label }}</td>
-              <td
-                v-for="(ds, c) in normalizedData.datasets"
-                :key="c"
-                class="border-b p-2 border-slate-200 dark:border-[var(--cyber-border,#10223f)]"
-              >
-                {{ Array.isArray(ds.data) ? (ds.data as any)[r] : '' }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </details>
-  </figure>
+                <td class="border-b p-2 border-slate-200 dark:border-[var(--cyber-border,#10223f)]">{{ label }}</td>
+                <td
+                  v-for="(ds, c) in normalizedData.datasets"
+                  :key="c"
+                  class="border-b p-2 border-slate-200 dark:border-[var(--cyber-border,#10223f)]"
+                >
+                  {{ Array.isArray(ds.data) ? (ds.data as any)[r] : '' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </CardContent>
+  </Card>
 </template>
 
 <style scoped>

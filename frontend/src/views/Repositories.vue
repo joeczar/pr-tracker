@@ -6,9 +6,16 @@ import TerminalHeader from '@/components/ui/terminal/TerminalHeader.vue'
 import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
 import RepositoryCard from '@/components/repositories/RepositoryCard.vue'
 import AddRepositoryDialog from '@/components/repositories/AddRepositoryDialog.vue'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const search = ref('')
 const showAdd = ref(false)
+const loading = ref(true)
+
+// Simulate initial load; replace with real fetch wiring
+setTimeout(() => {
+  loading.value = false
+}, 600)
 
 // Mock repositories until store wiring
 const repos = ref([
@@ -96,26 +103,38 @@ function handleAddSubmit(payload: { owner: string; name: string; url?: string })
       <div class="p-3 space-y-6">
         <header class="flex items-center justify-between">
           <h1 id="repos-title" class="text-xl font-semibold tracking-tight">Repositories</h1>
-          <div class="text-xs text-cyber-muted">Skeleton view</div>
+          <div class="text-xs text-cyber-muted">Search and manage repositories</div>
         </header>
         <!-- Repo cards grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          <RepositoryCard
-            v-for="r in filtered"
-            :key="`${r.owner}/${r.name}`"
-            :owner="r.owner"
-            :name="r.name"
-            :description="r.description"
-            :stats="r.stats"
-            :recent="r.recent"
-            :status="r.status as any"
-            @view="$router.push({ name: 'repository-detail', params: { id: `${r.owner}/${r.name}` } })"
-            @sync="r.status = 'syncing'"
-            @remove="repos = repos.filter(x => `${x.owner}/${x.name}` !== `${r.owner}/${r.name}`)"
-          />
-          <div v-if="filtered.length === 0" class="col-span-full text-sm font-mono text-slate-400">
-            No repositories match “{{ search }}”.
-          </div>
+          <template v-if="loading">
+            <div v-for="i in 6" :key="i" class="space-y-3">
+              <Skeleton class="h-40 w-full" />
+              <div class="flex items-center gap-2">
+                <Skeleton class="h-4 w-24" />
+                <Skeleton class="h-4 w-12" />
+              </div>
+              <Skeleton class="h-4 w-3/4" />
+            </div>
+          </template>
+          <template v-else>
+            <RepositoryCard
+              v-for="r in filtered"
+              :key="`${r.owner}/${r.name}`"
+              :owner="r.owner"
+              :name="r.name"
+              :description="r.description"
+              :stats="r.stats"
+              :recent="r.recent"
+              :status="r.status as any"
+              @view="$router.push({ name: 'repository-detail', params: { id: `${r.owner}/${r.name}` } })"
+              @sync="r.status = 'syncing'"
+              @remove="repos = repos.filter(x => `${x.owner}/${x.name}` !== `${r.owner}/${r.name}`)"
+            />
+            <div v-if="filtered.length === 0" class="col-span-full text-sm font-mono text-slate-400">
+              No repositories match “{{ search }}”.
+            </div>
+          </template>
         </div>
       </div>
     </TerminalWindow>

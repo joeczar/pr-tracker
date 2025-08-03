@@ -569,3 +569,40 @@ Each component should support multiple variants:
 ---
 
 *This design system ensures that the PR Tracker maintains its distinctive cyberpunk terminal aesthetic while providing an accessible, inclusive experience for all users. Regular updates and community feedback help maintain the highest standards of accessibility and usability.*
+
+---
+
+## shadcn-vue Adoption
+
+### Overview
+We use shadcn-vue primitives for consistent, accessible UI that fits our terminal/cyber theme. Prefer shadcn components first, apply terminal styles via Tailwind classes as needed.
+
+### What’s Installed
+- Primitives: Button, Card, Input, Label, Separator, Badge, Checkbox, Switch, Tabs, Dialog, DropdownMenu, Select, Tooltip, Form (scaffold), Progress, Skeleton, Toasts.
+- Location: `frontend/src/components/ui/*` with barrel exports in each component’s `index.ts`.
+- Generator config: `frontend/components.json`
+
+### Usage Guidelines
+- Import from local UI path aliases, e.g.:
+  - `import { Button } from '@/components/ui/button'`
+  - `import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'`
+- Keep variants minimal; use Tailwind utilities for terminal styling.
+- Use our cn utility for class merging: `frontend/src/lib/utils.ts` (`cn()` mirrors shadcn pattern).
+
+### Patterns
+- Dialogs: Use `ui/dialog` with `Dialog`, `DialogTrigger`, `DialogContent` and semantic headings.
+- Dropdowns: Use `ui/dropdown-menu` with keyboard nav and focus management; avoid custom key handlers.
+- Forms: Prefer `ui/form` + Zod where validation is needed, otherwise keep simple Input/Label pairs.
+- Tabs: Use `ui/tabs` for timeframe or mode switches; ensure proper aria attributes.
+- Feedback: Use `use-toast` for success/error; mount `Toaster` in `App.vue`.
+
+### Accessibility
+- Don’t remove focus outlines from shadcn primitives.
+- Ensure labels are associated (Label + for/id or wrapping).
+- Test keyboard navigation: Tab/Shift+Tab, Arrow keys in menus/lists, Esc to close overlays.
+
+### Adding New Components
+1. Update `frontend/components.json` if needed.
+2. Run the shadcn generator to add the component.
+3. Export from local `index.ts` and follow the same import patterns.
+4. Theme using Tailwind utilities; avoid overriding base accessibility behaviors.

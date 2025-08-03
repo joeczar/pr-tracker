@@ -12,14 +12,16 @@ Purpose: Track progress of replacing custom components with shadcn-vue equivalen
 - [x] Install shadcn-vue and configure generators
 - [x] Generate base primitives: Button, Card, Input, Label, Separator, Badge
 - [x] Add cn/tw-merge utility alignment with `frontend/src/lib/utils.ts`
-- [ ] Add docs note in DESIGN_SYSTEM.md
+- [x] Add docs note in DESIGN_SYSTEM.md
 
 ## Phase 2 — Dropdown Menu
 - [ ] Replace custom dropdown components:
-  - [ ] `frontend/src/components/ui/dropdown-menu/*` (generator shows files are identical; adopt official exports and remove custom overrides if any)
+  - [x] `frontend/src/components/ui/dropdown-menu/*` (generated via shadcn; matches official exports)
 - [ ] Keep index barrel path compatibility (exports/index mappings)
 - [ ] Verify keyboard nav and focus-trap behavior
 - [ ] Update callsites (if prop/slot differences)
+- [ ] Add user/menu dropdown in `AppShell.vue` (header actions)
+  - Note: Confirm exports parity with shadcn-vue docs; remove any custom overrides if discovered during audit
 
 ## Phase 3 — Dialog / Modal
 - [x] Convert `frontend/src/components/repositories/AddRepositoryDialog.vue` to shadcn Dialog
@@ -32,37 +34,47 @@ Purpose: Track progress of replacing custom components with shadcn-vue equivalen
 - [ ] Migrate ad-hoc buttons across views to shadcn variants
 - [x] Preserve terminal/cyber theme via Tailwind classes
 - [ ] Audit for remaining non-shadcn button usage in views (Login/Settings/Dashboard)
+  - Action: Grep for raw <button> or legacy classes; replace with `ui/button` variants
 
 ## Phase 5 — Cards & Badges
 - [x] Repository cards to shadcn Card (+ Badge for status)
   - [x] `frontend/src/components/repositories/RepositoryCard.vue`
 - [x] Metric tiles to shadcn Card (+ Badge/Tooltip for trend)
   - [x] `frontend/src/components/analytics/MetricTile.vue`
-- [ ] Chart containers to shadcn Card
-  - [ ] `frontend/src/components/analytics/TrendChart.vue`
+- [x] Chart containers to shadcn Card
+  - [x] `frontend/src/components/analytics/TrendChart.vue`
   - [x] Adopt `ui/badge` where status/trend labels are present
 
 ## Phase 6 — Command Palette
-- [ ] Port `frontend/src/components/ui/terminal/CommandPalette.vue` to shadcn Command
+- [~] Port `frontend/src/components/ui/terminal/CommandPalette.vue` to shadcn Command
+  - Implemented new `frontend/src/components/ui/command/CommandPalette.vue` using local `ui/command` primitives; integrated in `AppShell.vue` with v-model and navigation on select
 - [ ] Keep terminal styling; confirm keyboard navigation & a11y parity
 - [ ] Wire with `useCommandPalette.ts`
+- [ ] Map palette items to routes/actions; keep terminal theme via classes
+  - Note: Use `ui/command` structure (Command, CommandInput, CommandList, CommandItem, CommandGroup)
+  - Next: Replace minimal local primitives with generated shadcn-vue Command components if desired; expand items and wire to composable
 
 ## Phase 7 — Views: Inputs and Layout
-- [ ] Login view: replace inputs and form controls
-  - [ ] `frontend/src/views/Login.vue` (Input, Label, Button, Card)
-- [ ] Settings view: replace toggles/inputs/selects
-  - [ ] `frontend/src/views/Settings.vue` (Switch, Input, Select, Separator)
+- [x] Login view: replace inputs and form controls
+  - [x] `frontend/src/views/Login.vue` (Card, Button, Separator)
+- [x] Settings view: replace toggles/inputs/selects
+  - [x] `frontend/src/views/Settings.vue` (Switch, Input, Separator, Card, Button)
 - [ ] Layout/App
-  - [ ] `frontend/src/components/layout/AppShell.vue` (Button/Dropdown/Separator in header)
-  - [ ] `frontend/src/App.vue` (wire Toast Toaster provider)
+  - [x] `frontend/src/components/layout/AppShell.vue` (Button/Dropdown/Separator in header)
+    - Implemented user menu dropdown using `ui/dropdown-menu` + `ui/button`, added ⌘K shortcut button
+  - [x] `frontend/src/App.vue` (wire Toast Toaster provider)
 
 ## Phase 8 — Analytics & Dashboard Enhancements
-- [ ] Tabs for timeframe filters (7d/30d/90d)
-  - [ ] `frontend/src/views/Analytics.vue`
-- [ ] Tooltip for chart actions/info
-  - [ ] `frontend/src/components/analytics/TrendChart.vue`
+- [~] Tabs for timeframe filters (7d/30d/90d)
+  - [~] `frontend/src/views/Analytics.vue` (Tabs scaffolded with v-model timeframe; pending data wiring)
+- [x] Tooltip/Dropdown for chart actions/info
+  - [x] `frontend/src/components/analytics/TrendChart.vue`
 - [ ] Progress (linear) for background/sync states
   - [ ] Add where applicable (Dashboard/Analytics)
+- [ ] Use Badge for state chips across analytics where helpful
+- [~] Skeleton loaders for lists/cards where loading occurs
+  - [x] Implemented in `Analytics.vue` (filters and chart placeholders)
+  - [x] Implemented in `Repositories.vue` (card placeholders)
 
 ## Phase 9 — Repositories and Detail
 - [ ] Repositories list item actions using DropdownMenu
@@ -71,6 +83,7 @@ Purpose: Track progress of replacing custom components with shadcn-vue equivalen
   - [ ] Add where applicable
 - [ ] Badge standardization for repo statuses (open/merged/draft/syncing/idle/error)
   - [ ] `RepositoryCard.vue` and related
+- [ ] Linear Progress for repo syncing states where appropriate
 
 ## Phase 10 — System-wide UX
 - [x] Toast system (success/error feedback) — Toaster mounted in `frontend/src/App.vue`
@@ -92,6 +105,8 @@ Purpose: Track progress of replacing custom components with shadcn-vue equivalen
 - Ensure Tailwind config includes shadcn tokens and themes
 - Confirm class-variance-authority (cva) setup if used
 - Align `utils.ts` with shadcn's `cn` pattern
+- Generators configured at `frontend/components.json`; components live under `frontend/src/components/ui/*`
+- Dropdown, Dialog, Button, Card, Badge, Tabs, Skeleton present; Command pending
 
 ## Risks / Mitigations
 - API differences in dropdown/dialog may require minor callsite updates → mitigate via index barrel and wrapper props

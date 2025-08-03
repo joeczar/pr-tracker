@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu'
+import CommandPalette from '@/components/ui/command/CommandPalette.vue'
 
 const showCommandPalette = ref(false)
 
@@ -69,9 +79,33 @@ onBeforeUnmount(() => {
         </nav>
 
         <div class="flex items-center gap-2">
-          <!-- Placeholder for user/avatar -->
-          <div class="h-8 w-8 rounded-full border border-slate-300 dark:border-slate-700" aria-hidden="true"></div>
-          <RouterLink to="/login" class="text-sm hover:underline underline-offset-4">Login</RouterLink>
+          <!-- Command palette shortcut -->
+          <Button variant="outline" size="sm" class="hidden md:inline-flex" aria-label="Open command palette" @click="toggleCommandPalette()">
+            ⌘K
+          </Button>
+
+          <!-- User menu dropdown -->
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <Button variant="ghost" size="sm" class="h-8 w-8 rounded-full p-0 border border-slate-200 dark:border-slate-800" aria-label="Open user menu">
+                <span class="sr-only">Open user menu</span>
+                <div class="h-7 w-7 rounded-full bg-gradient-to-br from-cyan-500/30 to-fuchsia-500/30 border border-slate-300/40 dark:border-slate-700/60"></div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent class="w-40" align="end">
+              <DropdownMenuLabel class="text-xs">Signed in as user</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem as-child>
+                <RouterLink to="/settings">Settings</RouterLink>
+              </DropdownMenuItem>
+              <DropdownMenuItem @click="$router.push('/')">Dashboard</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem class="text-red-600 dark:text-red-400">Logout</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <!-- Fallback login link (if not authenticated) -->
+          <RouterLink to="/login" class="text-sm hover:underline underline-offset-4 md:hidden">Login</RouterLink>
         </div>
       </div>
     </header>
@@ -117,39 +151,14 @@ onBeforeUnmount(() => {
       </div>
     </footer>
   </div>
-  <!-- Command Palette Mount Point -->
-  <Teleport to="body">
-    <div
-      v-if="showCommandPalette"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Command Palette"
-      class="fixed inset-0 z-50 flex items-start justify-center p-4"
-    >
-      <!-- backdrop -->
-      <div class="absolute inset-0 bg-black/70" @click="toggleCommandPalette(false)"></div>
-      <!-- terminal-styled panel -->
-      <div class="relative z-10 w-full max-w-2xl">
-        <div class="rounded-lg border border-cyber-border bg-cyber-surface shadow-cyber scanlines">
-          <div class="flex items-center justify-between border-b border-cyber-border px-3 py-2">
-            <div class="text-cyber-muted text-sm font-terminal">user@pr-tracker:~$</div>
-            <div class="text-xs text-cyber-muted"><span class="kbd">Esc</span> to close</div>
-          </div>
-          <div class="p-3">
-            <!-- Lightweight inline input; actual fuzzy list is in CommandPalette.vue if present -->
-            <input
-              autofocus
-              type="text"
-              placeholder="Type a command…"
-              class="w-full rounded border border-cyber-border bg-black/30 px-3 py-2 font-terminal text-cyber-muted outline-none focus-visible:ring-2 focus-visible:ring-cyber-accent"
-              @keydown.escape.prevent="toggleCommandPalette(false)"
-            />
-            <div class="mt-2 text-xs text-cyber-muted">
-              Try: dashboard, repositories, settings…
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </Teleport>
+  <!-- Command Palette -->
+  <CommandPalette
+    v-model="showCommandPalette"
+    @select="(val: string) => {
+      if (val === 'dashboard') $router.push('/');
+      else if (val === 'repositories') $router.push('/repositories');
+      else if (val === 'analytics') $router.push('/analytics');
+      else if (val === 'settings') $router.push('/settings');
+    }"
+  />
 </template>
