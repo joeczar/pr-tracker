@@ -3,7 +3,7 @@ import { setCookie, deleteCookie, getCookie } from 'hono/cookie';
 import { OAuthService } from '../services/oauth.js';
 import { UserService } from '../services/user.js';
 import { requireAuth, getAuthenticatedUser } from '../middleware/auth.js';
-import { OAuthLoginQuery, OAuthCallbackQuery, AuthMeResponse, AuthResponse } from '../types/auth.js';
+import { OAuthLoginQuery, OAuthCallbackQuery, AuthMeResponse, AuthenticatedUser, User } from '../types/auth.js';
 
 const authRoutes = new Hono();
 
@@ -51,7 +51,7 @@ authRoutes.get('/github/login', async (c) => {
  */
 authRoutes.get('/github/callback', async (c) => {
   try {
-    const query = c.req.query() as OAuthCallbackQuery;
+    const query = c.req.query() as unknown as OAuthCallbackQuery;
     const { code, state, error, error_description } = query;
 
     // Check for OAuth errors
@@ -152,13 +152,13 @@ authRoutes.post('/logout', requireAuth, async (c) => {
  */
 authRoutes.get('/me', requireAuth, async (c) => {
   try {
-    const user = getAuthenticatedUser(c);
+    const user = getAuthenticatedUser(c) as (AuthenticatedUser & Pick<User, 'refresh_token' | 'token_expires_at'>) | null;
     
     if (!user) {
       return c.json({ error: 'User not found' }, 404);
     }
 
-    const response: AuthMeResponse = { user };
+    const response: AuthMeResponse = { user: user as AuthenticatedUser };
     return c.json(response);
   } catch (error) {
     console.error('Get user info error:', error);
@@ -175,19 +175,32 @@ authRoutes.get('/me', requireAuth, async (c) => {
  */
 authRoutes.post('/refresh', requireAuth, async (c) => {
   try {
-    const user = c.get('user');
-    
-    if (!user || !user.refresh_token) {
+    // Authenticated user has limited fields, so fetch full user from DB by session
+    const sessionCookieName = process.env.SESSION_COOKIE_NAME || 'pr_tracker_session';
+    const sessionId = getCookie(c, sessionCookieName);
+    if (!sessionId) {
+      return c.json({ error: 'Not authenticated' }, 401);
+    }
+    const session = await userService.getSession(sessionId);
+    if (!session) {
+      return c.json({ error: 'Session not found' }, 401);
+    }
+    const dbUser = await userService.getUserById(session.user_id);
+    if (!dbUser) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    if (!dbUser.refresh_token) {
       return c.json({ error: 'No refresh token available' }, 400);
     }
 
     // Check if token needs refresh
-    if (!oauthService.isTokenExpired(user.token_expires_at)) {
+    if (dbUser.token_expires_at && !oauthService.isTokenExpired(dbUser.token_expires_at)) {
       return c.json({ success: true, message: 'Token is still valid' });
     }
 
     // Refresh the token
-    const tokenResponse = await oauthService.refreshToken(user.refresh_token);
+    const tokenResponse = await oauthService.refreshToken(dbUser.refresh_token);
 
     // Update user with new tokens
     const scopes = oauthService.parseScopes(tokenResponse.scope);
@@ -195,14 +208,14 @@ authRoutes.post('/refresh', requireAuth, async (c) => {
 
     await userService.createOrUpdateUser(
       {
-        id: user.github_id,
-        login: user.login,
-        name: user.name,
-        email: user.email,
-        avatar_url: user.avatar_url
+        id: dbUser.github_id,
+        login: dbUser.login,
+        name: dbUser.name,
+        email: dbUser.email,
+        avatar_url: dbUser.avatar_url
       },
       tokenResponse.access_token,
-      tokenResponse.refresh_token || user.refresh_token,
+      tokenResponse.refresh_token || dbUser.refresh_token,
       scopes,
       expiresAt
     );

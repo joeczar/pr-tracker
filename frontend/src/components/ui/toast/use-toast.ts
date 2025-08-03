@@ -123,7 +123,8 @@ function dispatch(action: Action) {
 
 function useToast() {
   return {
-    toasts: computed(() => state.value.toasts),
+    // Narrow to a read-only computed for consumer safety and to avoid WritableComputedRef typing
+    toasts: computed(() => state.value.toasts) as Readonly<ReturnType<typeof computed<State['toasts']>>>,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
   }

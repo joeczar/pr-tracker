@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, getCurrentInstance } from 'vue'
 import TerminalWindow from '@/components/ui/terminal/TerminalWindow.vue'
 import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
 import TerminalHeader from '@/components/ui/terminal/TerminalHeader.vue'
@@ -7,6 +7,15 @@ import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
 import RepositoryCard from '@/components/repositories/RepositoryCard.vue'
 import AddRepositoryDialog from '@/components/repositories/AddRepositoryDialog.vue'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
 
 const search = ref('')
 const showAdd = ref(false)
@@ -73,6 +82,23 @@ function handleAddSubmit(payload: { owner: string; name: string; url?: string })
   })
   showAdd.value = false
 }
+
+function openRepo(r: { owner: string; name: string }) {
+  const inst = getCurrentInstance()
+  const router = inst?.proxy?.$router as any | undefined
+  if (router) {
+    router.push({ name: 'repository-detail', params: { id: `${r.owner}/${r.name}` } })
+  }
+}
+
+function syncRepo(r: { status: string }) {
+  r.status = 'syncing'
+  // TODO: call service; show toast
+}
+
+function deleteRepo(r: { owner: string; name: string }) {
+  repos.value = repos.value.filter(x => `${x.owner}/${x.name}` !== `${r.owner}/${r.name}`)
+}
 </script>
 
 <template>
@@ -118,19 +144,38 @@ function handleAddSubmit(payload: { owner: string; name: string; url?: string })
             </div>
           </template>
           <template v-else>
-            <RepositoryCard
-              v-for="r in filtered"
-              :key="`${r.owner}/${r.name}`"
-              :owner="r.owner"
-              :name="r.name"
-              :description="r.description"
-              :stats="r.stats"
-              :recent="r.recent"
-              :status="r.status as any"
-              @view="$router.push({ name: 'repository-detail', params: { id: `${r.owner}/${r.name}` } })"
-              @sync="r.status = 'syncing'"
-              @remove="repos = repos.filter(x => `${x.owner}/${x.name}` !== `${r.owner}/${r.name}`)"
-            />
+            <div v-for="r in filtered" :key="`${r.owner}/${r.name}`" class="relative group">
+              <!-- Actions dropdown -->
+              <div class="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <Button size="sm" variant="outline" class="h-8 px-2">
+                      •••
+                      <span class="sr-only">Open actions</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" class="w-40">
+                    <DropdownMenuLabel class="text-xs">{{ r.owner }}/{{ r.name }}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem @click="openRepo(r)">Open</DropdownMenuItem>
+                    <DropdownMenuItem @click="syncRepo(r)">Sync Now</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem class="text-red-600 dark:text-red-400" @click="deleteRepo(r)">Delete</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <RepositoryCard
+                :owner="r.owner"
+                :name="r.name"
+                :description="r.description"
+                :stats="r.stats"
+                :recent="r.recent"
+                :status="r.status as any"
+                @view="openRepo(r)"
+                @sync="syncRepo(r)"
+                @remove="deleteRepo(r)"
+              />
+            </div>
             <div v-if="filtered.length === 0" class="col-span-full text-sm font-mono text-slate-400">
               No repositories match “{{ search }}”.
             </div>

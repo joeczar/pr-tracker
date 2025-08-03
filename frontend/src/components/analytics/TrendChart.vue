@@ -8,9 +8,6 @@ import CardHeader from '@/components/ui/card/CardHeader.vue'
 import CardTitle from '@/components/ui/card/CardTitle.vue'
 import CardContent from '@/components/ui/card/CardContent.vue'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
-import Tooltip from '@/components/ui/tooltip/Tooltip.vue'
-import TooltipTrigger from '@/components/ui/tooltip/TooltipTrigger.vue'
-import TooltipContent from '@/components/ui/tooltip/TooltipContent.vue'
 
 // Lazy-load chart.js and vue-chartjs to keep bundle lean
 const ChartComp = ref<any>(null)

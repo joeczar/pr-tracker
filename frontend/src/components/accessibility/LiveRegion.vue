@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, watchEffect } from 'vue'
+import { onBeforeUnmount, ref, watchEffect } from 'vue'
 
 const props = withDefaults(defineProps<{
   mode?: 'polite' | 'assertive'

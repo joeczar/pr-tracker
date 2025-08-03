@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
 /**
  * shadcn-vue card primitives
  */
 import Card from '@/components/ui/card/Card.vue'
 import CardHeader from '@/components/ui/card/CardHeader.vue'
 import CardTitle from '@/components/ui/card/CardTitle.vue'
-import CardContent from '@/components/ui/card/CardContent.vue'
 /**
  * shadcn-vue badge
  */

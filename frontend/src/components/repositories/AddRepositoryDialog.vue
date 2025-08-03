@@ -12,7 +12,6 @@ import Dialog from '@/components/ui/dialog/Dialog.vue'
 import DialogContent from '@/components/ui/dialog/DialogContent.vue'
 import DialogHeader from '@/components/ui/dialog/DialogHeader.vue'
 import DialogTitle from '@/components/ui/dialog/DialogTitle.vue'
-import DialogDescription from '@/components/ui/dialog/DialogDescription.vue'
 import DialogFooter from '@/components/ui/dialog/DialogFooter.vue'
 import DialogClose from '@/components/ui/dialog/DialogClose.vue'
 
@@ -57,7 +56,7 @@ function parseInput(val: string) {
   // - owner/repo
   // - https://github.com/owner/repo
   // - github.com/owner/repo
-  const githubMatch = trimmed.match(/^(?:https?:\/\/)?(?:www\.)?github\.com\/([^\/\s]+)\/([^\/\s#?]+).*$/i)
+  const githubMatch = trimmed.match(/^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/\s]+)\/([^/\s#?]+).*$/i)
   if (githubMatch) {
     owner.value = githubMatch[1]
     name.value = githubMatch[2]
@@ -65,7 +64,7 @@ function parseInput(val: string) {
     return
   }
 
-  const simple = trimmed.match(/^([^\/\s]+)\/([^\/\s#?]+)$/)
+  const simple = trimmed.match(/^([^/\s]+)\/([^/\s#?]+)$/)
   if (simple) {
     owner.value = simple[1]
     name.value = simple[2]
