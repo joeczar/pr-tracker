@@ -6,7 +6,7 @@ export interface FetchJsonInit extends RequestInit {
   json?: unknown; // convenience to set JSON body
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
 
 export class HttpError extends Error {
   status: number;
@@ -58,7 +58,10 @@ export async function fetchJson(path: string, init: FetchJsonInit = {}) {
     ...init,
     headers,
     body,
+    // Always include cookies for cross-origin requests (auth/session)
     credentials: 'include',
+    // Avoid sending a body for GET/HEAD which can cause server/CORS issues
+    method: init.method ?? 'GET',
   });
 
   if (!res.ok) {

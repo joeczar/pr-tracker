@@ -47,6 +47,83 @@ Acceptance criteria:
 - /auth/me returns user when logged in; 401 when not.
 - No auth-related console errors/warnings.
 
+### Brief Diff Plan (to implement now)
+
+Frontend
+1) HTTP client: send credentials
+- File: frontend/src/lib/api/http.ts
+- Change:
+  - Set axios instance with `withCredentials: true`.
+  - Ensure `baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000'`.
+
+2) Auth API helper
+- File: frontend/src/lib/api/auth.ts
+- Change:
+  - Implement `getCurrentUser()` -> GET `/auth/me` returning `User | null`.
+  - Export `getLoginUrl(target: string)` -> `${baseURL}/auth/github/login?redirect=${encodeURIComponent(target)}`.
+
+3) Auth store
+- File: frontend/src/stores/auth.ts
+- Change:
+  - State: `user: User | null`, `initialized: boolean`, `loading: boolean`, `error: string | null`.
+  - Actions: `bootstrap()`, `setUser(user)`, `clearUser()`.
+  - `bootstrap()` calls `/auth/me` once and sets state.
+
+4) Router guard
+- File: frontend/src/router/index.ts
+- Change:
+  - `beforeEach`:
+    - If `to.query.auth === 'success'`: await `authStore.bootstrap()`; redirect to `to.query.redirect ?? '/'` (drop query).
+    - For protected routes: if `!authStore.initialized`, await `bootstrap`; then if `!user`, redirect to `/login?redirect=${to.fullPath}`.
+  - Provide loading indicator while awaiting bootstrap.
+
+5) App entry
+- File: frontend/src/main.ts
+- Change:
+  - Option A: call `authStore.bootstrap()` before `app.mount('#app')`.
+  - Option B: rely on first navigation guard; optionally show splash.
+
+6) Login view
+- File: frontend/src/views/Login.vue
+- Change:
+  - Use `getLoginUrl()` and include `redirect` from route query (default `/`).
+
+Backend
+7) CORS with credentials
+- File: backend/src/index.ts
+- Change:
+  - Add CORS middleware:
+    - origin: 'http://localhost:5173'
+    - credentials: true
+    - allowed headers/methods.
+
+8) OAuth callback cookie flags
+- Files: backend/src/routes/auth.ts, backend/src/services/oauth.ts
+- Change:
+  - Set cookie on success:
+    - httpOnly: true
+    - secure: false (localhost)
+    - sameSite: 'Lax' (or 'None' if required)
+    - path: '/'
+    - no domain
+  - Redirect to frontend with `?auth=success&redirect=<original>` or directly to original.
+
+9) /auth/me endpoint
+- File: backend/src/routes/auth.ts
+- Change:
+  - GET `/auth/me` returns user JSON if cookie valid; 401 otherwise.
+
+10) Auth middleware alignment
+- Files: backend/src/middleware/auth.ts, backend/src/utils/errors.ts
+- Change:
+  - Ensure consistent cookie reading and 401 response format.
+
+Testing & Acceptance
+- Fresh browser context -> / -> /login.
+- Click Sign in with GitHub -> return authenticated to original route.
+- /auth/me returns 200 when logged in; 401 when not.
+- No auth-related console warnings.
+
 ## Priority 1 — Fix Composition API Misuse Warnings
 
 Goal: Eliminate Vue warnings about inject()/onMounted/onBeforeUnmount usage outside setup().

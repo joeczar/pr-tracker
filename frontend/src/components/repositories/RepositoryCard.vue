@@ -115,19 +115,19 @@ const statusVariant = computed<BadgeVariant>(() => {
         <div class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
           <Card class="rounded p-2 border-slate-200 bg-white/60 dark:border-cyan-900/40 dark:bg-cyan-900/10">
             <div class="text-slate-600 dark:text-cyan-300 font-mono">PRs</div>
-            <div class="font-mono text-slate-900 dark:text-cyan-100 text-base">{{ stats.prs }}</div>
+            <div class="font-mono text-slate-900 dark:text-cyan-100 text-base">{{ stats?.prs ?? 0 }}</div>
           </Card>
           <Card class="rounded p-2 border-slate-200 bg-white/60 dark:border-fuchsia-900/40 dark:bg-fuchsia-900/10">
             <div class="text-slate-600 dark:text-fuchsia-300 font-mono">Avg Cmt/PR</div>
-            <div class="font-mono text-slate-900 dark:text-fuchsia-100 text-base">{{ stats.avgCommentsPerPR.toFixed(1) }}</div>
+            <div class="font-mono text-slate-900 dark:text-fuchsia-100 text-base">{{ Number.isFinite(stats?.avgCommentsPerPR) ? stats!.avgCommentsPerPR.toFixed(1) : '0.0' }}</div>
           </Card>
           <Card class="rounded p-2 border-slate-200 bg-white/60 dark:border-emerald-900/40 dark:bg-emerald-900/10">
             <div class="text-slate-600 dark:text-emerald-300 font-mono">CR Rate</div>
-            <div class="font-mono text-slate-900 dark:text-emerald-100 text-base">{{ stats.changeRequestRate }}%</div>
+            <div class="font-mono text-slate-900 dark:text-emerald-100 text-base">{{ Number.isFinite(stats?.changeRequestRate) ? stats!.changeRequestRate : 0 }}%</div>
           </Card>
           <Card class="rounded p-2 border-slate-200 bg-white/60 dark:border-slate-700 dark:bg-slate-800/30">
             <div class="text-slate-600 dark:text-slate-300 font-mono">Last Sync</div>
-            <div class="font-mono text-slate-900 dark:text-slate-100 text-base">{{ stats.lastSync }}</div>
+            <div class="font-mono text-slate-900 dark:text-slate-100 text-base">{{ stats?.lastSync ?? '—' }}</div>
           </Card>
         </div>
       </div>

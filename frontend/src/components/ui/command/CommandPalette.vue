@@ -9,16 +9,18 @@ import {
   CommandItem,
 } from './index'
 
-const props = defineProps<{
-  modelValue: boolean
-}>()
+const props = withDefaults(defineProps<{
+  modelValue?: boolean
+}>(), {
+  modelValue: false
+})
 
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void
   (e: 'select', value: string): void
 }>()
 
-const open = ref(props.modelValue)
+const open = ref(!!props.modelValue)
 watch(
   () => props.modelValue,
   (v) => (open.value = v)

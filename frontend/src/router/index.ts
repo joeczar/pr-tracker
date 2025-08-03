@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "../stores/auth";
+import { authApi } from "@/lib/api/auth";
 
 const routes = [
   { path: "/", name: "dashboard", component: () => import("../views/Dashboard.vue") },
@@ -25,20 +26,34 @@ export const router = createRouter({
  */
 router.beforeEach(async (to, _from, next) => {
   const publicRoutes = ["/login", "/auth/error"];
-  if (publicRoutes.includes(to.path)) return next();
 
-  const auth = useAuthStore();
-  if (!auth.checked && !auth.loading) {
-    try {
-      await auth.checkStatus();
-    } catch {
-      // ignore network errors; proceed to gate on flag
+  // Handle OAuth callback hint (?auth=success) first
+  if (to.query.auth === "success") {
+    // After OAuth, validate session and then redirect to target (or /)
+    const target = (to.query.redirect as string) || "/";
+    const auth = useAuthStore();
+    if (!auth.initialized && !auth.loading) {
+      await auth.bootstrap();
     }
+    return next({ path: target, query: {} });
   }
 
-  if (!auth.authenticated) {
+  // Allow navigation to public routes
+  if (publicRoutes.includes(to.path)) {
+    return next();
+  }
+
+  // Ensure session bootstrap has occurred
+  const auth = useAuthStore();
+  if (!auth.initialized && !auth.loading) {
+    await auth.bootstrap();
+  }
+
+  // Gate protected routes
+  if (!auth.isAuthenticated) {
     return next({ path: "/login", query: { redirect: to.fullPath } });
   }
+
   next();
 });
 

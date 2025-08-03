@@ -41,9 +41,9 @@ function handleGlobalKeydown(e: KeyboardEvent) {
 
 onMounted(async () => {
   window.addEventListener('keydown', handleGlobalKeydown)
-  // On shell mount, ensure we checked auth at least once
-  if (!auth.checked && !auth.loading) {
-    await auth.checkStatus()
+  // On shell mount, ensure we bootstrap auth once
+  if (!auth.initialized && !auth.loading) {
+    await auth.bootstrap()
   }
   // Note: OAuth return handling is centralized in Login.vue. Avoid duplicate handling here.
 })
@@ -125,7 +125,7 @@ onBeforeUnmount(() => {
 
           <!-- Auth-aware action -->
           <RouterLink
-            v-if="!auth.authenticated"
+            v-if="!auth.isAuthenticated"
             to="/login"
             class="text-sm hover:underline underline-offset-4 md:hidden"
           >

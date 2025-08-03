@@ -1,8 +1,12 @@
 import { FieldContextKey, useFieldError, useIsFieldDirty, useIsFieldTouched, useIsFieldValid } from 'vee-validate'
-import { inject } from 'vue'
+import { inject, getCurrentInstance } from 'vue'
 import { FORM_ITEM_INJECTION_KEY } from './injectionKeys'
 
 export function useFormField() {
+  // Dev guard: ensure composable is invoked within a component setup() context
+  if (import.meta.env?.DEV && !getCurrentInstance()) {
+    throw new Error('useFormField must be called within setup()')
+  }
   const fieldContext = inject(FieldContextKey)
   const fieldItemContext = inject(FORM_ITEM_INJECTION_KEY)
 
