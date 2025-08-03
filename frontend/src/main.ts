@@ -3,6 +3,7 @@ import App from './App.vue';
 import router from './router';
 import './style.css';
 
+import { createPinia } from 'pinia';
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
 import type { VueQueryPluginOptions } from '@tanstack/vue-query';
 
@@ -26,10 +27,17 @@ const queryClient = new QueryClient({
 
 const app = createApp(App);
 
+// Install Pinia BEFORE router/guards use stores
+const pinia = createPinia();
+app.use(pinia);
+
+// Install router (guards will now have active Pinia)
 app.use(router);
 
+// Install Vue Query
 app.use(VueQueryPlugin, {
   queryClient,
 } as VueQueryPluginOptions);
 
+// Mount
 app.mount('#app');

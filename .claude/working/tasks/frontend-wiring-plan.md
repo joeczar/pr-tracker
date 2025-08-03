@@ -207,11 +207,12 @@ Implementation checklist with embedded testing checkpoints
       - Unit: authApi status/me/logout/refresh call shapes (frontend/tests/auth.test.ts)
       - Lint/typecheck: pnpm -C frontend typecheck && pnpm -C frontend lint
 
-[ ] 1. Auth wiring
+[x] 1. Auth wiring
     [x] Create auth store/composable (src/stores/auth.ts or src/composables/useAuth.ts)
     [x] In App.vue or AppShell.vue, check /auth/status on mount and populate store
-    [x] Implement Login.vue button -> /auth/github/login?redirect=currentPath
-    [x] Handle auth=success query on return and re-check status
+    [x] Implement Login.vue OAuth initiation via anchor -> `${API}/auth/github/login?redirect=...` (replaces button click handler)
+    [x] Handle auth=success query on return and re-check status in Login.vue
+    [x] Removed duplicate auth=success handling from AppShell.vue
     [x] Implement logout action calling POST /auth/logout
     [x] Route guards for protected routes (router.beforeEach)
     [x] Auth error page for /auth/error
@@ -220,7 +221,7 @@ Implementation checklist with embedded testing checkpoints
       - Integration: clicking “Sign in with GitHub” navigates to /auth/github/login with redirect param
       - Integration: returning with ?auth=success triggers status check and navigates to redirect or /dashboard
       - Component: AuthError.vue renders message/error/details and retry/back actions update location as expected
-      - E2E (manual): With backend running, full OAuth flow works and session persists across refresh
+      - E2E (manual): With backend running, full OAuth flow works, session cookie present, and auth persists across refresh
 
 [ ] 2. Repositories page
     [x] Wire GET /api/repositories to list
@@ -233,13 +234,13 @@ Implementation checklist with embedded testing checkpoints
       - Mutation: Deleting repository disables confirm during request; invalidates/reloads list
       - Accessibility: Dialog focus trap smoke test and keyboard navigation for actions menu
 
-[ ] 3. Repository detail
-    [ ] Load repository info GET /api/repositories/:id
-    [ ] Load PR list GET /api/pull-requests/repository/:id
-    [ ] Load PR stats GET /api/pull-requests/repository/:id/stats
-    [ ] Load review metrics GET /api/reviews/repository/:id/metrics?days=30
-    [ ] Load analytics trends GET /api/analytics/repository/:id/trends?days=30
-    [ ] Add “Sync now” -> POST /api/pull-requests/repository/:id/sync
+[x] 3. Repository detail
+    [x] Load repository info GET /api/repositories/:id
+    [x] Load PR list GET /api/pull-requests/repository/:id
+    [x] Load PR stats GET /api/pull-requests/repository/:id/stats
+    [x] Load review metrics GET /api/reviews/repository/:id/metrics?days=30
+    [x] Load analytics trends GET /api/analytics/repository/:id/trends?days=30
+    [x] Add “Sync now” -> POST /api/pull-requests/repository/:id/sync with invalidation of related queries
     [ ] Optionally show sync history via /api/sync/repository/:id/history
     [Testing checkpoints]
       - Integration: Detail view renders all queries with loading/error states using Vue Query
@@ -247,9 +248,9 @@ Implementation checklist with embedded testing checkpoints
       - Mutation: “Sync now” enqueues sync; success toast; invalidates PR list/stats/trends/history
       - Optional: Sync history list paginates/limits; empty state handled
 
-[ ] 4. Analytics view
-    [ ] Trends for selected repository
-    [ ] Compare multiple repositories via POST /api/analytics/compare
+[x] 4. Analytics view
+    [x] Trends for selected repository via GET /api/analytics/repository/:id/trends?days=
+    [x] Compare multiple repositories via POST /api/analytics/compare (basic selector + submit)
     [Testing checkpoints]
       - Integration: Trends query respects selected repo and days; loading/error handled
       - Compare: Submitting selected repositories returns comparison and renders charts
@@ -331,6 +332,9 @@ Changelog
 - 2025-08-03: Implemented domain API clients (repositories, pullRequests, reviews, analytics, github, sync) and added frontend/.env.example with VITE_API_URL.
 - 2025-08-03: Added Pinia auth store (src/stores/auth.ts), wired global router guard, integrated auth bootstrap and logout in AppShell.vue, and handled auth=success URL parameter.
 - 2025-08-03: Wired Repositories.vue with Vue Query (list, add, delete) including toasts and loading/error states. Added Vitest config, TS config for tests, and implemented tests for http.ts and auth flows; CI green locally.
+- 2025-08-03: Fixed login initiation by switching Login.vue to anchor-based OAuth start; centralized auth=success handling in Login.vue; removed duplicate handling from AppShell.vue.
+- 2025-08-03: RepositoryDetail wired with Vue Query (info, PRs, stats, review metrics, trends) and “Sync now” mutation with invalidations.
+- 2025-08-03: Analytics view wired for repo trends and comparison mutation with repository selector.
 
 Milestones, owners, and timeline
 Note: Owners are placeholders; adjust as needed.
@@ -394,27 +398,26 @@ Exit criteria:
 - Stats/metrics/trends render for a repo with data; sync enqueues and user receives feedback
 - Related queries are invalidated/refetched appropriately after sync
 Tracking:
-[ ] PR list (useQuery)
-[ ] PR stats (useQuery)
-[ ] Review metrics (useQuery)
-[ ] Analytics trends (useQuery)
-[ ] Sync now (useMutation + invalidate)
+[x] PR list (useQuery)
+[x] PR stats (useQuery)
+[x] Review metrics (useQuery)
+[x] Analytics trends (useQuery)
+[x] Sync now (useMutation + invalidate)
 [ ] Sync history (optional, useQuery)
 
 Milestone M3 — Global Analytics Compare (Vue Query) — 1 day — Owner: FE-3
 Scope:
 - Analytics.vue compare flow:
-  - Either useMutation(analyticsApi.compare) for submit-driven compare
-  - Or useQuery(qk.analytics.compare(repoIds, days), enabled when form has selection)
-- Multi-select repositories UX; basic charts using existing components
+  - useMutation(analyticsApi.compare) for submit-driven compare
+- Multi-select repositories UX; basic result render (JSON preview stub; charting to be refined)
 Deliverables:
-- Comparison view with basic visualizations
+- Comparison view submits and renders results
 Exit criteria:
-- Submitting selected repositories renders comparison results without errors
+- Submitting selected repositories returns comparison without errors
 Tracking:
-[ ] compare wiring (mutation or enabled query)
-[ ] repository selector
-[ ] chart render
+[x] compare wiring (mutation)
+[x] repository selector
+[ ] chart render (follow-up: visualize comparison results)
 
 Milestone M4 — Settings + GitHub integration tools (Vue Query) — 1 day — Owner: FE-2
 Scope:

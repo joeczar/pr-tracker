@@ -45,13 +45,7 @@ onMounted(async () => {
   if (!auth.checked && !auth.loading) {
     await auth.checkStatus()
   }
-  // Handle auth=success query by re-checking status, then clean URL
-  const url = new URL(window.location.href)
-  if (url.searchParams.get('auth') === 'success') {
-    await auth.checkStatus()
-    url.searchParams.delete('auth')
-    window.history.replaceState({}, '', url.pathname + url.search)
-  }
+  // Note: OAuth return handling is centralized in Login.vue. Avoid duplicate handling here.
 })
 
 onBeforeUnmount(() => {

@@ -7,7 +7,6 @@ import CardTitle from '@/components/ui/card/CardTitle.vue'
 import CardDescription from '@/components/ui/card/CardDescription.vue'
 import CardContent from '@/components/ui/card/CardContent.vue'
 import CardFooter from '@/components/ui/card/CardFooter.vue'
-import Button from '@/components/ui/button/Button.vue'
 import Separator from '@/components/ui/separator/Separator.vue'
 import { API_BASE } from '@/lib/api/http'
 import { useAuthStore } from '@/stores/auth'
@@ -16,15 +15,6 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-function loginWithGitHub() {
-  // preserve intended redirect target if provided, otherwise current path or /dashboard
-  const redirectTarget =
-    (route.query.redirect as string) ||
-    route.fullPath ||
-    '/dashboard'
-  const url = `${API_BASE}/auth/github/login?redirect=${encodeURIComponent(redirectTarget)}`
-  window.location.href = url
-}
 
 onMounted(async () => {
   // If we landed here with ?auth=success (after OAuth), re-check status and redirect accordingly
@@ -62,9 +52,13 @@ onMounted(async () => {
 
         <!-- Auth options placeholder -->
         <div class="space-y-3">
-          <Button class="w-full" aria-label="Sign in with GitHub" @click="loginWithGitHub">
+          <a
+            class="w-full inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
+            :href="`${API_BASE}/auth/github/login?redirect=${encodeURIComponent((route.query.redirect as string) || route.fullPath || '/dashboard')}`"
+            aria-label="Sign in with GitHub"
+          >
             Sign in with GitHub
-          </Button>
+          </a>
           <div class="h-10 w-full rounded border border-dashed border-slate-300 dark:border-slate-700"></div>
         </div>
       </CardContent>
