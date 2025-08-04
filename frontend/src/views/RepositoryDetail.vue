@@ -331,7 +331,7 @@ const {
             v-for="pr in prList.data?.value || []"
             :key="pr.id"
             class="rounded border border-cyber-border bg-cyber-surface/60 p-3"
-            :class="deepLinkedPr !== null && pr.number === deepLinkedPr ? 'ring-2 ring-cyber-accent' : ''"
+            :class="pr.number === deepLinkedPr ? 'ring-2 ring-cyber-accent' : ''"
           >
             <div class="flex items-center justify-between">
               <div class="font-medium">{{ pr.title }}</div>
