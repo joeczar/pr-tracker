@@ -9,11 +9,16 @@ import MetricTile from '@/components/analytics/MetricTile.vue'
 import ProgressRadial from '@/components/analytics/ProgressRadial.vue'
 import TrendChart from '@/components/analytics/TrendChart.vue'
 import { repositoriesApi } from '@/lib/api/repositories'
+import { reviewsApi } from '@/lib/api/reviews'
+import { pullRequestsApi } from '@/lib/api/pullRequests'
+import { qk } from '@/lib/api/queryKeys'
+import { useSelectionStore } from '@/stores/selection'
 
 /**
- * Step 0 scaffolding:
- * - Repository selection state (route/localStorage/default-first)
- * - Do NOT replace visual data yet (keep mocks); just wire selection for later queries.
+ * Step 0 scaffolding (updated PR-centric):
+ * - Consume global selection store (repository + selected PRs from RepositoryDetail).
+ * - Remove local selector; use guided empty state when no selection.
+ * - Keep visuals for other sections as placeholders for now.
  */
 const reducedMotion =
   typeof window !== 'undefined' &&
@@ -27,7 +32,7 @@ const SELECT_KEY = 'dashboard.repositoryId'
  * We will not yet bind queries to visuals; this is scaffolding only.
  */
 const reposQuery = useQuery({
-  queryKey: ['repositories', 'list'],
+  queryKey: qk.repositories.list(),
   queryFn: () => repositoriesApi.list(),
 })
 
@@ -42,61 +47,120 @@ const reposEmpty = computed(() => Array.isArray(repositoryList.value) && reposit
  * - Fallback to localStorage
  * - Finally fallback to first repo when available
  */
-const selectedRepoId = ref<number | null>(null)
+/**
+ * PR-centric selection: use global store instead of local selector.
+ * Fallback: hydrate from URL to be robust on direct navigation.
+ */
+const sel = useSelectionStore()
+onMounted(() => {
+  // attempt hydration from URL once on load
+  sel.hydrateFromUrl()
+})
+const selectedRepoId = computed<number | null>(() => sel.selectedRepositoryId.value)
+const selectedPrIds = computed<number[]>(() => sel.selectedPullRequestIds.value)
+const hasSelection = computed(() => sel.hasSelection.value)
 
-function readInitialSelectedRepoId(): number | null {
-  try {
-    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
-    const fromQuery = params.get('repo')
-    if (fromQuery && !Number.isNaN(Number(fromQuery))) {
-      return Number(fromQuery)
-    }
-    const fromStorage = typeof window !== 'undefined' ? window.localStorage.getItem(SELECT_KEY) : null
-    if (fromStorage && !Number.isNaN(Number(fromStorage))) {
-      return Number(fromStorage)
-    }
-  } catch {
-    // ignore
-  }
-  return null
+/**
+ * Step 1: Quick Metrics tiles
+ * - reviews metrics (30d)
+ * - pull requests metrics (30d)
+ * Tiles:
+ *  - Total Comments (30d): reviews.total_comments (if available) else derived
+ *  - Avg Comments / PR: reviews.avg_comments_per_pr
+ *  - Change-request rate: reviews.change_request_rate (0-1 or 0-100)
+ *  - Active Repos: repositories count from reposQuery
+ */
+const DAYS = 30
+const enabledHasRepo = computed(() => Number.isFinite(selectedRepoId.value as any))
+
+const reviewsMetricsQuery = useQuery({
+  queryKey: computed(() => (enabledHasRepo.value ? qk.reviews.metrics(selectedRepoId.value as number, DAYS) : ['reviews', 'metrics', 'disabled'])),
+  queryFn: () => reviewsApi.metricsByRepo(selectedRepoId.value as number, DAYS),
+  enabled: enabledHasRepo,
+})
+
+const prMetricsQuery = useQuery({
+  queryKey: computed(() => (enabledHasRepo.value ? qk.prs.metrics(selectedRepoId.value as number, DAYS) : ['prs', 'metrics', 'disabled'])),
+  queryFn: () => pullRequestsApi.metricsByRepo(selectedRepoId.value as number, DAYS),
+  enabled: enabledHasRepo,
+})
+
+type Numberish = number | string
+
+function asPercent(val: number | undefined | null): string {
+  if (val == null || Number.isNaN(Number(val))) return '0%'
+  // Accept 0-1 or 0-100 ranges; normalize to 0-100
+  const n = Number(val)
+  const pct = n <= 1 ? n * 100 : n
+  return `${Math.round(pct)}%`
 }
 
-onMounted(() => {
-  selectedRepoId.value = readInitialSelectedRepoId()
+function toFixed1(val: number | undefined | null): number {
+  if (val == null || Number.isNaN(Number(val))) return 0
+  return Number(Number(val).toFixed(1))
+}
+
+const reposCount = computed(() => repositoryList.value?.length ?? 0)
+
+const quickMetrics = computed(() => {
+  // If no PRs selected, return an empty array to trigger guided state downstream
+  if (!hasSelection.value) return []
+  const reviews = (reviewsMetricsQuery.data as any)?.value ?? null
+  const prs = (prMetricsQuery.data as any)?.value ?? null
+
+  // For now, repository-level proxies; selection-specific aggregation to be added when per-PR data is available.
+  const selectedCount = selectedPrIds.value.length
+  const totalPRsRepo: number = prs?.total_prs ?? prs?.count ?? prs?.total ?? 0
+  const totalPRsSelected = Math.min(selectedCount, totalPRsRepo)
+
+  const avgCommentsPerPR: number = reviews?.avg_comments_per_pr ?? reviews?.avg_comments ?? 0
+  const providedTotalComments: number | undefined = reviews?.total_comments
+  const totalCommentsRepo: number = typeof providedTotalComments === 'number'
+    ? providedTotalComments
+    : Math.round(totalPRsRepo * avgCommentsPerPR)
+  // Approximate selected subset as proportional to selection size
+  const totalCommentsSelected = totalPRsRepo > 0 ? Math.round((totalCommentsRepo * totalPRsSelected) / totalPRsRepo) : 0
+
+  // Change-request rate
+  const changeReqRateRaw: number | undefined = reviews?.change_request_rate ?? reviews?.change_requests_rate
+  const changeReqRateDisplay: string = asPercent(changeReqRateRaw ?? 0)
+
+  const tiles: { label: string; value: Numberish; delta: number; trend: 'up' | 'down'; helpText: string; ariaDescription?: string }[] = [
+    { label: 'Total Comments (30d)', value: totalCommentsSelected, delta: 0, trend: 'up', helpText: 'vs prior 30d' },
+    { label: 'Avg Comments / PR', value: toFixed1(avgCommentsPerPR), delta: 0, trend: 'down', helpText: 'vs prior 30d' },
+    { label: 'Change-request rate', value: changeReqRateDisplay, delta: 0, trend: 'up', helpText: 'of PRs', ariaDescription: 'Higher is worse' },
+    { label: 'Active Repos', value: selectedRepoId.value ? 1 : 0, delta: 0, trend: 'up', helpText: 'tracked' },
+  ]
+  return tiles
 })
 
-watch(
-  () => repositoryList.value,
-  (list) => {
-    if (!list || !Array.isArray(list) || list.length === 0) return
-    if (selectedRepoId.value == null) {
-      selectedRepoId.value = list[0].id
-    }
-  },
-  { immediate: true }
-)
-
-watch(selectedRepoId, (id) => {
-  if (id == null) return
-  try {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(SELECT_KEY, String(id))
-      // also keep URL in sync with ?repo=
-      const url = new URL(window.location.href)
-      url.searchParams.set('repo', String(id))
-      window.history.replaceState({}, '', url.toString())
-    }
-  } catch {
-    // ignore storage/URL errors
-  }
+const metricsPending = computed(() => {
+  const revPending = !!(reviewsMetricsQuery.isPending as any)
+  const prPending = !!(prMetricsQuery.isPending as any)
+  // pending is only blocking if we have a repo selected but no data yet
+  return (revPending || prPending) && !!selectedRepoId.value && hasSelection.value
 })
 
-const quickMetrics = ref([
-  { label: 'Total Comments (30d)', value: 482, delta: -12, trend: 'down' as const, helpText: 'vs prior 30d' },
-  { label: 'Avg Comments / PR', value: 2.7, delta: -8, trend: 'down' as const, helpText: 'vs prior 30d' },
-  { label: 'Change-request rate', value: '18%', delta: 3, trend: 'up' as const, helpText: 'of PRs', ariaDescription: 'Higher is worse' },
-  { label: 'Active Repos', value: 7, delta: 1, trend: 'up' as const, helpText: 'last 7 days' }
-])
+const metricsError = computed(() => !!(reviewsMetricsQuery.isError as any) || !!(prMetricsQuery.isError as any))
+const metricsHasAnyData = computed(() => {
+  const rev = (reviewsMetricsQuery.data as any)?.value
+  const prs = (prMetricsQuery.data as any)?.value
+  return !!rev || !!prs
+})
+const metricsEmpty = computed(() => {
+  if (!hasSelection.value) return false
+  // If both queries resolved but totals are zero, consider empty
+  const rev = (reviewsMetricsQuery.data as any)?.value
+  const prs = (prMetricsQuery.data as any)?.value
+  if (!rev && !prs) return false
+  const totalPRs: number = prs?.total_prs ?? prs?.count ?? prs?.total ?? 0
+  const avgCommentsPerPR: number = rev?.avg_comments_per_pr ?? rev?.avg_comments ?? 0
+  const providedTotalComments: number | undefined = rev?.total_comments
+  const totalComments: number = typeof providedTotalComments === 'number'
+    ? providedTotalComments
+    : Math.round(totalPRs * avgCommentsPerPR)
+  return totalPRs === 0 && totalComments === 0
+})
 
 const trendTab = ref<'comments' | 'change' | 'avg'>('comments')
 const labels = Array.from({ length: 14 }, (_, i) => `D-${13 - i}`)
@@ -140,38 +204,46 @@ const goals = ref([
     <header class="flex items-center justify-between gap-3 flex-wrap">
       <div class="flex items-center gap-3">
         <h1 id="dashboard-title" class="text-xl font-semibold tracking-tight">Dashboard</h1>
-        <div class="text-xs text-slate-500">Skeleton view</div>
+        <div class="text-xs text-slate-500">PR-centric</div>
       </div>
 
-      <!-- Step 0: Repository selector (scaffolding only) -->
+      <!-- Selection Controls (visible when there is a selection) -->
       <div class="text-xs">
-        <label for="dashboard-repo" class="sr-only">Select repository</label>
         <div class="flex items-center gap-2">
           <div class="rounded border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 px-2 py-1.5">
-            <select
-              id="dashboard-repo"
-              class="bg-transparent text-xs min-w-[200px] appearance-auto focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-[var(--cyber-accent,#ea00d9)]"
-              v-model.number="selectedRepoId"
-              :disabled="reposPending && repositoryList.length === 0"
-              tabindex="0"
-              aria-label="Select repository for dashboard metrics"
-            >
-              <option :value="null" disabled>Select repository…</option>
-              <option
-                v-for="r in repositoryList"
-                :key="r.id"
-                :value="r.id"
-              >
-                {{ r.owner }}/{{ r.name }}
-              </option>
-            </select>
+            <span class="text-xs">
+              <template v-if="hasSelection">
+                {{ selectedPrIds.length }} PR<span v-if="selectedPrIds.length !== 1">s</span> selected
+                <template v-if="selectedRepoId"> • Repo ID: {{ selectedRepoId }}</template>
+              </template>
+              <template v-else-if="selectedRepoId">
+                Repo • ID: {{ selectedRepoId }} • No PRs selected
+              </template>
+              <template v-else>
+                No repository selected
+              </template>
+            </span>
           </div>
-          <span v-if="reposPending" class="text-slate-500">Loading repos…</span>
-          <span v-else-if="reposError && reposEmpty" class="text-red-600">Failed to load repositories</span>
-          <span v-else-if="reposEmpty" class="text-slate-500">No repositories found</span>
           <button
-            v-if="reposError || reposPending"
-            class="ml-2 px-2 py-1 text-xs rounded border border-slate-300 dark:border-slate-700"
+            v-if="hasSelection"
+            class="px-2 py-1 text-xs rounded border border-slate-300 dark:border-slate-700"
+            @click="(sel.clearSelection(), sel.syncToUrl({ replace: true }))"
+            aria-label="Clear selected pull requests"
+            title="Clear selected pull requests"
+          >
+            Clear Selection
+          </button>
+          <a
+            v-if="hasSelection && selectedRepoId"
+            class="px-2 py-1 text-xs rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+            :href="`/repositories/${selectedRepoId}?` + selectedPrIds.map(id => `pr=${id}`).join('&')"
+            aria-label="Review selection in repository view"
+          >
+            Review Selection
+          </a>
+          <button
+            v-if="reposError"
+            class="px-2 py-1 text-xs rounded border border-slate-300 dark:border-slate-700"
             @click="reposQuery.refetch()"
             aria-label="Retry loading repositories"
           >
@@ -181,23 +253,64 @@ const goals = ref([
       </div>
     </header>
 
-    <!-- Debug (temporary): show repo query status -->
-    <div v-if="reposError || reposPending" class="text-[10px] text-slate-500 dark:text-slate-400">
-      Repo debug — pending: {{ String(reposPending) }}, error: {{ String(reposError) }}, count: {{ repositoryList.length }}
+    <!-- Guided empty state when no PRs selected -->
+    <div v-if="!hasSelection" class="text-sm text-slate-500 dark:text-slate-400">
+      Select PRs in the repository view to populate the dashboard.
+      <a href="/repositories" class="underline">Go to Repositories</a>
+      <template v-if="selectedRepoId">
+        or <a :href="`/repositories/${selectedRepoId}`" class="underline">Review current repository</a>
+      </template>.
     </div>
 
     <!-- Quick Stats row -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-      <MetricTile
-        v-for="(m, i) in quickMetrics"
-        :key="i"
-        :label="m.label"
-        :value="m.value"
-        :delta="m.delta as any"
-        :trend="m.trend as any"
-        :help-text="m.helpText"
-        :aria-description="(m as any).ariaDescription"
-      />
+      <!-- Loading: show placeholders (existing tiles act as placeholders) -->
+      <template v-if="metricsPending && !metricsHasAnyData">
+        <MetricTile
+          v-for="i in 4"
+          :key="'skeleton-' + i"
+          :label="'Loading...'"
+          :value="'—'"
+          :delta="0"
+          :trend="'up'"
+          :help-text="'loading'"
+          aria-busy="true"
+          aria-live="polite"
+        />
+      </template>
+
+      <!-- Error: only show when there IS a selection; otherwise prefer the guided empty state -->
+      <template v-else-if="metricsError && hasSelection && !metricsHasAnyData">
+        <div class="col-span-4 text-sm text-red-600 flex items-center gap-2">
+          Failed to load metrics.
+          <button
+            class="px-2 py-1 text-xs rounded border border-slate-300 dark:border-slate-700"
+            @click="(reviewsMetricsQuery as any).refetch() && (prMetricsQuery as any).refetch()"
+            aria-label="Retry loading metrics"
+          >
+            Retry
+          </button>
+        </div>
+      </template>
+
+      <!-- Empty -->
+      <template v-else-if="metricsEmpty">
+        <div class="col-span-4 text-sm text-slate-500">No metrics available for the last 30 days.</div>
+      </template>
+
+      <!-- Data -->
+      <template v-else>
+        <MetricTile
+          v-for="(m, i) in quickMetrics"
+          :key="i"
+          :label="m.label"
+          :value="m.value as any"
+          :delta="m.delta as any"
+          :trend="m.trend as any"
+          :help-text="m.helpText"
+          :aria-description="(m as any).ariaDescription"
+        />
+      </template>
     </div>
 
     <!-- Trends -->

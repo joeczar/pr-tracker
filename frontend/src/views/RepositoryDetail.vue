@@ -15,6 +15,7 @@ import { analyticsApi } from '@/lib/api/analytics'
 import { syncApi, type RepoSyncHistoryItem } from '@/lib/api/sync'
 import { qk } from '@/lib/api/queryKeys'
 import ErrorBoundary from "@/components/error/ErrorBoundary.vue"
+import { useSelectionStore } from '@/stores/selection'
 
 // Basic env
 const reducedMotion =
@@ -25,12 +26,40 @@ const reducedMotion =
 const route = useRoute()
 const repoId = computed(() => Number(route.params.id))
 
+// Selection store: keep global PR-centric context updated
+const sel = useSelectionStore()
+
+// Ensure store repository matches current route param
+watch(
+  () => repoId.value,
+  (id) => {
+    if (Number.isFinite(id)) {
+      sel.setRepository(id)
+    } else {
+      sel.setRepository(null)
+    }
+  },
+  { immediate: true }
+)
+
 // Optional: pre-focus a PR if deep-linked via ?pr=123
-const deepLinkedPr = computed<number | null>(() => {
+/**
+ * Deep-linked PRs:
+ * - Support single ?pr=123, multiple ?pr=1&pr=2, or comma-separated ?pr=1,2
+ */
+const deepLinkedPrs = computed<number[]>(() => {
   const raw = route.query.pr
-  if (raw == null) return null
-  const n = Array.isArray(raw) ? Number(raw[0]) : Number(raw)
-  return Number.isFinite(n) ? n : null
+  if (raw == null) return []
+  const vals = Array.isArray(raw) ? raw : [raw]
+  const ids: number[] = []
+  for (const v of vals) {
+    String(v)
+      .split(',')
+      .map((x) => Number(x))
+      .filter((n) => Number.isFinite(n))
+      .forEach((n) => ids.push(n))
+  }
+  return Array.from(new Set(ids))
 })
 const days = ref(30)
 const prState = ref<'open' | 'closed' | 'merged' | 'all'>('open')
@@ -56,16 +85,20 @@ const prList = useQuery({
  * Vue Query's composition API doesn't accept onSuccess in options typing here,
  * so watch the query result instead.
  */
+/**
+ * Keep selection in sync with deep-link and data loading.
+ * - If deep-linked PRs exist, ensure filters allow visibility (use 'all' and a larger limit)
+ * - Write all deep-linked PR ids into selection
+ */
 watch(
   () => prList.data.value,
   () => {
-    if (deepLinkedPr.value != null) {
-      if (prState.value !== 'all') {
-        prState.value = 'all'
-      }
-      if (prLimit.value < 100) {
-        prLimit.value = 100
-      }
+    if (deepLinkedPrs.value.length > 0) {
+      if (prState.value !== 'all') prState.value = 'all'
+      if (prLimit.value < 100) prLimit.value = 100
+      sel.setSelectedPRs(deepLinkedPrs.value)
+      // Optionally keep URL tidy with normalized pr params
+      sel.syncToUrl({ replace: true })
     }
   }
 )
@@ -323,18 +356,62 @@ const {
         <template v-if="prList.isLoading">
           <div v-for="i in 3" :key="i" class="h-16 rounded border border-dashed border-cyber-border animate-pulse"></div>
         </template>
+
         <template v-else-if="prList.isError">
           <div class="text-sm text-red-600">Failed to load pull requests.</div>
         </template>
+
         <template v-else>
+          <!-- Selection toolbar -->
+          <div class="flex items-center justify-between text-xs text-cyber-muted" v-if="(sel.selectedPullRequestIds.value?.length || 0) > 0">
+            <div>
+              {{ sel.selectedPullRequestIds.value.length }} selected
+              <span v-if="prState !== 'all'" class="ml-2 opacity-80">(Some selected PRs may be hidden by filters)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <TerminalButton size="sm" variant="ghost" aria-label="Select all visible PRs"
+                @click="
+                  sel.setSelectedPRs([
+                    ...new Set([
+                      ...sel.selectedPullRequestIds.value,
+                      ...((prList.data?.value || []).map(p => p.id))
+                    ])
+                  ]);
+                  sel.syncToUrl({ replace: true });
+                "
+              >Select visible</TerminalButton>
+              <TerminalButton size="sm" variant="ghost" aria-label="Clear selected PRs"
+                @click="sel.clearSelection(); sel.setRepository(repoId as unknown as number); sel.syncToUrl({ replace: true })"
+              >Clear</TerminalButton>
+            </div>
+          </div>
+
+          <!-- PR list with selection checkboxes -->
           <div
             v-for="pr in prList.data?.value || []"
             :key="pr.id"
             class="rounded border border-cyber-border bg-cyber-surface/60 p-3"
-            :class="pr.number === deepLinkedPr ? 'ring-2 ring-cyber-accent' : ''"
+            :class="sel.selectedPullRequestIds.value.includes(pr.id) ? 'ring-2 ring-cyber-accent' : ''"
           >
-            <div class="flex items-center justify-between">
-              <div class="font-medium">{{ pr.title }}</div>
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 accent-[var(--cyber-accent,#ea00d9)]"
+                  :aria-label="`Select PR #${pr.number}`"
+                  :checked="sel.selectedPullRequestIds.value.includes(pr.id)"
+                  @change="(e) => {
+                    const target = e.target as HTMLInputElement | null
+                    if (target && target.checked) {
+                      sel.addSelectedPR(pr.id)
+                    } else {
+                      sel.removeSelectedPR(pr.id)
+                    }
+                    sel.syncToUrl({ replace: true })
+                  }"
+                />
+                <div class="font-medium">{{ pr.title }}</div>
+              </div>
               <div class="text-xs text-cyber-muted">#{{ pr.number }} • {{ pr.state }}</div>
             </div>
             <div class="text-xs text-cyber-muted">
@@ -342,7 +419,7 @@ const {
             </div>
           </div>
 
-          <!-- Pagination placeholder -->
+          <!-- Pagination controls -->
           <div class="flex items-center justify-between pt-2">
             <div class="text-xs text-cyber-muted">
               Showing up to {{ prLimit }} {{ prState }} PRs
