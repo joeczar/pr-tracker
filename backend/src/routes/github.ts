@@ -145,39 +145,9 @@ githubRoutes.get('/organizations', requireAuth, async (c) => {
     if (!user) return c.json({ error: 'User not found' }, 401)
 
     const githubService = GitHubService.forUser(user)
-    
-    // Debug: Try the API call directly and log details
-    console.log('🔍 Fetching organizations for user:', user.login)
-    
-    try {
-      console.log('🔍 Fetching organizations for user:', user.login)
+    const organizations = await githubService.getUserOrganizations()
 
-      const orgs = await githubService.getUserOrganizations()
-
-      console.log('✅ Organizations fetched successfully')
-      console.log('📊 Organizations count:', orgs.length)
-      console.log('🏢 Organization names:', orgs.map(org => org.login))
-
-      return c.json({
-        organizations: orgs,
-        debug: {
-          count: orgs.length,
-          organizations: orgs.map(org => org.login)
-        }
-      })
-    } catch (apiError: any) {
-      console.error('❌ GitHub API error:', apiError.status, apiError.message)
-      console.error('📝 Full error:', apiError)
-      
-      return c.json({
-        organizations: [],
-        error: `GitHub API error: ${apiError.status} - ${apiError.message}`,
-        debug: {
-          status: apiError.status,
-          message: apiError.message
-        }
-      }, apiError.status || 500)
-    }
+    return c.json({ organizations })
   } catch (error) {
     console.error('Failed to fetch organizations:', error)
     return c.json({
@@ -223,101 +193,6 @@ githubRoutes.get('/orgs/:org/repos', requireAuth, async (c) => {
   }
 })
 
-// Debug: Check current OAuth scopes
-githubRoutes.get('/debug/token-info', requireAuth, async (c) => {
-  try {
-    const user = getUser(c)
-    if (!user) {
-      return c.json({ error: 'User not found' }, 401)
-    }
-
-    const githubService = GitHubService.forUser(user)
-    
-    // Make a request to GitHub to see what scopes we actually have
-    const response = await githubService.getOctokit().request('GET /user')
-    const scopes = response.headers['x-oauth-scopes']?.split(', ') || []
-    
-    return c.json({
-      user_login: response.data.login,
-      granted_scopes: scopes,
-      has_read_org: scopes.includes('read:org'),
-      has_repo: scopes.includes('repo'),
-      token_created: user.created_at,
-      raw_scopes_header: response.headers['x-oauth-scopes']
-    })
-  } catch (error) {
-    console.error('Failed to get token info:', error)
-    return c.json({
-      error: error instanceof Error ? error.message : 'Failed to get token info'
-    }, 500)
-  }
-})
-
-// Debug: Test direct GitHub orgs API call
-githubRoutes.get('/debug/orgs-raw', requireAuth, async (c) => {
-  try {
-    const user = getUser(c)
-    if (!user) {
-      return c.json({ error: 'User not found' }, 401)
-    }
-
-    const githubService = GitHubService.forUser(user)
-    
-    console.log('🔍 Making direct GitHub API call for organizations...')
-    
-    // Try different organization endpoints
-    const octokit = githubService.getOctokit()
-    const endpoints = [
-      { name: 'listForAuthenticatedUser', call: () => octokit.rest.orgs.listForAuthenticatedUser() },
-      { name: 'direct /user/orgs', call: () => octokit.request('GET /user/orgs') },
-      { name: 'direct /user/orgs with per_page', call: () => octokit.request('GET /user/orgs', { per_page: 100 }) },
-      { name: 'memberships-active', call: () => octokit.request('GET /user/memberships/orgs', { state: 'active', per_page: 100 }) },
-      { name: 'memberships-all', call: () => octokit.request('GET /user/memberships/orgs', { per_page: 100 }) }
-    ]
-    
-    const results: Record<string, any> = {}
-    
-    for (const endpoint of endpoints) {
-      try {
-        console.log(`📡 Testing endpoint: ${endpoint.name}`)
-        const response = await endpoint.call()
-        console.log(`✅ ${endpoint.name} - Status: ${response.status}, Count: ${response.data.length}`)
-        console.log(`📊 ${endpoint.name} - Data:`, response.data.map((org: any) => ({ login: org.login, id: org.id })))
-        console.log(`🔐 ${endpoint.name} - Headers:`, {
-          scopes: response.headers['x-oauth-scopes'],
-          rateLimit: response.headers['x-ratelimit-remaining']
-        })
-        
-        results[endpoint.name] = {
-          status: response.status,
-          count: response.data.length,
-          organizations: response.data.map((org: any) => ({ login: org.login, id: org.id, avatar_url: org.avatar_url })),
-          headers: {
-            scopes: response.headers['x-oauth-scopes'],
-            rateLimit: response.headers['x-ratelimit-remaining']
-          }
-        }
-      } catch (error: any) {
-        console.error(`❌ ${endpoint.name} failed:`, error.status, error.message)
-        results[endpoint.name] = {
-          error: error.message,
-          status: error.status
-        }
-      }
-    }
-    
-    return c.json({
-      message: 'Direct GitHub API test results',
-      user_login: user.login,
-      results
-    })
-  } catch (error) {
-    console.error('Failed to test GitHub orgs API:', error)
-    return c.json({
-      error: error instanceof Error ? error.message : 'Failed to test GitHub API'
-    }, 500)
-  }
-})
 
 // Get rate limit information
 githubRoutes.get('/rate-limit', requireAuth, async (c) => {

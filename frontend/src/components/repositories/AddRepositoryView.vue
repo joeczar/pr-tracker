@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount as _onBeforeUnmount, computed } from 'vue'
 import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
 
 import Command from '../ui/command/Command.vue'

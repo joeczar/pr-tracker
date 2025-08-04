@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 import { authApi } from '@/lib/api/auth';
 import { useAuthStore } from '@/stores/auth';
 import { createPinia, setActivePinia } from 'pinia';
@@ -38,22 +38,17 @@ describe('auth store', () => {
     vi.restoreAllMocks();
   });
 
-  it('checkStatus sets authenticated and user, calls /me when missing user in status', async () => {
-    const statusSpy = vi.fn().mockResolvedValue(new Response(JSON.stringify({ authenticated: true }), { status: 200 }));
+  it('bootstrap sets user when authenticated', async () => {
     const meSpy = vi.fn().mockResolvedValue(new Response(JSON.stringify({ user: { id: 5, github_id: 7, login: 'alice', name: null, email: null, avatar_url: null } }), { status: 200 }));
     // @ts-ignore override
-    global.fetch = vi.fn((url: string, init?: any) => {
-      if (url.includes('/auth/status')) return statusSpy(url, init);
-      if (url.includes('/auth/me')) return meSpy(url, init);
-      return Promise.reject(new Error('unexpected url ' + url));
-    });
+    global.fetch = meSpy;
 
     const store = useAuthStore();
-    await store.checkStatus();
+    await store.bootstrap();
 
-    expect(store.authenticated).toBe(true);
+    expect(store.isAuthenticated).toBe(true);
     expect(store.user?.login).toBe('alice');
-    expect(store.checked).toBe(true);
+    expect(store.initialized).toBe(true);
   });
 
   it('logout clears state even if request fails', async () => {
@@ -63,11 +58,11 @@ describe('auth store', () => {
 
     const store = useAuthStore();
     store.setUser({ id: 1, github_id: 2, login: 'x', name: null, email: null, avatar_url: null });
-    expect(store.authenticated).toBe(true);
+    expect(store.isAuthenticated).toBe(true);
 
     // logout propagates error; ensure state is still cleared in finally
     await expect(store.logout()).rejects.toBeTruthy();
-    expect(store.authenticated).toBe(false);
+    expect(store.isAuthenticated).toBe(false);
     expect(store.user).toBeNull();
   });
 });

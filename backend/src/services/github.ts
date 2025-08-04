@@ -309,7 +309,7 @@ export class GitHubService {
         per_page: Math.min(options.per_page || 100, 100),
         sort: options.sort || 'updated',
         direction: options.direction || 'desc',
-        type: (options.type as any) || 'all',
+        type: options.type || 'all',
       })
 
       // Filter out archived repos and ensure user has at least read permissions if present

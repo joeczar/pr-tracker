@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { setupRepositoriesTest, createBasicAuthTest } from '../helpers/test-utils';
+import { test, expect as _expect } from '@playwright/test';
+import { setupRepositoriesTest, createBasicAuthTest as _createBasicAuthTest } from '../helpers/test-utils';
 
 // Repositories happy path using role-based selectors
 test.describe('Repositories', () => {

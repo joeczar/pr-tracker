@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect as _expect } from '@playwright/test';
 import { setupAuthenticatedTest, mockApi } from '../helpers/test-utils';
 
 // Analytics coverage with role-based selectors

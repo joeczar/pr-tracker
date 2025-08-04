@@ -76,7 +76,7 @@ const prStats = useQuery({
   enabled: computed(() => Number.isFinite(repoId.value)),
 })
 
-const reviewMetrics = useQuery({
+const _reviewMetrics = useQuery({
   queryKey: qk.reviews.metrics(repoId.value, days.value),
   queryFn: () => reviewsApi.metricsByRepo(repoId.value, days.value),
   enabled: computed(() => Number.isFinite(repoId.value)),

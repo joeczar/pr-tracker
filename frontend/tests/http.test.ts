@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 import { fetchJson, HttpError } from '@/lib/api/http';
 
 const originalFetch = global.fetch;

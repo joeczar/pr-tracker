@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, getCurrentInstance } from 'vue'
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import TerminalWindow from '@/components/ui/terminal/TerminalWindow.vue'
 import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
@@ -34,6 +35,7 @@ const showAddInline = ref(false)
 const showDelete = ref(false)
 const toDelete = ref<{ id?: number; owner: string; name: string } | null>(null)
 const { toast } = useToast?.() ?? { toast: (args: any) => console.log('[toast]', args) }
+const router = useRouter()
 
 const qc = useQueryClient()
 
@@ -109,11 +111,9 @@ function handleAddSubmit(payload: { owner: string; name: string; url?: string; p
         // default onSuccess from mutation still runs (toast, list invalidate, close dialog)
         // Deep-link to repo detail when a PR number was selected in the picker
         if (payload.prNumber != null) {
-          const inst = getCurrentInstance()
-          const router = inst?.proxy?.$router as any | undefined
           // Navigate using numeric id if available, otherwise fallback to owner/name
           const id = created?.id ?? `${payload.owner}/${payload.name}`
-          router?.push({ name: 'repository-detail', params: { id }, query: { pr: String(payload.prNumber) } })
+          router.push({ name: 'repository-detail', params: { id }, query: { pr: String(payload.prNumber) } })
         }
       },
     }
@@ -129,12 +129,8 @@ function cancelAddRepository() {
 }
 
 function openRepo(r: { owner: string; name: string }) {
-  const inst = getCurrentInstance()
-  const router = inst?.proxy?.$router as any | undefined
-  if (router) {
-    // Note: backend repository detail route expects numeric id; here we navigate by owner/name string as placeholder
-    router.push({ name: 'repository-detail', params: { id: `${r.owner}/${r.name}` } })
-  }
+  // Note: backend repository detail route expects numeric id; here we navigate by owner/name string as placeholder
+  router.push({ name: 'repository-detail', params: { id: `${r.owner}/${r.name}` } })
 }
 
 function syncRepo(r: { id?: number; owner: string; name: string }) {

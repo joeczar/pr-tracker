@@ -27,7 +27,7 @@ const emit = defineEmits<{
   (e: 'pat-updated'): void
 }>()
 
-const open = ref(props.modelValue)
+const _open = ref(props.modelValue)
 const patToken = ref('')
 const loading = ref(false)
 const error = ref<string | null>(null)

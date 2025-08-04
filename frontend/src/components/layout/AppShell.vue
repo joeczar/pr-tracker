@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import CommandPalette from '@/components/ui/command/CommandPalette.vue'
 import { useAuthStore } from '@/stores/auth'
-import { authApi } from '@/lib/api/auth'
+import { authApi as _authApi } from '@/lib/api/auth'
 
 const showCommandPalette = ref(false)
 const auth = useAuthStore()

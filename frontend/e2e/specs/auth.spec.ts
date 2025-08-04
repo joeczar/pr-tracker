@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { clearAuth, setAuth, mockApi, setupAuthenticatedTest } from '../helpers/test-utils';
+import { test, expect as _expect } from '@playwright/test';
+import { clearAuth, setAuth as _setAuth, mockApi, setupAuthenticatedTest } from '../helpers/test-utils';
 
 // Auth specs using role-based selectors only
 test.describe('Auth', () => {
