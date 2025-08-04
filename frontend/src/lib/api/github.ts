@@ -51,10 +51,18 @@ export type GitHubPullFile = {
   blob_url?: string;
 };
 
+
 export const githubApi = {
   test: () => http.get('/api/github/test') as Promise<{ success: boolean; user?: any }>,
 
   rateLimit: () => http.get('/api/github/rate-limit') as Promise<GitHubRateLimit>,
+
+  // Personal Access Token management
+  pat: {
+    store: (pat: string) => http.post('/api/github/pat/store', { pat }) as Promise<{ success: boolean; message: string }>,
+    validate: () => http.get('/api/github/pat/validate') as Promise<{ valid: boolean; message?: string; pat_user?: { login: string; id: number; name: string | null } }>,
+    remove: () => http.delete('/api/github/pat/remove') as Promise<{ success: boolean; message: string }>
+  },
 
   getRepo: (owner: string, repo: string) =>
     http.get(`/api/github/repos/${owner}/${repo}`) as Promise<GitHubRepo>,

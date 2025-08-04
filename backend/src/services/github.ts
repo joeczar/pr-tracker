@@ -2,6 +2,7 @@ import { Octokit } from '@octokit/rest'
 import { User } from '../types/auth.js'
 import { OAuthService } from './oauth.js'
 import { UserService } from './user.js'
+import { EncryptionService } from '../utils/encryption.js'
 
 type OrgSummary = { login: string; id: number; avatar_url?: string };
 
@@ -18,9 +19,22 @@ export class GitHubService {
       // Direct token provided
       token = userOrToken;
     } else if (userOrToken && typeof userOrToken === 'object') {
-      // User object provided, use their access token
+      // User object provided, prefer PAT over OAuth token
       this.user = userOrToken;
-      token = userOrToken.access_token;
+      
+      // Try to use PAT first if available
+      if (userOrToken.github_pat_encrypted) {
+        try {
+          token = EncryptionService.decrypt(userOrToken.github_pat_encrypted);
+          console.log('Using PAT for GitHub authentication for user:', userOrToken.login);
+        } catch (error) {
+          console.warn('Failed to decrypt PAT, falling back to OAuth token for user:', userOrToken.login);
+          token = userOrToken.access_token;
+        }
+      } else {
+        // Use OAuth token as fallback
+        token = userOrToken.access_token;
+      }
 
       // Initialize OAuth and User services for token refresh
       this.oauthService = new OAuthService();
@@ -51,6 +65,13 @@ export class GitHubService {
    */
   static withToken(token: string): GitHubService {
     return new GitHubService(token);
+  }
+
+  /**
+   * Get the Octokit instance for debugging purposes
+   */
+  getOctokit(): Octokit {
+    return this.octokit;
   }
 
   /**

@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import crypto from 'crypto'
-import { GitHubAppService } from '../services/github-app.js'
 
 const webhookRoutes = new Hono()
 
@@ -18,12 +17,9 @@ webhookRoutes.post('/github', async (c) => {
 
     const body = await c.req.text()
 
-    // Verify webhook signature using GitHub App service
-    const githubAppService = new GitHubAppService()
-    if (!githubAppService.verifyWebhookSignature(body, signature)) {
-      console.log('Invalid webhook signature')
-      return c.json({ error: 'Invalid signature' }, 401)
-    }
+    // TODO: Implement webhook signature verification
+    // For now, skip signature verification as GitHub App is removed
+    console.log('Webhook signature verification skipped (GitHub App removed)')
 
     let payload
     try {

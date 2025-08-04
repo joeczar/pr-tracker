@@ -21,6 +21,7 @@ import CommandItem from '../ui/command/CommandItem.vue'
 
 import type { GitHubRepo as RepositoryOption, GitHubPull as GitHubPullRequest } from '@/lib/api/github'
 import { githubApi } from '@/lib/api/github'
+import GitHubSettingsModal from '@/components/settings/GitHubSettingsModal.vue'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean
@@ -64,6 +65,7 @@ const orgs = ref<{ login: string; id: number; avatar_url?: string }[]>([])
 const orgsError = ref<string | null>(null)
 const loadingOrgs = ref(false)
 const selectedOrg = ref<string | null>(null)
+const showGitHubSettings = ref(false)
 
 /**
  * Load organizations helper (idempotent)
@@ -74,17 +76,25 @@ async function loadOrgsIfNeeded(force = false) {
   try {
     loadingOrgs.value = true
     orgsError.value = null
-    console.debug('[repo-picker] fetching organizations…')
-    const res = await githubApi.listOrganizations()
-    orgs.value = res.organizations ?? []
-    console.debug('[repo-picker] organizations loaded:', orgs.value.length)
+    console.debug('[repo-picker] fetching organizations via OAuth…')
+
+    // Use OAuth API to get organizations you belong to
+    const response = await githubApi.listOrganizations()
+    orgs.value = response.organizations.map(org => ({
+      login: org.login,
+      id: org.id,
+      avatar_url: org.avatar_url
+    }))
+
+    console.debug('[repo-picker] organizations loaded (via OAuth):', orgs.value.length)
   } catch (e: any) {
-    console.error('Failed to load organizations', e)
+    console.error('Failed to load organizations via OAuth', e)
     orgsError.value = e?.message ?? 'Failed to load organizations'
   } finally {
     loadingOrgs.value = false
   }
 }
+
 
 /**
  * Repository list (paged) + filtering + states
@@ -196,8 +206,9 @@ async function loadPulls(reset = false) {
       pulls.value = []
       hasMorePulls.value = true
     }
+    const ownerLogin = selectedRepo.value.owner.login
     const batch = await githubApi.listPulls(
-      selectedRepo.value.owner.login,
+      ownerLogin,
       selectedRepo.value.name,
       { state: pullsState.value, page: pullsPage.value, per_page: pullsPerPage }
     )
@@ -241,6 +252,15 @@ function onKeydown(e: KeyboardEvent) {
 
 function close() {
   open.value = false
+}
+
+/**
+ * Handle PAT updates from settings modal
+ */
+function onPATUpdated() {
+  // Reload organizations after PAT is updated
+  void loadOrgsIfNeeded(true)
+  void loadRepos(true)
 }
 
 /**
@@ -303,6 +323,8 @@ watch(open, v => {
     pullsState.value = 'open'
     reposError.value = null
     pullsError.value = null
+    // Load orgs and repos
+    void loadOrgsIfNeeded(true)
     void loadRepos(true)
     requestAnimationFrame(() => {
       const root = contentEl.value instanceof HTMLElement ? contentEl.value : (dialogEl.value as HTMLElement | null)
@@ -322,7 +344,7 @@ onMounted(async () => {
   document.addEventListener('keydown', onKeydown)
   computeCaps()
   window.addEventListener('resize', computeCaps)
-  // Preload orgs (best effort, safe if unauth or missing scope; also logged)
+  // Preload orgs (best effort)
   void loadOrgsIfNeeded(true)
 })
 
@@ -407,9 +429,44 @@ onBeforeUnmount(() => {
                     <CommandList>
                       <CommandEmpty class="text-sm font-mono text-slate-400 p-3">
                         <template v-if="loadingOrgs">Loading organizations…</template>
-                        <template v-else>No organizations</template>
+                        <template v-else>
+                          <div class="space-y-2">
+                            <div>No organizations</div>
+                            <div class="text-xs text-slate-500">
+                              If your orgs are private, add a Personal Access Token with read:org.
+                              <button
+                                @click="showGitHubSettings = true"
+                                class="text-cyber-accent hover:underline focus:underline ml-1"
+                                type="button"
+                              >
+                                Add PAT
+                              </button>
+                            </div>
+                          </div>
+                        </template>
                       </CommandEmpty>
-                      <CommandGroup heading="Organizations">
+                      <div class="flex items-center justify-between px-2 pb-1 mb-2">
+                        <span class="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">Organizations</span>
+                        <div class="flex items-center gap-2">
+                          <button
+                            @click="() => { selectedOrg = null; orgsError = null; void loadOrgsIfNeeded(true) }"
+                            class="text-[11px] text-slate-400 hover:text-slate-200 underline"
+                            type="button"
+                            title="Refresh organizations"
+                          >
+                            Refresh
+                          </button>
+                          <button
+                            @click="showGitHubSettings = true"
+                            class="text-xs text-cyber-accent hover:text-cyan-300 underline"
+                            type="button"
+                            title="Configure GitHub settings"
+                          >
+                            Settings
+                          </button>
+                        </div>
+                      </div>
+                      <CommandGroup>
                         <template v-if="orgsError">
                           <div class="text-xs text-amber-400 px-3 py-2">Failed to load orgs; try again later.</div>
                         </template>
@@ -446,7 +503,37 @@ onBeforeUnmount(() => {
                     <template v-else>No repositories found.</template>
                   </CommandEmpty>
                   <CommandGroup heading="Repositories">
-                    <!-- Skeletons -->
+                    <!-- Empty state for organizations -->
+                    <template v-if="scope === 'org' && !selectedOrg && !loadingOrgs && orgs.length === 0">
+                      <div class="px-3 py-3 space-y-2 border border-amber-500/30 bg-amber-500/5 rounded">
+                        <div class="text-xs text-amber-300">
+                          No organizations found.
+                        </div>
+                        <div class="text-xs text-slate-400 space-y-1">
+                          <p>You may not belong to any GitHub organizations, or they may be private.</p>
+                          <p>
+                            If organizations are private, add a
+                            <button 
+                              @click="showGitHubSettings = true"
+                              class="text-cyber-accent hover:underline focus:underline"
+                              type="button"
+                            >
+                              Personal Access Token
+                            </button>
+                            with read:org to see them.
+                          </p>
+                          <div>
+                            <button
+                              @click="() => { orgsError = null; void loadOrgsIfNeeded(true) }"
+                              type="button"
+                              class="text-xs text-slate-300 hover:underline"
+                            >
+                              Try loading organizations again
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
                     <template v-if="loadingRepos && !repos.length">
                       <div v-for="i in 6" :key="i" class="px-3 py-2">
                         <div class="h-4 w-2/3 bg-slate-700/40 rounded animate-pulse mb-1"></div>
@@ -521,7 +608,7 @@ onBeforeUnmount(() => {
                 </div>
               </div>
 
-              <Command>
+                  <Command>
                 <CommandInput
                   id="pr-search"
                   v-model="pullSearch"
@@ -599,5 +686,11 @@ onBeforeUnmount(() => {
         </DialogHeader>
       </div>
     </DialogContent>
+    
+    <!-- GitHub Settings Modal -->
+    <GitHubSettingsModal 
+      v-model="showGitHubSettings" 
+      @pat-updated="onPATUpdated"
+    />
   </Dialog>
 </template>
