@@ -76,11 +76,14 @@ function refresh() {
     </div>
 
     <div v-else-if="isEmptySelection" class="text-sm text-slate-500">
-      No PRs selected.
+      No PRs selected. Select PRs in the repository view to see recent activity here.
     </div>
 
     <div v-else-if="isEmptyFiltered" class="text-sm text-slate-500">
       No recent activity for the selected PRs within the fetched range.
+      <div class="mt-2 text-xs text-slate-400">
+        Tip: Click Refresh or widen the time window in future iterations to include more history.
+      </div>
     </div>
 
     <ul v-else class="space-y-2" role="list">

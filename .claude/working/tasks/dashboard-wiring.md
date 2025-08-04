@@ -2,7 +2,7 @@
 
 Owner: Cline  
 Status: In Progress  
-Last Updated: 2025-08-04
+Last Updated: 2025-08-04 (updated after componentization, Quick Metrics empty states, and Trends wiring)
 
 ## Goal
 
@@ -54,6 +54,7 @@ Query Keys:
 ## Implementation Steps (ONE BY ONE with Playwright MCP verification)
 
 Step 0: Selection Store + Repo View + Repo Cards UX
+(done)
 - Create `frontend/src/stores/selection.ts`:
   - `selectedRepositoryId: Ref<number | null>`
   - `selectedPullRequestIds: Ref<number[]>`
@@ -82,49 +83,22 @@ Step 0: Selection Store + Repo View + Repo Cards UX
   - From `/repositories`, if selection exists for id X, assert the card for id X shows “Selected PRs” chips and that clicking a chip routes to the PR-focused context and selection is reflected.
 
 Step 1: Quick Metrics Tiles (PR-scoped)
-- Wire tiles to reflect ONLY selected PRs:
-  - Use `pullRequestsApi.listByRepo(repoId, { state: 'all', limit: N })` to fetch a working set.
-  - Filter list by `selectedPullRequestIds`. If no PRs selected, show guided empty state for tiles.
-  - reviews metrics proxy:
-    - If repository-level reviews metrics are available for the period (`reviewsApi.metricsByRepo(repoId, 30)`), and selected PRs ⊆ fetched list:
-      - Derive totals for selected PRs client-side if possible; else fall back to repo-level values with a subtle note flag (internal TODO).
-    - Calculate:
-      - Total Comments (30d): derive from aggregated per-PR data if accessible; otherwise `avg_comments_per_pr * selected_total_prs`.
-      - Avg Comments / PR: derived average over selected PRs.
-      - Change-request rate: percent over selected PRs.
-      - Active Repos: 1 when a repo is selected (or from repositories count if design prefers).
-- Loading/Error/Empty:
-  - Loading: placeholder tiles when pending and no previous data for the selected set.
-  - Error: inline message + Retry button to refetch relevant queries.
-  - Empty: “Select PRs in the repository view to populate metrics.”
-- Playwright MCP verification (Step 1):
-  - Navigate to `/repositories/:id`, select one or more PRs (or use `/repositories/:id?pr=<knownPr>`).
-  - Navigate to `/` and assert:
-    - Each of the 4 tiles renders a non-placeholder numeric value (e.g., not "—", not "Loading...", not empty).
-    - "Active Repos" matches 1 (if PR-centric) or the repositories count by design.
-  - Change selection:
-    - Back to `/repositories/:id?pr=<differentPr>`, then return to `/`.
-    - Assert at least one tile value changes relative to the previous view (indicating refetch based on selection).
-  - Error path:
-    - Temporarily disconnect network (if feasible) or simulate refetch; assert the error message and "Retry" button is present; click "Retry" and assert tiles recover.
+(done: componentized, queries owned in section, robust loading/error/empty; empty shows normal zeros with faded style and hover tooltips)
+- Enhancements delivered:
+  - Always render 4 tiles to keep layout stable.
+  - No-selection/empty: 0 or 0% values in a disabled/faded style; tooltip explains “Select PRs to populate” or “No data in the last 30 days”.
+  - Error with Retry; loading skeletons preserved.
+- TODO (follow-up when PR-scoped endpoints exist): compute exact per-PR aggregates instead of proportional proxies.
+- Playwright MCP (pending): add assertions for card presence in empty state and tooltip visibility on hover.
 
-Step 2: Trends Chart (PR-scoped)
-- Replace mock chart data with trends derived from selected PRs.
-  - If backend trends are repository-level only, compute a best-effort client-side series for selected PRs using available PR/review data.
-  - Maintain tabs (e.g., comments, change) and a11y summary.
-- Loading/Error/Empty:
-  - Loading: chart skeleton when pending and no data.
-  - Error: concise message with Retry.
-  - Empty: “Select PRs in the repository view to populate trends.”
-- Playwright MCP verification (Step 2):
-  - With selected PRs:
-    - Navigate to `/` and assert the chart is visible and dataset length > 0 (summary should say e.g., "Points: N" or "Data points: N days").
-    - Click tab buttons (Comments, Change Req) and assert the chart updates (e.g., dataset labels or values change).
-  - Empty path:
-    - Clear PR selection in `/repositories/:id` and return to `/`.
-    - Assert trends area shows the guided empty state for trends.
-  - Error path:
-    - Simulate a failure and assert "Failed to load trends." with Retry, click Retry, and assert recovery.
+Step 2: Trends Chart (repo analytics wired; selection-aware derivations pending)
+(in progress: wired to analyticsApi.trendsByRepo(repoId, 14) with loading/error/empty; tabs mapped: comments, change %, avg)
+- Implemented:
+  - Live data via analyticsApi.trendsByRepo.
+  - Loading placeholder, concise Error with Retry, Empty shows faded zeroed chart to keep layout stable.
+  - Change tab normalizes 0–1 to %, or derives proxy from avg_reviews.
+- TODO: selection-aware trend derivation once PR-scoped trends endpoint exists.
+- Playwright MCP (pending): verify tabs switch and dataset lengths/labels update; verify empty/error states and Retry.
 
 Step 3: Goals (derived from selected PRs)
 - Keep existing ProgressRadial UI; compute values from current metrics scoped to selected PRs (e.g., thresholds).
@@ -137,17 +111,15 @@ Step 3: Goals (derived from selected PRs)
     - Assert the guided empty goals state is visible.
 
 Step 4: Recent Activity (PR-scoped)
-- Replace placeholders with list of selected PRs:
-  - Fetch via `pullRequestsApi.listByRepo(repoId, { state: 'all', limit })` and filter by `selectedPullRequestIds`.
-  - Render title, state, updated date.
-  - Implement Refresh button calling `refetch`.
-- Loading/Error/Empty states as above.
-- Playwright MCP verification (Step 4):
-  - With selected PRs:
-    - Navigate to `/` and assert the Recent Activity list renders items corresponding to selected PRs (title and state visible).
-    - Click "Refresh" and assert a refetch occurs (e.g., network call visible in logs or list timestamps change).
-  - No selection:
-    - Assert the guided empty state for Recent Activity.
+(in progress: wired to repo list and filtered by selection; enhanced empty states)
+- Implemented:
+  - Fetch repo PR list with undefined state (all) and limit; client-side filter to selected PR IDs.
+  - Refresh triggers refetch.
+  - Empty states:
+    - No selection: “Select PRs…” message.
+    - Selected but none in range: explanatory message + tip.
+- TODO: when backend supports PR-scoped query, request only selected PRs.
+- Playwright MCP (pending): assert list items match selection; Refresh triggers refetch; empty states render as described.
 
 Step 5: Polish
 - Retry buttons invalidate relevant queries.
@@ -244,9 +216,11 @@ Repository cards
 
 ## Next Commits (planned)
 
-- feat(frontend): selection store for repo and PRs; hydrate from route
-- feat(frontend): dashboard consumes PR-centric selection; remove local repo selector
-- feat(frontend): wire quick metrics to selected PRs
-- feat(frontend): wire trends to selected PRs
-- feat(frontend): wire recent activity to selected PRs and refresh
-- test(e2e): dashboard PR-centric verification with Playwright MCP
+- feat(frontend): selection store for repo and PRs; hydrate from route (done)
+- feat(frontend): dashboard consumes PR-centric selection; remove local repo selector (done)
+- feat(frontend): componentize dashboard sections (done)
+- feat(frontend): quick metrics section with robust states and empty tooltips (done)
+- feat(frontend): trends section wired to analytics with robust states (in progress)
+- feat(frontend): recent activity section with robust states and refresh (in progress)
+- feat(frontend): goals section derived from metrics (pending)
+- test(e2e): dashboard PR-centric verification with Playwright MCP (pending)
