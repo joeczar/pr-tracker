@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import crypto from 'crypto'
+import { GitHubAppService } from '../services/github-app.js'
 
 const webhookRoutes = new Hono()
 
@@ -9,30 +10,19 @@ webhookRoutes.post('/github', async (c) => {
     const signature = c.req.header('x-hub-signature-256')
     const event = c.req.header('x-github-event')
     const delivery = c.req.header('x-github-delivery')
-    
+
     if (!signature || !event || !delivery) {
       console.log('Missing required webhook headers')
       return c.json({ error: 'Missing required headers' }, 400)
     }
 
     const body = await c.req.text()
-    
-    // Verify webhook signature if secret is configured
-    const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET
-    if (webhookSecret) {
-      const expectedSignature = `sha256=${crypto
-        .createHmac('sha256', webhookSecret)
-        .update(body, 'utf8')
-        .digest('hex')}`
 
-      // Use timingSafeEqual to prevent timing attacks
-      if (!crypto.timingSafeEqual(
-        Buffer.from(signature, 'utf8'),
-        Buffer.from(expectedSignature, 'utf8')
-      )) {
-        console.log('Invalid webhook signature')
-        return c.json({ error: 'Invalid signature' }, 401)
-      }
+    // Verify webhook signature using GitHub App service
+    const githubAppService = new GitHubAppService()
+    if (!githubAppService.verifyWebhookSignature(body, signature)) {
+      console.log('Invalid webhook signature')
+      return c.json({ error: 'Invalid signature' }, 401)
     }
 
     let payload

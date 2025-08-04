@@ -10,6 +10,7 @@ const dbManager = DatabaseManager.getInstance();
 dbManager.runMigrations();
 
 import { githubRoutes } from './routes/github.js';
+import { githubAppRoutes } from './routes/github-app.js';
 import { repositoryRoutes } from './routes/repositories.js';
 import { pullRequestRoutes } from './routes/pull-requests.js';
 import { reviewRoutes } from './routes/reviews.js';
@@ -50,6 +51,7 @@ app.route('/webhooks', webhookRoutes);
 
 // API routes
 app.route('/api/github', githubRoutes);
+app.route('/api/github-app', githubAppRoutes);
 app.route('/api/repositories', repositoryRoutes);
 app.route('/api/pull-requests', pullRequestRoutes);
 app.route('/api/reviews', reviewRoutes);

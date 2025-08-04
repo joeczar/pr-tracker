@@ -233,9 +233,29 @@ export class GitHubService {
 
   /**
    * List organizations for the authenticated user
+   * Tries memberships endpoint first for private organizations, falls back to public orgs
    */
   async getUserOrganizations(): Promise<OrgSummary[]> {
     return this.withTokenRefresh(async () => {
+      try {
+        // Try memberships endpoint first - this shows private organizations
+        const membershipsResponse = await this.octokit.request('GET /user/memberships/orgs', {
+          per_page: 100,
+          state: 'active'
+        })
+
+        if (membershipsResponse.data.length > 0) {
+          return membershipsResponse.data.map((membership: any) => ({
+            login: membership.organization.login,
+            id: membership.organization.id,
+            avatar_url: membership.organization.avatar_url ?? undefined,
+          }))
+        }
+      } catch (error) {
+        console.log('Memberships endpoint failed, falling back to public orgs:', error)
+      }
+
+      // Fallback to public organizations endpoint
       const response = await this.octokit.rest.orgs.listForAuthenticatedUser({
         per_page: 100,
         page: 1,

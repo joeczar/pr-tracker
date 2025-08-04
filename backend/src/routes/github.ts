@@ -148,27 +148,19 @@ githubRoutes.get('/organizations', requireAuth, async (c) => {
     console.log('🔍 Fetching organizations for user:', user.login)
     
     try {
-      const response = await githubService.octokit.rest.orgs.listForAuthenticatedUser({
-        per_page: 100
-      })
-      
-      console.log('✅ GitHub API response status:', response.status)
-      console.log('📊 Organizations count:', response.data.length)
-      console.log('🏢 Organization names:', response.data.map(org => org.login))
-      console.log('🔐 Response headers - scopes:', response.headers['x-oauth-scopes'])
-      
-      const orgs = response.data.map(org => ({
-        login: org.login,
-        id: org.id,
-        avatar_url: org.avatar_url ?? undefined,
-      }))
-      
-      return c.json({ 
+      console.log('🔍 Fetching organizations for user:', user.login)
+
+      const orgs = await githubService.getUserOrganizations()
+
+      console.log('✅ Organizations fetched successfully')
+      console.log('📊 Organizations count:', orgs.length)
+      console.log('🏢 Organization names:', orgs.map(org => org.login))
+
+      return c.json({
         organizations: orgs,
         debug: {
-          api_status: response.status,
-          count: response.data.length,
-          scopes: response.headers['x-oauth-scopes']
+          count: orgs.length,
+          organizations: orgs.map(org => org.login)
         }
       })
     } catch (apiError: any) {
