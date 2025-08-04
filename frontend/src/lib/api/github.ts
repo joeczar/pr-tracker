@@ -24,6 +24,12 @@ export type GitHubRepo = {
   updated_at?: string;
 };
 
+export type GitHubOrganization = {
+  login: string;
+  id: number;
+  avatar_url?: string;
+};
+
 export type GitHubPull = {
   id: number;
   number: number;
@@ -45,10 +51,18 @@ export type GitHubPullFile = {
   blob_url?: string;
 };
 
+
 export const githubApi = {
   test: () => http.get('/api/github/test') as Promise<{ success: boolean; user?: any }>,
 
   rateLimit: () => http.get('/api/github/rate-limit') as Promise<GitHubRateLimit>,
+
+  // Personal Access Token management
+  pat: {
+    store: (pat: string) => http.post('/api/github/pat/store', { pat }) as Promise<{ success: boolean; message: string }>,
+    validate: () => http.get('/api/github/pat/validate') as Promise<{ valid: boolean; message?: string; pat_user?: { login: string; id: number; name: string | null } }>,
+    remove: () => http.delete('/api/github/pat/remove') as Promise<{ success: boolean; message: string }>
+  },
 
   getRepo: (owner: string, repo: string) =>
     http.get(`/api/github/repos/${owner}/${repo}`) as Promise<GitHubRepo>,
@@ -73,6 +87,34 @@ export const githubApi = {
 
   getPullFiles: (owner: string, repo: string, number: number) =>
     http.get(`/api/github/repos/${owner}/${repo}/pulls/${number}/files`) as Promise<GitHubPullFile[]>,
+
+  listOrganizations: () =>
+    http.get('/api/github/organizations') as Promise<{ organizations: GitHubOrganization[] }>,
+
+  listOrgRepos: (
+    org: string,
+    opts?: {
+      page?: number;
+      per_page?: number;
+      sort?: 'created' | 'updated' | 'pushed' | 'full_name';
+      direction?: 'asc' | 'desc';
+      type?: 'all' | 'public' | 'private' | 'forks' | 'sources' | 'member';
+    }
+  ) => {
+    const params = new URLSearchParams();
+    if (opts?.page != null) params.set('page', String(opts.page));
+    if (opts?.per_page != null) params.set('per_page', String(opts.per_page));
+    if (opts?.sort) params.set('sort', opts.sort);
+    if (opts?.direction) params.set('direction', opts.direction);
+    if (opts?.type) params.set('type', opts.type);
+    const qs = params.toString();
+    return http.get(
+      `/api/github/orgs/${org}/repos${qs ? `?${qs}` : ''}`
+    ) as Promise<{
+      repositories: GitHubRepo[];
+      pagination?: { page: number; per_page: number; has_next_page?: boolean };
+    }>;
+  },
 
   listAccessibleRepositories: (opts?: {
     page?: number;

@@ -98,6 +98,9 @@ export class DatabaseManager {
         refresh_token TEXT,
         token_expires_at DATETIME,
         scopes TEXT NOT NULL,
+        github_pat_encrypted TEXT,
+        pat_status TEXT,
+        pat_validated_at DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -135,6 +138,33 @@ export class DatabaseManager {
     } catch (error) {
       // Column might already exist, ignore error
       console.log('Note: user_id column may already exist in repositories table');
+    }
+
+    // Add github_pat_encrypted to users table (if not exists)
+    try {
+      this.db.exec(`
+        ALTER TABLE users ADD COLUMN github_pat_encrypted TEXT;
+      `);
+    } catch (error) {
+      console.log('Note: github_pat_encrypted column may already exist in users table');
+    }
+
+    // Add pat_status to users table (if not exists)
+    try {
+      this.db.exec(`
+        ALTER TABLE users ADD COLUMN pat_status TEXT;
+      `);
+    } catch (error) {
+      console.log('Note: pat_status column may already exist in users table');
+    }
+
+    // Add pat_validated_at to users table (if not exists)
+    try {
+      this.db.exec(`
+        ALTER TABLE users ADD COLUMN pat_validated_at DATETIME;
+      `);
+    } catch (error) {
+      console.log('Note: pat_validated_at column may already exist in users table');
     }
 
     // Create indexes for better performance

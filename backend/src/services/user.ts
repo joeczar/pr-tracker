@@ -133,9 +133,29 @@ export class UserService {
       refresh_token: dbUser.refresh_token ? this.decryptToken(dbUser.refresh_token) : null,
       token_expires_at: dbUser.token_expires_at ? new Date(dbUser.token_expires_at) : null,
       scopes: JSON.parse(dbUser.scopes),
+      github_pat_encrypted: dbUser.github_pat_encrypted,
       created_at: new Date(dbUser.created_at),
       updated_at: new Date(dbUser.updated_at)
     };
+  }
+
+  async updateUserPAT(userId: number, encryptedPAT: string | null): Promise<void> {
+    const stmt = this.db.prepare(`
+      UPDATE users 
+      SET github_pat_encrypted = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+
+    stmt.run(encryptedPAT, userId);
+  }
+
+  async updatePatValidation(userId: number, status: 'valid' | 'invalid', validatedAt: Date = new Date()): Promise<void> {
+    const stmt = this.db.prepare(`
+      UPDATE users
+      SET pat_status = ?, pat_validated_at = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    stmt.run(status, validatedAt.toISOString(), userId);
   }
 
   // Session management

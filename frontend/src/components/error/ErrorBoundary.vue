@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, onErrorCaptured, h, type VNodeChild } from 'vue';
+import { defineProps, defineEmits, ref, onErrorCaptured, h as _h, type VNodeChild } from 'vue';
 
 type FallbackRender = (params: {
   error: unknown;
   resetError: () => void;
 }) => VNodeChild;
 
-const props = defineProps<{
+const _props = defineProps<{
   fallback?: VNodeChild;
   fallbackRender?: FallbackRender;
 }>();

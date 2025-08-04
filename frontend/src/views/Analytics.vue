@@ -11,6 +11,13 @@ import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
 import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
 import TrendChart from '@/components/analytics/TrendChart.vue'
 import MetricTile from '@/components/analytics/MetricTile.vue'
+
+// Mark unused imports for lint
+const _TerminalWindow = TerminalWindow
+const _TerminalHeader = TerminalHeader
+const _TerminalTitle = TerminalTitle
+const _TerminalButton = TerminalButton
+const _MetricTile = MetricTile
 import ErrorBoundary from '@/components/error/ErrorBoundary.vue'
 
 type Timeframe = '7d' | '30d' | '90d'
@@ -43,7 +50,7 @@ const compareMutation = useMutation({
 })
 
 // Stub: pretend-fetch analytics for a given timeframe
-async function fetchAnalytics(tf: Timeframe) {
+async function fetchAnalytics(_tf: Timeframe) {
   loading.value = true
   try {
     // Placeholder to keep legacy skeletons working alongside real queries

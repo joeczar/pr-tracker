@@ -2,6 +2,9 @@ import { Octokit } from '@octokit/rest'
 import { User } from '../types/auth.js'
 import { OAuthService } from './oauth.js'
 import { UserService } from './user.js'
+import { EncryptionService } from '../utils/encryption.js'
+
+type OrgSummary = { login: string; id: number; avatar_url?: string };
 
 export class GitHubService {
   private octokit: Octokit
@@ -16,9 +19,22 @@ export class GitHubService {
       // Direct token provided
       token = userOrToken;
     } else if (userOrToken && typeof userOrToken === 'object') {
-      // User object provided, use their access token
+      // User object provided, prefer PAT over OAuth token
       this.user = userOrToken;
-      token = userOrToken.access_token;
+      
+      // Try to use PAT first if available
+      if (userOrToken.github_pat_encrypted) {
+        try {
+          token = EncryptionService.decrypt(userOrToken.github_pat_encrypted);
+          console.log('Using PAT for GitHub authentication for user:', userOrToken.login);
+        } catch (error) {
+          console.warn('Failed to decrypt PAT, falling back to OAuth token for user:', userOrToken.login);
+          token = userOrToken.access_token;
+        }
+      } else {
+        // Use OAuth token as fallback
+        token = userOrToken.access_token;
+      }
 
       // Initialize OAuth and User services for token refresh
       this.oauthService = new OAuthService();
@@ -49,6 +65,13 @@ export class GitHubService {
    */
   static withToken(token: string): GitHubService {
     return new GitHubService(token);
+  }
+
+  /**
+   * Get the Octokit instance for debugging purposes
+   */
+  getOctokit(): Octokit {
+    return this.octokit;
   }
 
   /**
@@ -226,6 +249,75 @@ export class GitHubService {
     return this.withTokenRefresh(async () => {
       const response = await this.octokit.rest.rateLimit.get()
       return response.data
+    })
+  }
+
+  /**
+   * List organizations for the authenticated user
+   * Tries memberships endpoint first for private organizations, falls back to public orgs
+   */
+  async getUserOrganizations(): Promise<OrgSummary[]> {
+    return this.withTokenRefresh(async () => {
+      try {
+        // Try memberships endpoint first - this shows private organizations
+        const membershipsResponse = await this.octokit.request('GET /user/memberships/orgs', {
+          per_page: 100,
+          state: 'active'
+        })
+
+        if (membershipsResponse.data.length > 0) {
+          return membershipsResponse.data.map((membership: any) => ({
+            login: membership.organization.login,
+            id: membership.organization.id,
+            avatar_url: membership.organization.avatar_url ?? undefined,
+          }))
+        }
+      } catch (error) {
+        console.log('Memberships endpoint failed, falling back to public orgs:', error)
+      }
+
+      // Fallback to public organizations endpoint
+      const response = await this.octokit.rest.orgs.listForAuthenticatedUser({
+        per_page: 100,
+        page: 1,
+      })
+      return response.data.map(org => ({
+        login: org.login,
+        id: org.id,
+        avatar_url: org.avatar_url ?? undefined,
+      }))
+    })
+  }
+
+  /**
+   * List repositories for a specific organization
+   */
+  async getOrganizationRepositories(
+    org: string,
+    options: {
+      page?: number
+      per_page?: number
+      sort?: 'created' | 'updated' | 'pushed' | 'full_name'
+      direction?: 'asc' | 'desc'
+      type?: 'all' | 'public' | 'private' | 'forks' | 'sources' | 'member'
+    } = {}
+  ) {
+    return this.withTokenRefresh(async () => {
+      const response = await this.octokit.rest.repos.listForOrg({
+        org,
+        page: options.page || 1,
+        per_page: Math.min(options.per_page || 100, 100),
+        sort: options.sort || 'updated',
+        direction: options.direction || 'desc',
+        type: options.type || 'all',
+      })
+
+      // Filter out archived repos and ensure user has at least read permissions if present
+      const repos = response.data.filter(repo => {
+        return !repo.archived && (repo.permissions?.pull ?? true)
+      })
+
+      return repos
     })
   }
 

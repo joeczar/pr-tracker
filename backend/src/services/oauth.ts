@@ -8,7 +8,8 @@ export class OAuthService {
       clientId: process.env.GITHUB_OAUTH_CLIENT_ID || '',
       clientSecret: process.env.GITHUB_OAUTH_CLIENT_SECRET || '',
       callbackUrl: process.env.GITHUB_OAUTH_CALLBACK_URL || 'http://localhost:3000/auth/github/callback',
-      scopes: ['repo', 'user:email', 'read:user']
+      // Include read:org to allow fetching private organization memberships and org repos
+      scopes: ['repo', 'read:org', 'user:email', 'read:user']
     };
 
     if (!this.config.clientId || !this.config.clientSecret) {

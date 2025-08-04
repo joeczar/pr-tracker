@@ -7,6 +7,10 @@ node_modules/
 .env.local
 .env.*.local
 
+# GitHub App private keys
+backend/keys/
+*.pem
+
 # Build outputs
 dist/
 */dist/

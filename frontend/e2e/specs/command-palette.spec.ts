@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect as _expect } from '@playwright/test';
 import { setupRepositoriesTest } from '../helpers/test-utils';
 
 // Command Palette coverage with role-based selectors

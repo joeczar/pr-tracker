@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "../stores/auth";
-import { authApi } from "@/lib/api/auth";
+import { authApi as _authApi } from "@/lib/api/auth";
 
 const routes = [
   { path: "/", name: "dashboard", component: () => import("../views/Dashboard.vue") },

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import TerminalWindow from '@/components/ui/terminal/TerminalWindow.vue'
@@ -24,6 +24,14 @@ const reducedMotion =
 
 const route = useRoute()
 const repoId = computed(() => Number(route.params.id))
+
+// Optional: pre-focus a PR if deep-linked via ?pr=123
+const deepLinkedPr = computed<number | null>(() => {
+  const raw = route.query.pr
+  if (raw == null) return null
+  const n = Array.isArray(raw) ? Number(raw[0]) : Number(raw)
+  return Number.isFinite(n) ? n : null
+})
 const days = ref(30)
 const prState = ref<'open' | 'closed' | 'merged' | 'all'>('open')
 const prLimit = ref(50)
@@ -43,13 +51,32 @@ const prList = useQuery({
   enabled: computed(() => Number.isFinite(repoId.value)),
 })
 
+/**
+ * Adjust filters based on deep-linked PR after data loads.
+ * Vue Query's composition API doesn't accept onSuccess in options typing here,
+ * so watch the query result instead.
+ */
+watch(
+  () => prList.data.value,
+  () => {
+    if (deepLinkedPr.value != null) {
+      if (prState.value !== 'all') {
+        prState.value = 'all'
+      }
+      if (prLimit.value < 100) {
+        prLimit.value = 100
+      }
+    }
+  }
+)
+
 const prStats = useQuery({
   queryKey: qk.prs.stats(repoId.value),
   queryFn: () => pullRequestsApi.statsByRepo(repoId.value),
   enabled: computed(() => Number.isFinite(repoId.value)),
 })
 
-const reviewMetrics = useQuery({
+const _reviewMetrics = useQuery({
   queryKey: qk.reviews.metrics(repoId.value, days.value),
   queryFn: () => reviewsApi.metricsByRepo(repoId.value, days.value),
   enabled: computed(() => Number.isFinite(repoId.value)),
@@ -304,6 +331,7 @@ const {
             v-for="pr in prList.data?.value || []"
             :key="pr.id"
             class="rounded border border-cyber-border bg-cyber-surface/60 p-3"
+            :class="pr.number === deepLinkedPr ? 'ring-2 ring-cyber-accent' : ''"
           >
             <div class="flex items-center justify-between">
               <div class="font-medium">{{ pr.title }}</div>

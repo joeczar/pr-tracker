@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect as _expect } from '@playwright/test';
 import { 
   setupAuthenticatedTest, 
   setupRepositoriesTest, 
-  createBasicAuthTest, 
+  createBasicAuthTest as _createBasicAuthTest, 
   mockApi 
 } from '../helpers/test-utils';
 
@@ -17,7 +17,7 @@ test.describe('Template Examples', () => {
   
   // PATTERN 1: Simple authenticated test - just verify auth works
   test('basic auth setup pattern', async ({ page }) => {
-    await createBasicAuthTest(page, '/some-route');
+    await _createBasicAuthTest(page, '/some-route');
     // Test passes by verifying navigation is visible and auth works
   });
 

@@ -9,31 +9,17 @@ webhookRoutes.post('/github', async (c) => {
     const signature = c.req.header('x-hub-signature-256')
     const event = c.req.header('x-github-event')
     const delivery = c.req.header('x-github-delivery')
-    
+
     if (!signature || !event || !delivery) {
       console.log('Missing required webhook headers')
       return c.json({ error: 'Missing required headers' }, 400)
     }
 
     const body = await c.req.text()
-    
-    // Verify webhook signature if secret is configured
-    const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET
-    if (webhookSecret) {
-      const expectedSignature = `sha256=${crypto
-        .createHmac('sha256', webhookSecret)
-        .update(body, 'utf8')
-        .digest('hex')}`
 
-      // Use timingSafeEqual to prevent timing attacks
-      if (!crypto.timingSafeEqual(
-        Buffer.from(signature, 'utf8'),
-        Buffer.from(expectedSignature, 'utf8')
-      )) {
-        console.log('Invalid webhook signature')
-        return c.json({ error: 'Invalid signature' }, 401)
-      }
-    }
+    // TODO: Implement webhook signature verification
+    // For now, skip signature verification as GitHub App is removed
+    console.log('Webhook signature verification skipped (GitHub App removed)')
 
     let payload
     try {

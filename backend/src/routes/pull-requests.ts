@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { PullRequestService } from '../services/pull-request.js'
+import { requireAuth, getUser } from '../middleware/auth.js'
 
 const pullRequestRoutes = new Hono()
 
@@ -77,14 +78,19 @@ pullRequestRoutes.get('/:id', async (c) => {
 })
 
 // Sync pull requests for a repository
-pullRequestRoutes.post('/repository/:repositoryId/sync', async (c) => {
+pullRequestRoutes.post('/repository/:repositoryId/sync', requireAuth, async (c) => {
   try {
     const repositoryId = parseInt(c.req.param('repositoryId'))
     if (isNaN(repositoryId)) {
       return c.json({ error: 'Invalid repository ID' }, 400)
     }
 
-    const pullRequestService = new PullRequestService()
+    const user = getUser(c)
+    if (!user) {
+      return c.json({ error: 'User not found' }, 401)
+    }
+
+    const pullRequestService = PullRequestService.forUser(user)
     const result = await pullRequestService.syncPullRequests(repositoryId)
 
     return c.json(result)

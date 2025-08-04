@@ -1,12 +1,24 @@
 import { DatabaseManager } from '../db/database.js'
 import { GitHubService } from './github.js'
 import { PullRequestService } from './pull-request.js'
+import { User } from '../types/auth.js'
 import type { Review, ReviewMetrics } from '@shared/types/index.js'
 
 export class ReviewService {
   private db = DatabaseManager.getInstance().getDatabase()
-  private githubService = new GitHubService()
-  private pullRequestService = new PullRequestService()
+  private githubService: GitHubService
+  private pullRequestService: PullRequestService
+  private user: User | null
+
+  constructor(user?: User) {
+    this.user = user || null
+    this.githubService = user ? GitHubService.forUser(user) : new GitHubService()
+    this.pullRequestService = user ? PullRequestService.forUser(user) : new PullRequestService()
+  }
+
+  static forUser(user: User): ReviewService {
+    return new ReviewService(user)
+  }
 
   async getReviewsByPullRequest(pullRequestId: number): Promise<Review[]> {
     const stmt = this.db.prepare(`

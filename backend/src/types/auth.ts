@@ -19,6 +19,7 @@ export interface User {
   refresh_token: string | null;
   token_expires_at: Date | null;
   scopes: string[];
+  github_pat_encrypted: string | null;
   created_at: Date;
   updated_at: Date;
 }

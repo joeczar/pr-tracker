@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import { GitHubService } from '../services/github.js'
 import { requireAuth, getUser } from '../middleware/auth.js'
+import { EncryptionService } from '../utils/encryption.js'
+import { UserService } from '../services/user.js'
 
 const githubRoutes = new Hono()
 
@@ -134,6 +136,64 @@ githubRoutes.get('/repos/:owner/:repo/pulls/:pull_number/files', requireAuth, as
   }
 })
 
+/**
+ * Organizations
+ */
+githubRoutes.get('/organizations', requireAuth, async (c) => {
+  try {
+    const user = getUser(c)
+    if (!user) return c.json({ error: 'User not found' }, 401)
+
+    const githubService = GitHubService.forUser(user)
+    const organizations = await githubService.getUserOrganizations()
+
+    return c.json({ organizations })
+  } catch (error) {
+    console.error('Failed to fetch organizations:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to fetch organizations'
+    }, 500)
+  }
+})
+
+githubRoutes.get('/orgs/:org/repos', requireAuth, async (c) => {
+  try {
+    const { org } = c.req.param()
+    const page = parseInt(c.req.query('page') || '1')
+    const per_page = parseInt(c.req.query('per_page') || '100')
+    const sort = (c.req.query('sort') as 'created' | 'updated' | 'pushed' | 'full_name') || 'updated'
+    const direction = (c.req.query('direction') as 'asc' | 'desc') || 'desc'
+    const type = (c.req.query('type') as 'all' | 'public' | 'private' | 'forks' | 'sources' | 'member') || 'all'
+
+    const user = getUser(c)
+    if (!user) return c.json({ error: 'User not found' }, 401)
+
+    const githubService = GitHubService.forUser(user)
+    const repositories = await githubService.getOrganizationRepositories(org, {
+      page,
+      per_page,
+      sort,
+      direction,
+      type,
+    })
+
+    return c.json({
+      repositories,
+      pagination: {
+        page,
+        per_page,
+        has_next_page: repositories.length === per_page
+      }
+    })
+  } catch (error) {
+    console.error('Failed to fetch organization repositories:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to fetch organization repositories'
+    }, 500)
+  }
+})
+
+
 // Get rate limit information
 githubRoutes.get('/rate-limit', requireAuth, async (c) => {
   try {
@@ -193,6 +253,148 @@ githubRoutes.get('/repositories', requireAuth, async (c) => {
     console.error('Failed to fetch accessible repositories:', error)
     return c.json({
       error: error instanceof Error ? error.message : 'Failed to fetch repositories'
+    }, 500)
+  }
+})
+
+/**
+ * Personal Access Token (PAT) Management
+ */
+
+// Store PAT for enhanced GitHub access
+githubRoutes.post('/pat/store', requireAuth, async (c) => {
+  try {
+    const user = getUser(c)
+    if (!user) return c.json({ error: 'User not found' }, 401)
+
+    const body = await c.req.json()
+    const { pat } = body
+
+    if (!pat || typeof pat !== 'string' || !pat.startsWith('ghp_')) {
+      return c.json({ 
+        error: 'Invalid PAT format. Personal Access Tokens should start with "ghp_"' 
+      }, 400)
+    }
+
+    // Test the PAT first
+    try {
+      const testService = GitHubService.withToken(pat)
+      await testService.getCurrentUser()
+    } catch (error) {
+      return c.json({ 
+        error: 'Invalid PAT - unable to authenticate with GitHub',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, 400)
+    }
+
+    // Encrypt and store the PAT
+    const encryptedPAT = EncryptionService.encrypt(pat)
+    const userService = new UserService()
+    
+    await userService.updateUserPAT(user.id, encryptedPAT)
+
+    return c.json({ 
+      success: true,
+      message: 'Personal Access Token stored successfully'
+    })
+  } catch (error) {
+    console.error('Failed to store PAT:', error)
+    return c.json({
+      error: 'Failed to store Personal Access Token',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, 500)
+  }
+})
+
+ // Validate stored PAT
+githubRoutes.get('/pat/validate', requireAuth, async (c) => {
+  try {
+    const user = getUser(c)
+    if (!user) return c.json({ error: 'User not found' }, 401)
+
+    const userService = new UserService()
+
+    if (!user.github_pat_encrypted) {
+      // Persist invalid state as no token
+      try {
+        await userService.updatePatValidation(user.id, 'invalid', new Date())
+      } catch (e) {
+        console.warn('Failed to persist PAT invalid status (no token):', e)
+      }
+      return c.json({ 
+        valid: false,
+        status: 'invalid',
+        validated_at: new Date().toISOString(),
+        message: 'No Personal Access Token stored'
+      })
+    }
+
+    try {
+      // Decrypt and test the PAT
+      const pat = EncryptionService.decrypt(user.github_pat_encrypted)
+      const testService = GitHubService.withToken(pat)
+      const githubUser = await testService.getCurrentUser()
+
+      const now = new Date()
+      try {
+        await userService.updatePatValidation(user.id, 'valid', now)
+      } catch (e) {
+        console.warn('Failed to persist PAT valid status:', e)
+      }
+
+      return c.json({ 
+        valid: true,
+        status: 'valid',
+        validated_at: now.toISOString(),
+        pat_user: {
+          login: githubUser.login,
+          id: githubUser.id,
+          name: githubUser.name
+        }
+      })
+    } catch (error) {
+      const now = new Date()
+      try {
+        await userService.updatePatValidation(user.id, 'invalid', now)
+      } catch (e) {
+        console.warn('Failed to persist PAT invalid status:', e)
+      }
+
+      return c.json({ 
+        valid: false,
+        status: 'invalid',
+        validated_at: now.toISOString(),
+        message: 'Stored PAT is invalid or expired',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  } catch (error) {
+    console.error('Failed to validate PAT:', error)
+    return c.json({
+      error: 'Failed to validate Personal Access Token',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, 500)
+  }
+})
+
+// Remove stored PAT
+githubRoutes.delete('/pat/remove', requireAuth, async (c) => {
+  try {
+    const user = getUser(c)
+    if (!user) return c.json({ error: 'User not found' }, 401)
+
+    const userService = new UserService()
+    await userService.updateUserPAT(user.id, null)
+
+    return c.json({ 
+      success: true,
+      message: 'Personal Access Token removed successfully'
+    })
+  } catch (error) {
+    console.error('Failed to remove PAT:', error)
+    return c.json({
+      error: 'Failed to remove Personal Access Token',
+      message: error instanceof Error ? error.message : 'Unknown error'
     }, 500)
   }
 })

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { RecentPR, RepositoryStats } from '@/lib/api/repositories'
 /**
  * shadcn-vue card primitives
  */
@@ -14,48 +15,21 @@ import Badge from '@/components/ui/badge/Badge.vue'
  * shadcn-vue progress
  */
 import Progress from '@/components/ui/progress/Progress.vue'
-/**
- * shadcn-vue dropdown menu primitives
- */
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
+
 
 type RepoStatus = 'idle' | 'syncing' | 'error' | 'ok'
 type BadgeVariant = 'default' | 'secondary' | 'outline' | 'destructive'
-
-interface RecentPR {
-  id: number | string
-  title: string
-  state: 'open' | 'merged' | 'closed' | 'draft' | 'review'
-  comments: number
-  updatedAt: string
-}
 
 const props = defineProps<{
   owner?: string
   name: string
   description?: string
-  stats?: {
-    prs: number
-    avgCommentsPerPR: number
-    changeRequestRate: number // percent 0-100
-    lastSync: string
-  }
+  stats?: RepositoryStats
   recent?: RecentPR[]
   status?: RepoStatus
 }>()
 
-const emit = defineEmits<{
-  (e: 'view'): void
-  (e: 'sync'): void
-  (e: 'remove'): void
-}>()
+
 
 const repoFullName = computed(() => props.owner ? `${props.owner}/${props.name}` : props.name)
 const statusLabel = computed(() => {
@@ -132,44 +106,7 @@ const statusVariant = computed<BadgeVariant>(() => {
         </div>
       </div>
 
-      <!-- Actions: shadcn dropdown for consistent menu patterns -->
-      <div class="sm:justify-end flex items-center">
-        <DropdownMenu>
-          <!-- Causing a double button on hover -->
-          <!--<DropdownMenuTrigger class="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-mono cursor-pointer
-                   bg-white text-slate-700 border-slate-300 hover:bg-slate-50
-                   dark:bg-transparent dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-800/40"
-            aria-label="Repository actions menu"
-          >
-            ...
-          </DropdownMenuTrigger> -->
-          <DropdownMenuContent align="end" class="w-44 font-mono text-xs">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              :disabled="status === 'syncing'"
-              @click="emit('sync')"
-              class="cursor-pointer"
-            >
-              <span v-if="status === 'syncing'" class="inline-flex items-center gap-1">
-                <span class="animate-spin" aria-hidden="true">⏳</span> Syncing…
-              </span>
-              <span v-else>Sync</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem @click="emit('view')" class="cursor-pointer">
-              View
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              @click="emit('remove')"
-              aria-label="Remove repository"
-              title="Remove repository"
-              class="text-rose-700 dark:text-rose-300 focus:text-rose-700 dark:focus:text-rose-300 cursor-pointer"
-            >
-              Remove
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+
     </div>
 
     <!-- Linear progress when syncing -->

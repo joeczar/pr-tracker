@@ -1,12 +1,24 @@
 import { DatabaseManager } from '../db/database.js'
 import { GitHubService } from './github.js'
 import { RepositoryService } from './repository.js'
+import { User } from '../types/auth.js'
 import type { PullRequest, PullRequestFilters, RepositoryMetrics, SyncResult } from '@shared/types/index.js'
 
 export class PullRequestService {
   private db = DatabaseManager.getInstance().getDatabase()
-  private githubService = new GitHubService()
-  private repositoryService = new RepositoryService()
+  private githubService: GitHubService
+  private repositoryService: RepositoryService
+  private user: User | null
+
+  constructor(user?: User) {
+    this.user = user || null
+    this.githubService = user ? GitHubService.forUser(user) : new GitHubService()
+    this.repositoryService = user ? RepositoryService.forUser(user) : new RepositoryService()
+  }
+
+  static forUser(user: User): PullRequestService {
+    return new PullRequestService(user)
+  }
 
   async getPullRequestsByRepository(
     repositoryId: number, 
