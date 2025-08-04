@@ -29,6 +29,7 @@ repositoryRoutes.get('/', requireAuth, async (c) => {
   }
 })
 
+
 // Add a repository to track
 repositoryRoutes.post('/', requireAuth, async (c) => {
   try {
@@ -50,6 +51,11 @@ repositoryRoutes.post('/', requireAuth, async (c) => {
         error: 'Invalid request data',
         details: error.errors
       }, 400)
+    }
+
+    // Handle "already tracked" as a conflict (409) instead of 500
+    if (error instanceof Error && /already being tracked/i.test(error.message)) {
+      return c.json({ error: error.message }, 409)
     }
 
     console.error('Failed to add repository:', error)

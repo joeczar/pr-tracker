@@ -71,13 +71,19 @@ const selectedPrsForRepo = computed(() => (isSelectedRepo.value ? sel.selectedPu
 </script>
 
 <template>
-  <Card class="p-4">
+  <Card class="p-4" :aria-label="`Repository card: ${repoFullName}`">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div class="space-y-1">
         <div class="flex items-center gap-3">
           <CardHeader class="p-0">
             <CardTitle class="text-lg font-mono font-semibold text-cyan-700 dark:text-cyan-300">
-              {{ repoFullName }}
+              <RouterLink
+                :to="`/repositories/${props.id}`"
+                class="hover:underline underline-offset-4"
+                :aria-label="`Open repository ${repoFullName}`"
+              >
+                {{ repoFullName }}
+              </RouterLink>
             </CardTitle>
           </CardHeader>
           <!-- Status badge -->
@@ -153,6 +159,7 @@ const selectedPrsForRepo = computed(() => (isSelectedRepo.value ? sel.selectedPu
         >
           <div class="flex items-center gap-2">
             <span class="text-xs font-mono"
+              v-if="Number.isFinite(props.id)"
               :class="{
                 'text-emerald-600 dark:text-emerald-300': pr.state === 'merged',
                 'text-cyan-700 dark:text-cyan-300': pr.state === 'open' || pr.state === 'review',
@@ -171,7 +178,7 @@ const selectedPrsForRepo = computed(() => (isSelectedRepo.value ? sel.selectedPu
             </RouterLink>
           </div>
           <div class="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400 font-mono">
-            <span aria-label="Comments">💬 {{ pr.comments }}</span>
+            <span v-if="typeof pr.comments !== 'undefined'" aria-label="Comments">💬 {{ pr.comments }}</span>
             <span aria-label="Updated">{{ pr.updatedAt }}</span>
           </div>
         </li>

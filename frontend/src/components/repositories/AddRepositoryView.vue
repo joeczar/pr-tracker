@@ -11,6 +11,7 @@ import CommandItem from '../ui/command/CommandItem.vue'
 
 import type { GitHubRepo as RepositoryOption, GitHubPull as GitHubPullRequest } from '@/lib/api/github'
 import { githubApi } from '@/lib/api/github'
+import { repositoriesApi } from '@/lib/api/repositories'
 
 const emit = defineEmits<{
   (e: 'submit', payload: { owner: string; name: string; url?: string; prNumber?: number }): void
@@ -194,6 +195,37 @@ async function loadPulls(reset = false) {
 const selectedPull = ref<GitHubPullRequest | null>(null)
 
 /**
+ * Track if the selected repo is already tracked locally, and capture add errors
+ */
+const trackedRepoNames = ref<Set<string>>(new Set())
+const isTrackedRepo = ref(false)
+const addError = ref<string | null>(null)
+
+async function preloadTrackedRepos() {
+  try {
+    const repos = await repositoriesApi.list().catch(() => [])
+    const names = new Set<string>()
+    for (const r of repos) {
+      const fullName = (r as any).full_name || (r.owner && r.name ? `${(r as any).owner}/${(r as any).name}` : null)
+      if (fullName) names.add(fullName)
+    }
+    trackedRepoNames.value = names
+  } catch {
+    trackedRepoNames.value = new Set()
+  }
+}
+
+watch(selectedRepo, (repo) => {
+  addError.value = null
+  if (!repo) {
+    isTrackedRepo.value = false
+    return
+  }
+  const fullName = repo.full_name
+  isTrackedRepo.value = trackedRepoNames.value.has(fullName)
+})
+
+/**
  * Step navigation
  */
 function goNext() {
@@ -213,14 +245,35 @@ function goBack() {
 /**
  * Submit selection
  */
-function submit() {
+async function submit() {
   if (!selectedRepo.value) return
+  addError.value = null
   const owner = selectedRepo.value.owner.login
   const name = selectedRepo.value.name
   const url = `https://github.com/${owner}/${name}`
   const prNumber = selectedPull.value?.number
 
-  emit('submit', { owner, name, url, prNumber })
+  // If already tracked, prevent submit and show inline message
+  if (isTrackedRepo.value) {
+    addError.value = 'Repository is already tracked.'
+    return
+  }
+
+  try {
+    emit('submit', { owner, name, url, prNumber })
+    // On success, optimistically mark as tracked so button disables if user returns
+    trackedRepoNames.value.add(`${owner}/${name}`)
+    isTrackedRepo.value = true
+  } catch (e: any) {
+    const status = e?.status ?? e?.response?.status
+    const msg = e?.payload?.error ?? e?.response?.data?.error ?? e?.message
+    if (status === 409 || /already.*tracked/i.test(String(msg ?? ''))) {
+      addError.value = msg || 'Repository is already tracked.'
+      isTrackedRepo.value = true
+    } else {
+      addError.value = msg || 'Failed to add repository.'
+    }
+  }
 }
 
 /**
@@ -246,6 +299,8 @@ onMounted(async () => {
   pullsState.value = 'open'
   reposError.value = null
   pullsError.value = null
+  addError.value = null
+  await preloadTrackedRepos()
   void loadRepos(true)
   // Preload orgs (best effort, safe if unauth or missing scope; also logged)
   void loadOrgsIfNeeded(true)
@@ -275,6 +330,9 @@ watch(pullsState, () => {
     </div>
     <div v-if="pullsError && step === 'pr'" class="border border-red-500/40 bg-red-500/10 text-red-300 text-xs font-mono px-3 py-2 rounded">
       {{ pullsError }}
+    </div>
+    <div v-if="addError && step === 'pr'" class="border border-red-500/40 bg-red-500/10 text-red-300 text-xs font-mono px-3 py-2 rounded">
+      {{ addError }}
     </div>
 
     <!-- Step: Repository selection -->
@@ -472,11 +530,11 @@ watch(pullsState, () => {
                 :value="String(pr.number)"
                 @select="selectedPull = pr"
                 :aria-selected="selectedPull?.id === pr.id"
-                :class="selectedPull?.id === pr.id ? 'bg-cyber-accent/20 border-cyber-accent/50 border' : ''"
+                :class="(selectedPull && selectedPull.id === pr.id) ? 'bg-cyber-accent/20 border-cyber-accent/50 border' : ''"
               >
                 <div class="flex items-center justify-between w-full">
                   <div class="flex flex-col gap-0.5 flex-1">
-                    <div class="text-sm font-mono" :class="selectedPull?.id === pr.id ? 'text-cyber-accent font-semibold' : 'text-slate-200'">
+                    <div class="text-sm font-mono" :class="(selectedPull && selectedPull.id === pr.id) ? 'text-cyber-accent font-semibold' : 'text-slate-200'">
                       #{{ pr.number }} — {{ pr.title }}
                       <span class="ml-2 text-xs" :class="pr.state === 'open' ? 'text-emerald-400' : 'text-slate-400'">
                         {{ pr.state }}
@@ -485,8 +543,21 @@ watch(pullsState, () => {
                     <div class="text-xs text-slate-400">
                       {{ pr.user?.login ?? 'unknown' }}
                     </div>
+                    <div v-if="selectedPull && selectedPull.id === pr.id" class="mt-2 flex items-center gap-2">
+                      <span class="text-[11px] text-cyber-accent font-mono px-1.5 py-0.5 border border-cyber-accent/50 rounded">
+                        Selected
+                      </span>
+                      <button
+                        type="button"
+                        class="text-[11px] font-mono text-slate-300 hover:text-slate-100 underline decoration-slate-500"
+                        :aria-label="`Deselect pull request #${pr.number}`"
+                        @click.stop.prevent="selectedPull = null"
+                      >
+                        Deselect
+                      </button>
+                    </div>
                   </div>
-                  <div v-if="selectedPull?.id === pr.id" class="ml-3 text-cyber-accent">
+                  <div v-if="selectedPull && selectedPull.id === pr.id" class="ml-3 text-cyber-accent">
                     ✓
                   </div>
                 </div>
@@ -511,7 +582,12 @@ watch(pullsState, () => {
           </TerminalButton>
           <div class="flex items-center gap-2">
             <TerminalButton variant="ghost" @click="goBack">Back</TerminalButton>
-            <TerminalButton variant="primary" :disabled="!selectedRepo" @click="submit">
+            <TerminalButton
+              variant="primary"
+              :disabled="!selectedRepo || isTrackedRepo"
+              :title="isTrackedRepo ? 'Repository already tracked' : undefined"
+              @click="submit"
+            >
               Add
             </TerminalButton>
           </div>
