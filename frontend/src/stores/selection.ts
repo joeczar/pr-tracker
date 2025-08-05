@@ -32,51 +32,50 @@ async function addSelectedPRNumber(prNumber: number) {
   if (!Number.isFinite(prNumber)) return
   const set = new Set(selectedPullRequestNumbers.value)
   if (set.has(prNumber)) return
-  // Optimistic update
+
+  // Update UI immediately (local-first)
   set.add(Number(prNumber))
   selectedPullRequestNumbers.value = Array.from(set)
-  // Persist to server if repo is known
+
+  // Sync to server in background (don't block UI)
   if (Number.isFinite(selectedRepositoryId.value as any)) {
-    try {
-      await selectionsApi.addItems([{ repository_id: selectedRepositoryId.value as number, pr_number: prNumber }])
-    } catch {
-      // rollback on failure
-      set.delete(Number(prNumber))
-      selectedPullRequestNumbers.value = Array.from(set)
-    }
+    selectionsApi.addItems([{ repository_id: selectedRepositoryId.value as number, pr_number: prNumber }])
+      .catch((error) => {
+        console.warn('Failed to sync selection to server:', error)
+        // Keep local state - don't rollback for better UX
+      })
   }
 }
 
 async function removeSelectedPRNumber(prNumber: number) {
   const set = new Set(selectedPullRequestNumbers.value)
   if (!set.has(prNumber)) return
-  // Optimistic update
+
+  // Update UI immediately (local-first)
   set.delete(Number(prNumber))
   selectedPullRequestNumbers.value = Array.from(set)
+
+  // Sync to server in background (don't block UI)
   if (Number.isFinite(selectedRepositoryId.value as any)) {
-    try {
-      await selectionsApi.removeItems([{ repository_id: selectedRepositoryId.value as number, pr_number: prNumber }])
-    } catch {
-      // rollback on failure
-      set.add(Number(prNumber))
-      selectedPullRequestNumbers.value = Array.from(set)
-    }
+    selectionsApi.removeItems([{ repository_id: selectedRepositoryId.value as number, pr_number: prNumber }])
+      .catch((error) => {
+        console.warn('Failed to sync deselection to server:', error)
+        // Keep local state - don't rollback for better UX
+      })
   }
 }
 
 async function clearSelection() {
-  // Optimistically clear local state
-  const prevRepo = selectedRepositoryId.value
-  const prev = [...selectedPullRequestNumbers.value]
+  // Clear local state immediately (local-first)
   selectedRepositoryId.value = null
   selectedPullRequestNumbers.value = []
-  try {
-    await selectionsApi.clearActive()
-  } catch {
-    // rollback on failure
-    selectedRepositoryId.value = prevRepo
-    selectedPullRequestNumbers.value = prev
-  }
+
+  // Sync to server in background (don't block UI)
+  selectionsApi.clearActive()
+    .catch((error) => {
+      console.warn('Failed to sync clear selection to server:', error)
+      // Keep local state - don't rollback for better UX
+    })
 }
 
 const hasSelection = computed(() => selectedRepositoryId.value != null && selectedPullRequestNumbers.value.length > 0)

@@ -1,8 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useQuery } from '@tanstack/vue-query'
-import { repositoriesApi } from '@/lib/api/repositories'
-import { qk } from '@/lib/api/queryKeys'
 import { useSelectionStore } from '@/stores/selection'
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import SelectionControls from '@/components/dashboard/SelectionControls.vue'
@@ -23,36 +20,20 @@ const reducedMotion =
   window.matchMedia &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-/**
- * Load repositories to support counts and review URL formation
- */
-const reposQuery = useQuery({
-  queryKey: qk.repositories.list(),
-  queryFn: () => repositoriesApi.list(),
-})
 
-const repositoryList = computed(() => reposQuery.data?.value ?? [])
-const reposPending = computed(() => !!(reposQuery.isPending as any) && repositoryList.value.length === 0)
-const reposError = computed(() => !!(reposQuery.isError as any))
-const reposEmpty = computed(() => Array.isArray(repositoryList.value) && repositoryList.value.length === 0)
 
-/**
- * Selected repository id:
- * - Start from route query (?repo=)
- * - Fallback to localStorage
- * - Finally fallback to first repo when available
- */
 /**
  * PR-centric selection: use global store instead of local selector.
  * Fallback: hydrate from URL to be robust on direct navigation.
  */
 const sel = useSelectionStore()
-onMounted(() => {
-  // attempt hydration from URL once on load
+onMounted(async () => {
+  // attempt hydration from URL and server on load
   sel.hydrateFromUrl()
+  await sel.hydrateFromServer()
 })
 const selectedRepoId = computed<number | null>(() => sel.selectedRepositoryId.value)
-const selectedPrIds = computed<number[]>(() => sel.selectedPullRequestIds.value)
+const selectedPrIds = computed<number[]>(() => sel.selectedPullRequestNumbers.value)
 const hasSelection = computed(() => sel.hasSelection.value)
 
 /**
@@ -117,7 +98,7 @@ const goals = ref([
         :selected-pr-ids="selectedPrIds"
         :has-selection="hasSelection"
         @clear="(sel.clearSelection(), sel.syncToUrl({ replace: true }))"
-        @review="() => { const q = selectedPrIds.map(id => `pr=${id}`).join('&'); if (selectedRepoId) { (window as any).location.href = `/repositories/${selectedRepoId}?${q}` } }"
+        @review="() => { const q = selectedPrIds.map(id => `pr=${id}`).join('&'); if (selectedRepoId) { window.location.href = `/repositories/${selectedRepoId}?${q}` } }"
       />
     </header>
 

@@ -16,6 +16,7 @@ import ErrorBoundary from "@/components/error/ErrorBoundary.vue"
 import { useSelectionStore } from '@/stores/selection'
 import PRList from '@/components/repositories/PRList.vue'
 import RepoSyncHistory from '@/components/repositories/RepoSyncHistory.vue'
+import SelectedPRsSection from '@/components/repositories/SelectedPRsSection.vue'
 
 
 
@@ -77,6 +78,41 @@ const prList = useQuery({
   queryFn: () => pullRequestsApi.listByRepo(repoId.value, { state: prState.value === 'all' ? undefined : prState.value, limit: prLimit.value }),
   enabled: computed(() => Number.isFinite(repoId.value)),
 })
+
+// Compute selected PRs from the main PR list for better reactivity
+const selectedPRsFromList = computed(() => {
+  const allPRs = (prList.data?.value || []) as any[]
+  const selectedNumbers = sel.selectedPullRequestNumbers.value
+  return allPRs.filter((pr: any) => selectedNumbers.includes(pr.number))
+})
+
+// Fetch additional selected PRs that might not be in the main list (e.g., merged PRs when filtering by open)
+const additionalSelectedPRs = useQuery({
+  queryKey: computed(() => ['additional-selected-prs', repoId.value, sel.selectedPullRequestNumbers.value]),
+  queryFn: async () => {
+    if (!sel.selectedPullRequestNumbers.value.length) return []
+    const allPRs = (prList.data?.value || []) as any[]
+    const visiblePRNumbers = new Set(allPRs.map((pr: any) => pr.number))
+    const missingNumbers = sel.selectedPullRequestNumbers.value.filter(num => !visiblePRNumbers.has(num))
+
+    if (missingNumbers.length === 0) return []
+
+    // Fetch all PRs to find the missing selected ones
+    const allPRsFromAPI = await pullRequestsApi.listByRepo(repoId.value, { limit: 1000 })
+    return allPRsFromAPI.filter((pr: any) => missingNumbers.includes(pr.number))
+  },
+  enabled: computed(() => Number.isFinite(repoId.value) && sel.selectedPullRequestNumbers.value.length > 0),
+})
+
+// Combine selected PRs from both sources
+const selectedPRs = computed(() => {
+  const fromList = selectedPRsFromList.value
+  const additional = (additionalSelectedPRs.data?.value || []) as any[]
+  return [...fromList, ...additional]
+})
+
+// Reactive selected numbers for the PRList component
+const selectedNumbers = computed(() => sel.selectedPullRequestNumbers.value)
 
 /**
  * Adjust filters based on deep-linked PR after data loads.
@@ -222,29 +258,38 @@ const {
 
 
 
+    <!-- Selected PRs Section -->
+    <ErrorBoundary>
+      <SelectedPRsSection
+        :selected-p-rs="selectedPRs as any"
+        :loading="!!additionalSelectedPRs.isPending.value"
+        @deselect="async (prNumber: number) => {
+          await sel.removeSelectedPRNumber(prNumber)
+          sel.syncToUrl({ replace: true })
+        }"
+        @clear="() => {
+          sel.clearSelection()
+          sel.setRepository(repoId as unknown as number)
+          sel.syncToUrl({ replace: true })
+        }"
+      />
+    </ErrorBoundary>
+
     <!-- PR list -->
     <section>
       <PRList
         :repo-id="repoId as unknown as number"
         :prs="(prList.data?.value || []) as any"
         :selectable="true"
-        :selected-numbers="sel.selectedPullRequestNumbers.value"
+        :selected-numbers="selectedNumbers"
         :page-size="prLimit"
         :state-filter="prState"
         :loading="!!prList.isPending.value"
         :error="prList.isError.value ? 'Failed to load pull requests.' : null"
-        @update:selectedNumbers="async (nums: number[]) => {
-          // Diff current vs next and call store add/remove for each change
-          const prev = new Set(sel.selectedPullRequestNumbers.value)
-          const next = new Set(nums)
-          // removals
-          for (const n of prev) {
-            if (!next.has(n)) await sel.removeSelectedPRNumber(n)
-          }
-          // additions
-          for (const n of next) {
-            if (!prev.has(n)) await sel.addSelectedPRNumber(n)
-          }
+        @update:selectedNumbers="(nums: number[]) => {
+          // Update selection immediately (local-first)
+          sel.setSelectedPRNumbers(nums)
+          sel.setRepository(repoId as unknown as number)
           sel.syncToUrl({ replace: true })
         }"
         @request:selectVisible="() => {

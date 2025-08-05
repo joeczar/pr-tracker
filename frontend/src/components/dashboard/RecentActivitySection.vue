@@ -20,12 +20,12 @@ const emit = defineEmits<{
 
 const enabledHasRepo = computed(() => Number.isFinite(props.selectedRepoId as any))
 
-// For now, fetch a reasonable working set and filter client-side by selected PRs
-const LIMIT = 50
+// Fetch a larger set to ensure selected PRs are included, or fetch all PRs if selection is small
+const LIMIT = computed(() => props.selectedPrIds.length > 0 ? Math.max(100, props.selectedPrIds.length * 2) : 50)
 const prListQuery = useQuery({
   // Types for state exclude 'all'; pass undefined to mean all states.
-  queryKey: computed(() => enabledHasRepo.value ? qk.prs.byRepo(props.selectedRepoId as number, { state: undefined, limit: LIMIT }) : ['prs', 'byRepo', 'disabled']),
-  queryFn: () => pullRequestsApi.listByRepo(props.selectedRepoId as number, { state: undefined, limit: LIMIT }),
+  queryKey: computed(() => enabledHasRepo.value ? qk.prs.byRepo(props.selectedRepoId as number, { state: undefined, limit: LIMIT.value }) : ['prs', 'byRepo', 'disabled']),
+  queryFn: () => pullRequestsApi.listByRepo(props.selectedRepoId as number, { state: undefined, limit: LIMIT.value }),
   enabled: enabledHasRepo,
 })
 
@@ -35,7 +35,7 @@ const items = computed<any[]>(() => (prListQuery.data?.value as any[]) || [])
 const filtered = computed(() => {
   if (!props.hasSelection) return []
   const sel = new Set(props.selectedPrIds)
-  return items.value.filter((pr) => sel.has(pr.id))
+  return items.value.filter((pr) => sel.has(pr.number))
 })
 const isEmptySelection = computed(() => props.hasSelection && props.selectedPrIds.length === 0)
 const isEmptyFiltered = computed(() => props.hasSelection && props.selectedPrIds.length > 0 && filtered.value.length === 0 && !pending.value && !error.value)

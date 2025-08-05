@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
-import Checkbox from '@/components/ui/checkbox/Checkbox.vue'
+
 import { Command, CommandInput } from '@/components/ui/command'
 import Select from '@/components/ui/select/Select.vue'
 import SelectTrigger from '@/components/ui/select/SelectTrigger.vue'
@@ -297,12 +297,16 @@ function more() {
       >
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-2">
-            <Checkbox
+            <input
               v-if="selectable"
+              type="checkbox"
               :checked="selectedNumbers.includes(pr.number)"
               :aria-label="`Select PR #${pr.number}`"
-              class="h-4 w-4 rounded-sm data-[state=checked]:bg-[var(--cyber-accent,#ea00d9)] border-cyber-border focus-visible:ring-[var(--cyber-accent,#ea00d9)]"
-              @update:checked="(val: boolean) => toggle(pr, val)"
+              class="h-4 w-4 accent-[var(--cyber-accent,#ea00d9)] rounded-sm border border-cyber-border focus-visible:ring-[var(--cyber-accent,#ea00d9)]"
+              @change="(e: Event) => {
+                const checked = (e.target as HTMLInputElement).checked
+                toggle(pr, checked)
+              }"
             />
             <div class="font-medium">{{ pr.title }}</div>
           </div>
