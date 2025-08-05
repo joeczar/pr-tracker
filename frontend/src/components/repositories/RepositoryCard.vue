@@ -67,7 +67,7 @@ const statusVariant = computed<BadgeVariant>(() => {
 // Selection awareness
 const sel = useSelectionStore()
 const isSelectedRepo = computed(() => sel.selectedRepositoryId.value != null && Number(props.id) === Number(sel.selectedRepositoryId.value))
-const selectedPrsForRepo = computed(() => (isSelectedRepo.value ? sel.selectedPullRequestIds.value : []))
+const selectedPrsForRepo = computed(() => (isSelectedRepo.value ? sel.selectedPullRequestNumbers.value : []))
 </script>
 
 <template>

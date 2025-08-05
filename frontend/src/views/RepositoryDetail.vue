@@ -96,7 +96,7 @@ watch(
     if (deepLinkedPrs.value.length > 0) {
       if (prState.value !== 'all') prState.value = 'all'
       if (prLimit.value < 100) prLimit.value = 100
-      sel.setSelectedPRs(deepLinkedPrs.value)
+      sel.setSelectedPRNumbers(deepLinkedPrs.value)
       // Optionally keep URL tidy with normalized pr params
       sel.syncToUrl({ replace: true })
     }
@@ -363,18 +363,18 @@ const {
 
         <template v-else>
           <!-- Selection toolbar -->
-          <div class="flex items-center justify-between text-xs text-cyber-muted" v-if="(sel.selectedPullRequestIds.value?.length || 0) > 0">
+          <div class="flex items-center justify-between text-xs text-cyber-muted" v-if="(sel.selectedPullRequestNumbers.value?.length || 0) > 0">
             <div>
-              {{ sel.selectedPullRequestIds.value.length }} selected
+              {{ sel.selectedPullRequestNumbers.value.length }} selected
               <span v-if="prState !== 'all'" class="ml-2 opacity-80">(Some selected PRs may be hidden by filters)</span>
             </div>
             <div class="flex items-center gap-2">
               <TerminalButton size="sm" variant="ghost" aria-label="Select all visible PRs"
                 @click="
-                  sel.setSelectedPRs([
+                  sel.setSelectedPRNumbers([
                     ...new Set([
-                      ...sel.selectedPullRequestIds.value,
-                      ...((prList.data?.value || []).map(p => p.id))
+                      ...sel.selectedPullRequestNumbers.value,
+                      ...((prList.data?.value || []).map(p => p.number))
                     ])
                   ]);
                   sel.syncToUrl({ replace: true });
@@ -391,7 +391,7 @@ const {
             v-for="pr in prList.data?.value || []"
             :key="pr.id"
             class="rounded border border-cyber-border bg-cyber-surface/60 p-3"
-            :class="sel.selectedPullRequestIds.value.includes(pr.id) ? 'ring-2 ring-cyber-accent' : ''"
+            :class="sel.selectedPullRequestNumbers.value.includes(pr.number) ? 'ring-2 ring-cyber-accent' : ''"
           >
             <div class="flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
@@ -399,13 +399,13 @@ const {
                   type="checkbox"
                   class="h-4 w-4 accent-[var(--cyber-accent,#ea00d9)]"
                   :aria-label="`Select PR #${pr.number}`"
-                  :checked="sel.selectedPullRequestIds.value.includes(pr.id)"
-                  @change="(e) => {
+                  :checked="sel.selectedPullRequestNumbers.value.includes(pr.number)"
+                  @change="async (e) => {
                     const target = e.target as HTMLInputElement | null
                     if (target && target.checked) {
-                      sel.addSelectedPR(pr.id)
+                      await sel.addSelectedPRNumber(pr.number)
                     } else {
-                      sel.removeSelectedPR(pr.id)
+                      await sel.removeSelectedPRNumber(pr.number)
                     }
                     sel.syncToUrl({ replace: true })
                   }"

@@ -155,11 +155,16 @@ Backend
 - Server: Wired /api/selections into backend/src/index.ts. [done]
 
 Next Frontend Tasks
-- Add selections API client (frontend/src/lib/api/selections.ts): active(), ensureActive(), addItems(), removeItems(), clear().
-- Wire selection store to call server endpoints with optimistic updates.
-- RepositoryDetail: checkbox column + header select -> calls add/remove items.
-- Global selection bar: Clear All -> DELETE /api/selections/active; Analyze -> navigate Dashboard.
-- App bootstrap: hydrate selection from GET /api/selections/active.
+- Add selections API client (frontend/src/lib/api/selections.ts): active(), ensureActive(), addItems(), removeItems(), clear(). [done]
+- Wire selection store to call server endpoints with optimistic updates. [pending]
+- RepositoryDetail: checkbox column + header select -> calls add/remove items. [pending]
+- Global selection bar: Clear All -> DELETE /api/selections/active; Analyze -> navigate Dashboard. [pending]
+- App bootstrap: hydrate selection from GET /api/selections/active. [pending]
+
+Verification (MCP/Playwright) — Current Status
+- Authenticated session GET /api/selections/active returns 200 and creates/reads active selection. [verified]
+- POST /api/selections/active/items requires valid repository_id & pr_number (FK enforced). UI must send real ids from repo detail list. [verified]
+- Items currently empty because UI/store not yet persisting selection to server. [identified gap]
 
 Acceptance Criteria
 - User can select PRs in Repo Detail via checkboxes and see a live global count.

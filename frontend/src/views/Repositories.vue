@@ -128,9 +128,10 @@ function cancelAddRepository() {
   showAddInline.value = false
 }
 
-function openRepo(r: { owner: string; name: string }) {
-  // Note: backend repository detail route expects numeric id; here we navigate by owner/name string as placeholder
-  router.push({ name: 'repository-detail', params: { id: `${r.owner}/${r.name}` } })
+function openRepo(r: { id?: number; owner: string; name: string }) {
+  // Prefer numeric id; fall back to owner/name only if id is missing (should not happen for created repos)
+  const id = r.id ?? `${r.owner}/${r.name}`
+  router.push({ name: 'repository-detail', params: { id } })
 }
 
 function syncRepo(r: { id?: number; owner: string; name: string }) {
@@ -235,6 +236,7 @@ function cancelDeleteRepo() {
                 </DropdownMenu>
               </div>
               <RepositoryCard
+                :id="r.id as number"
                 :owner="r.owner"
                 :name="r.name"
                 :description="r.description"
