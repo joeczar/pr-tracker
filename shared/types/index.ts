@@ -20,6 +20,8 @@ export interface PullRequest {
   lines_deleted: number
   files_changed: number
   commits_count: number
+  // Optional, added via migration. May be null/undefined for legacy rows.
+  author_login?: string | null
 }
 
 export interface Review {

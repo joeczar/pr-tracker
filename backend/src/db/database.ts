@@ -66,10 +66,20 @@ export class DatabaseManager {
         lines_deleted INTEGER DEFAULT 0,
         files_changed INTEGER DEFAULT 0,
         commits_count INTEGER DEFAULT 0,
+        author_login TEXT,
         FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE,
         UNIQUE(repository_id, number)
       )
     `);
+
+    // Add author_login to pull_requests (if not exists)
+    try {
+      this.db.exec(`
+        ALTER TABLE pull_requests ADD COLUMN author_login TEXT;
+      `);
+    } catch (error) {
+      // Column might already exist, ignore
+    }
 
     // Create reviews table
     this.db.exec(`

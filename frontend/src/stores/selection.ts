@@ -99,7 +99,7 @@ function hydrateFromUrl() {
     }
     // Support multiple ?pr params or comma-separated
     const prParams = url.searchParams.getAll('pr')
-    let prIds: number[] = []
+    const prIds: number[] = []
     if (prParams.length > 0) {
       for (const p of prParams) {
         const parts = String(p).split(',').map((x) => Number(x)).filter((n) => Number.isFinite(n))

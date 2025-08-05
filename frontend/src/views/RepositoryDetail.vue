@@ -6,26 +6,18 @@ import TerminalWindow from '@/components/ui/terminal/TerminalWindow.vue'
 import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
 import TerminalHeader from '@/components/ui/terminal/TerminalHeader.vue'
 import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
-import MetricTile from '@/components/analytics/MetricTile.vue'
 import RepoOverviewTiles from '@/components/repositories/RepoOverviewTiles.vue'
-import TrendChart from '@/components/analytics/TrendChart.vue'
-import RepoTrendsPanel from '@/components/repositories/RepoTrendsPanel.vue'
 import { repositoriesApi } from '@/lib/api/repositories'
 import { pullRequestsApi } from '@/lib/api/pullRequests'
-import { reviewsApi } from '@/lib/api/reviews'
-import { analyticsApi } from '@/lib/api/analytics'
-import { syncApi, type RepoSyncHistoryItem } from '@/lib/api/sync'
+
+import { syncApi } from '@/lib/api/sync'
 import { qk } from '@/lib/api/queryKeys'
 import ErrorBoundary from "@/components/error/ErrorBoundary.vue"
 import { useSelectionStore } from '@/stores/selection'
 import PRList from '@/components/repositories/PRList.vue'
 import RepoSyncHistory from '@/components/repositories/RepoSyncHistory.vue'
 
-// Basic env
-const reducedMotion: boolean =
-  typeof window !== 'undefined' &&
-  !!window.matchMedia &&
-  !!window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
 
 const route = useRoute()
 const repoId = computed(() => Number(route.params.id))
@@ -115,17 +107,7 @@ const prStats = useQuery({
   enabled: computed(() => Number.isFinite(repoId.value)),
 })
 
-const _reviewMetrics = useQuery({
-  queryKey: computed(() => qk.reviews.metrics(repoId.value, days.value)),
-  queryFn: () => reviewsApi.metricsByRepo(repoId.value, days.value),
-  enabled: computed(() => Number.isFinite(repoId.value)),
-})
 
-const trends = useQuery({
-  queryKey: computed(() => qk.analytics.trends(repoId.value, days.value)),
-  queryFn: () => analyticsApi.trendsByRepo(repoId.value, days.value),
-  enabled: computed(() => Number.isFinite(repoId.value)),
-})
 
 // Mutation: Sync now
 const { mutate: syncNow, status: syncStatus } = useMutation({
@@ -151,50 +133,17 @@ const { mutate: syncNow, status: syncStatus } = useMutation({
 // Derived UI state for overview tiles
 const overview = computed(() => {
   const stats = prStats.data.value as any
-  // last_sync not defined in types; guard access
-  const lastSync = (trends.data.value as any)?.last_sync || null
   return [
     { label: 'Total PRs', value: stats?.total ?? '—', trend: 'flat' as const },
     { label: 'Open', value: stats?.open ?? '—', trend: 'up' as const },
     { label: 'Merged', value: stats?.merged ?? '—', trend: 'up' as const },
     { label: 'Closed', value: stats?.closed ?? '—', trend: 'down' as const },
     { label: 'Merge rate', value: stats?.merge_rate != null ? `${Math.round(stats.merge_rate)}%` : '—', trend: 'flat' as const },
-    { label: 'Last sync', value: lastSync ? new Date(lastSync).toLocaleString() : '—', trend: 'flat' as const },
+    { label: 'Last sync', value: '—', trend: 'flat' as const },
   ]
 })
 
-// Trends chart mapping
-const trendTab = ref<'comments' | 'change'>('comments')
-const labels = computed(() => {
-  const trendsArray = (trends.data.value as any)?.trends ?? []
-  return trendsArray.map((t: any) => t.date)
-})
-const commentsData = computed(() => {
-  const trendsArray = (trends.data.value as any)?.trends ?? []
-  return trendsArray.map((t: any) => t.avg_comments || 0)
-})
-const changeRateData = computed(() => {
-  const trendsArray = (trends.data.value as any)?.trends ?? []
-  // Use avg_reviews as a proxy for change request rate (0-100%)
-  return trendsArray.map((t: any) => (t.avg_reviews || 0) * 100)
-})
 
-const currentTrend = computed(() => {
-  if (trendTab.value === 'comments') {
-    return {
-      title: 'Comments over time',
-      description: 'Daily review comments for this repository.',
-      type: 'line' as const,
-      datasets: [{ label: 'Comments', data: commentsData.value }]
-    }
-  }
-  return {
-    title: 'Change-request rate over time',
-    description: 'Percent of PRs with changes requested.',
-    type: 'bar' as const,
-    datasets: [{ label: 'Change %', data: changeRateData.value, backgroundColor: 'rgba(234,0,217,0.15)', borderColor: '#ea00d9' }]
-  }
-})
 /* Optional Sync History wiring */
 const historyLimit = ref(10)
 
@@ -264,71 +213,54 @@ const {
 
         <RepoOverviewTiles
           :metrics="overview as any"
-          :loading="!!prStats.isPending.value || !!trends.isPending.value"
-          :error="(prStats.isError.value || trends.isError.value) ? 'Failed to load repository overview.' : null"
+          :loading="!!prStats.isPending.value"
+          :error="prStats.isError.value ? 'Failed to load repository overview.' : null"
         />
         </div>
       </TerminalWindow>
     </ErrorBoundary>
 
-    <!-- Trends -->
-    <ErrorBoundary>
-      <RepoTrendsPanel
-        :labels="labels as any"
-        :comments="commentsData as any"
-        :change-rate="changeRateData as any"
-        :loading="!!trends.isPending.value"
-        :error="trends.isError.value ? 'Failed to load trends.' : null"
-        :reduced-motion="reducedMotion"
+
+
+    <!-- PR list -->
+    <section>
+      <PRList
+        :repo-id="repoId as unknown as number"
+        :prs="(prList.data?.value || []) as any"
+        :selectable="true"
+        :selected-numbers="sel.selectedPullRequestNumbers.value"
+        :page-size="prLimit"
+        :state-filter="prState"
+        :loading="!!prList.isPending.value"
+        :error="prList.isError.value ? 'Failed to load pull requests.' : null"
+        @update:selectedNumbers="async (nums: number[]) => {
+          // Diff current vs next and call store add/remove for each change
+          const prev = new Set(sel.selectedPullRequestNumbers.value)
+          const next = new Set(nums)
+          // removals
+          for (const n of prev) {
+            if (!next.has(n)) await sel.removeSelectedPRNumber(n)
+          }
+          // additions
+          for (const n of next) {
+            if (!prev.has(n)) await sel.addSelectedPRNumber(n)
+          }
+          sel.syncToUrl({ replace: true })
+        }"
+        @request:selectVisible="() => {
+          const visible = (prList.data?.value || []).map((p: any) => p.number)
+          sel.setSelectedPRNumbers([...new Set([ ...sel.selectedPullRequestNumbers.value, ...visible ])])
+          sel.syncToUrl({ replace: true })
+        }"
+        @request:clear="() => {
+          sel.clearSelection()
+          sel.setRepository(repoId as unknown as number)
+          sel.syncToUrl({ replace: true })
+        }"
+        @request:less="() => prLimit = Math.max(25, prLimit - 25)"
+        @request:more="() => prLimit = prLimit + 25"
+        @request:updateState="(next) => { prState = next }"
       />
-    </ErrorBoundary>
-
-    <!-- Filters + PR list -->
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      <aside aria-label="Filters" class="rounded border border-cyber-border bg-cyber-surface/40 p-4 space-y-3">
-        <div class="h-9 w-full rounded border border-dashed border-cyber-border"></div>
-        <div class="h-9 w-full rounded border border-dashed border-cyber-border"></div>
-        <div class="h-9 w-full rounded border border-dashed border-cyber-border"></div>
-        <div class="h-9 w-full rounded border border-dashed border-cyber-border"></div>
-        <div class="h-9 w-full rounded border border-dashed border-cyber-border"></div>
-      </aside>
-
-      <section class="lg:col-span-3">
-        <PRList
-          :prs="(prList.data?.value || []) as any"
-          :selected-numbers="sel.selectedPullRequestNumbers.value"
-          :page-size="prLimit"
-          :state-filter="prState"
-          :loading="!!prList.isPending.value"
-          :error="prList.isError.value ? 'Failed to load pull requests.' : null"
-          @update:selectedNumbers="async (nums: number[]) => {
-            // Diff current vs next and call store add/remove for each change
-            const prev = new Set(sel.selectedPullRequestNumbers.value)
-            const next = new Set(nums)
-            // removals
-            for (const n of prev) {
-              if (!next.has(n)) await sel.removeSelectedPRNumber(n)
-            }
-            // additions
-            for (const n of next) {
-              if (!prev.has(n)) await sel.addSelectedPRNumber(n)
-            }
-            sel.syncToUrl({ replace: true })
-          }"
-          @request:selectVisible="() => {
-            const visible = (prList.data?.value || []).map((p: any) => p.number)
-            sel.setSelectedPRNumbers([...new Set([ ...sel.selectedPullRequestNumbers.value, ...visible ])])
-            sel.syncToUrl({ replace: true })
-          }"
-          @request:clear="() => {
-            sel.clearSelection()
-            sel.setRepository(repoId as unknown as number)
-            sel.syncToUrl({ replace: true })
-          }"
-          @request:less="() => prLimit = Math.max(25, prLimit - 25)"
-          @request:more="() => prLimit = prLimit + 25"
-        />
-      </section>
-    </div>
+    </section>
   </section>
 </template>

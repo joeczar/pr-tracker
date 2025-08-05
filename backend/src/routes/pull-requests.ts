@@ -4,6 +4,36 @@ import { requireAuth, getUser } from '../middleware/auth.js'
 
 const pullRequestRoutes = new Hono()
 
+/**
+ * Get distinct PR authors for a repository
+ * Optional query param: state=open|closed|merged to filter authors by PR state
+ * Response: { authors: string[] }
+ */
+pullRequestRoutes.get('/repository/:repositoryId/authors', async (c) => {
+  try {
+    const repositoryId = parseInt(c.req.param('repositoryId'))
+    if (isNaN(repositoryId)) {
+      return c.json({ error: 'Invalid repository ID' }, 400)
+    }
+
+    const state = c.req.query('state')
+    const allowed = new Set(['open', 'closed', 'merged'])
+    const normalizedState = allowed.has(state || '') ? (state as 'open' | 'closed' | 'merged') : undefined
+
+    const pullRequestService = new PullRequestService()
+    const authors = await pullRequestService.getAuthorsByRepository(repositoryId, {
+      state: normalizedState
+    })
+
+    return c.json({ authors })
+  } catch (error) {
+    console.error('Failed to fetch PR authors:', error)
+    return c.json({
+      error: error instanceof Error ? error.message : 'Failed to fetch PR authors'
+    }, 500)
+  }
+})
+
 // Get pull requests for a repository
 pullRequestRoutes.get('/repository/:repositoryId', async (c) => {
   try {
