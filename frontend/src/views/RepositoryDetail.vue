@@ -7,7 +7,9 @@ import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
 import TerminalHeader from '@/components/ui/terminal/TerminalHeader.vue'
 import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
 import MetricTile from '@/components/analytics/MetricTile.vue'
+import RepoOverviewTiles from '@/components/repositories/RepoOverviewTiles.vue'
 import TrendChart from '@/components/analytics/TrendChart.vue'
+import RepoTrendsPanel from '@/components/repositories/RepoTrendsPanel.vue'
 import { repositoriesApi } from '@/lib/api/repositories'
 import { pullRequestsApi } from '@/lib/api/pullRequests'
 import { reviewsApi } from '@/lib/api/reviews'
@@ -16,12 +18,14 @@ import { syncApi, type RepoSyncHistoryItem } from '@/lib/api/sync'
 import { qk } from '@/lib/api/queryKeys'
 import ErrorBoundary from "@/components/error/ErrorBoundary.vue"
 import { useSelectionStore } from '@/stores/selection'
+import PRList from '@/components/repositories/PRList.vue'
+import RepoSyncHistory from '@/components/repositories/RepoSyncHistory.vue'
 
 // Basic env
-const reducedMotion =
+const reducedMotion: boolean =
   typeof window !== 'undefined' &&
-  window.matchMedia &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  !!window.matchMedia &&
+  !!window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 const route = useRoute()
 const repoId = computed(() => Number(route.params.id))
@@ -32,9 +36,11 @@ const sel = useSelectionStore()
 // Ensure store repository matches current route param
 watch(
   () => repoId.value,
-  (id) => {
+  async (id) => {
     if (Number.isFinite(id)) {
       sel.setRepository(id)
+      // Hydrate persisted selection from server for this repo
+      await sel.hydrateFromServer()
     } else {
       sel.setRepository(null)
     }
@@ -69,13 +75,13 @@ const qc = useQueryClient()
 
 // Queries
 const repoInfo = useQuery({
-  queryKey: qk.repositories.byId(repoId.value),
+  queryKey: computed(() => qk.repositories.byId(repoId.value)),
   queryFn: () => repositoriesApi.get(repoId.value),
   enabled: computed(() => Number.isFinite(repoId.value)),
 })
 
 const prList = useQuery({
-  queryKey: qk.prs.byRepo(repoId.value, { state: prState.value === 'all' ? undefined : prState.value, limit: prLimit.value }),
+  queryKey: computed(() => qk.prs.byRepo(repoId.value, { state: prState.value === 'all' ? undefined : prState.value, limit: prLimit.value })),
   queryFn: () => pullRequestsApi.listByRepo(repoId.value, { state: prState.value === 'all' ? undefined : prState.value, limit: prLimit.value }),
   enabled: computed(() => Number.isFinite(repoId.value)),
 })
@@ -104,19 +110,19 @@ watch(
 )
 
 const prStats = useQuery({
-  queryKey: qk.prs.stats(repoId.value),
+  queryKey: computed(() => qk.prs.stats(repoId.value)),
   queryFn: () => pullRequestsApi.statsByRepo(repoId.value),
   enabled: computed(() => Number.isFinite(repoId.value)),
 })
 
 const _reviewMetrics = useQuery({
-  queryKey: qk.reviews.metrics(repoId.value, days.value),
+  queryKey: computed(() => qk.reviews.metrics(repoId.value, days.value)),
   queryFn: () => reviewsApi.metricsByRepo(repoId.value, days.value),
   enabled: computed(() => Number.isFinite(repoId.value)),
 })
 
 const trends = useQuery({
-  queryKey: qk.analytics.trends(repoId.value, days.value),
+  queryKey: computed(() => qk.analytics.trends(repoId.value, days.value)),
   queryFn: () => analyticsApi.trendsByRepo(repoId.value, days.value),
   enabled: computed(() => Number.isFinite(repoId.value)),
 })
@@ -152,16 +158,26 @@ const overview = computed(() => {
     { label: 'Open', value: stats?.open ?? '—', trend: 'up' as const },
     { label: 'Merged', value: stats?.merged ?? '—', trend: 'up' as const },
     { label: 'Closed', value: stats?.closed ?? '—', trend: 'down' as const },
-    { label: 'Merge rate', value: stats?.merge_rate != null ? `${Math.round(stats.merge_rate * 100)}%` : '—', trend: 'flat' as const },
+    { label: 'Merge rate', value: stats?.merge_rate != null ? `${Math.round(stats.merge_rate)}%` : '—', trend: 'flat' as const },
     { label: 'Last sync', value: lastSync ? new Date(lastSync).toLocaleString() : '—', trend: 'flat' as const },
   ]
 })
 
 // Trends chart mapping
 const trendTab = ref<'comments' | 'change'>('comments')
-const labels = computed(() => (trends.data.value as any)?.labels ?? [])
-const commentsData = computed(() => (trends.data.value as any)?.comments ?? [])
-const changeRateData = computed(() => (trends.data.value as any)?.change_request_rate ?? [])
+const labels = computed(() => {
+  const trendsArray = (trends.data.value as any)?.trends ?? []
+  return trendsArray.map((t: any) => t.date)
+})
+const commentsData = computed(() => {
+  const trendsArray = (trends.data.value as any)?.trends ?? []
+  return trendsArray.map((t: any) => t.avg_comments || 0)
+})
+const changeRateData = computed(() => {
+  const trendsArray = (trends.data.value as any)?.trends ?? []
+  // Use avg_reviews as a proxy for change request rate (0-100%)
+  return trendsArray.map((t: any) => (t.avg_reviews || 0) * 100)
+})
 
 const currentTrend = computed(() => {
   if (trendTab.value === 'comments') {
@@ -184,13 +200,16 @@ const historyLimit = ref(10)
 
 const {
   data: syncHistory,
-  isLoading: historyLoading,
+  isPending: historyLoading,
   isError: historyError,
   error: historyErr,
   refetch: refetchHistory,
 } = useQuery({
-  queryKey: qk.sync.history(repoId.value, historyLimit.value),
-  queryFn: () => syncApi.repoHistory(repoId.value, historyLimit.value),
+  queryKey: computed(() => qk.sync.history(repoId.value, historyLimit.value)),
+  queryFn: async () => {
+    try { await fetch('/auth/status', { credentials: 'include' }).catch(() => {}) } catch {}
+    return syncApi.repoHistory(repoId.value, historyLimit.value)
+  },
   enabled: computed(() => Number.isFinite(repoId.value) && historyLimit.value > 0),
 })
 
@@ -198,75 +217,40 @@ const {
 
 <template>
   <section aria-labelledby="repo-detail-title" class="space-y-6">
+    <!-- Sync History Panel -->
+    <ErrorBoundary>
+      <RepoSyncHistory
+        :items="(((syncHistory as unknown) as { id: string; status: string; type?: string; started_at?: string; finished_at?: string; job_id?: string }[]) || []).map(it => ({ id: Number(it.id), status: it.status, type: it.type, started_at: it.started_at, finished_at: it.finished_at, job_id: it.job_id }))"
+        :loading="!!historyLoading"
+        :error="historyError ? ((historyErr as any)?.message || 'Unknown error') : null"
+        :limit="historyLimit"
+        @update:limit="(v: number) => { historyLimit = v; refetchHistory() }"
+        @refresh="() => refetchHistory()"
+      />
+    </ErrorBoundary>
+
     <ErrorBoundary>
       <TerminalWindow>
         <template #title>
-        <TerminalHeader>
-          <template #title>
-            <TerminalTitle command="repository-detail" />
-            <!-- Optional: Sync History -->
-  <section aria-labelledby="sync-history-title" class="mt-6">
-    <div class="flex items-center justify-between mb-2">
-      <h2 id="sync-history-title" class="text-base font-semibold">Sync history</h2>
-      <div class="flex items-center gap-2">
-        <label class="text-xs text-slate-500" for="history-limit">Limit</label>
-        <select id="history-limit" class="border rounded px-2 py-1 text-sm bg-background"
-                v-model.number="historyLimit" @change="refetchHistory()">
-          <option :value="10">10</option>
-          <option :value="25">25</option>
-          <option :value="50">50</option>
-        </select>
-      </div>
-    </div>
+          <TerminalHeader>
+            <template #title>
+              <TerminalTitle command="repository-detail" />
+            </template>
+            <template #actions>
+              <div class="flex items-center gap-2">
+                <TerminalButton size="sm" variant="secondary" aria-label="Sync repository" :disabled="syncStatus === 'pending'" @click="syncNow">
+                  <span v-if="syncStatus === 'pending'">Syncing…</span>
+                  <span v-else>Sync</span>
+                </TerminalButton>
+              </div>
+            </template>
+          </TerminalHeader>
+        </template>
 
-    <div v-if="historyLoading" class="text-sm text-slate-500">Loading history…</div>
-    <div v-else-if="historyError" class="text-sm text-rose-600">
-      Failed to load sync history: {{ (historyErr as any)?.message || 'Unknown error' }}
-    </div>
-    <div v-else>
-      <div v-if="!syncHistory || (syncHistory as RepoSyncHistoryItem[]).length === 0" class="text-sm text-slate-500">
-        No sync events yet.
-      </div>
-      <ul v-else class="divide-y divide-slate-200 dark:divide-slate-800 rounded border border-slate-200 dark:border-slate-800">
-        <li v-for="item in (syncHistory as RepoSyncHistoryItem[])" :key="item.id" class="p-3 flex items-center justify-between text-sm">
-          <div class="flex items-center gap-3">
-            <span class="font-mono text-xs opacity-70">#{{ item.id }}</span>
-            <span class="font-medium">{{ item.type || 'incremental' }}</span>
-            <span class="text-xs px-2 py-0.5 rounded border"
-                  :class="item.status === 'completed' ? 'border-emerald-400 text-emerald-600' :
-                          item.status === 'queued' ? 'border-amber-400 text-amber-600' :
-                          item.status === 'running' ? 'border-sky-400 text-sky-600' :
-                          'border-rose-400 text-rose-600'">
-              {{ item.status }}
-            </span>
-          </div>
-          <div class="flex items-center gap-3 text-xs text-slate-500">
-            <span>{{ new Date(item.started_at || item.finished_at || Date.now()).toLocaleString() }}</span>
-            <a v-if="(item as any).job_id" class="underline hover:no-underline"
-               :href="`/api/sync/job/${(item as any).job_id}`" target="_blank" rel="noreferrer">
-              Job {{ (item as any).job_id }}
-            </a>
-          </div>
-        </li>
-      </ul>
-    </div>
-  </section>
-</template>
-          <template #actions>
-            <div class="flex items-center gap-2">
-              <TerminalButton size="sm" variant="secondary" aria-label="Sync repository" :disabled="syncStatus === 'pending'" @click="syncNow">
-                <span v-if="syncStatus === 'pending'">Syncing…</span>
-                <span v-else>Sync</span>
-              </TerminalButton>
-            </div>
-          </template>
-        </TerminalHeader>
-      </template>
-
-      <div class="p-3 space-y-6">
+        <div class="p-3 space-y-6">
         <header class="flex items-center justify-between">
           <h1 id="repo-detail-title" class="text-xl font-semibold tracking-tight">
-            {{ repoInfo.data?.value?.owner }}/{{ repoInfo.data?.value?.name }} • Repository Details
+            {{ repoInfo.data?.value?.full_name || repoInfo.data?.value?.name || 'Repository' }} • Repository Details
           </h1>
           <div class="flex items-center gap-2">
               <TerminalButton size="sm" variant="secondary" aria-label="Sync repository" :disabled="syncStatus === 'pending'" @click="syncNow">
@@ -277,69 +261,26 @@ const {
         </header>
 
         <!-- Overview tiles -->
-        <div v-if="prStats.isLoading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div v-for="i in 6" :key="i" class="h-24 rounded border border-dashed border-cyber-border animate-pulse"></div>
+
+        <RepoOverviewTiles
+          :metrics="overview as any"
+          :loading="!!prStats.isPending.value || !!trends.isPending.value"
+          :error="(prStats.isError.value || trends.isError.value) ? 'Failed to load repository overview.' : null"
+        />
         </div>
-        <div v-else-if="prStats.isError" class="text-sm text-red-600">
-          Failed to load repository stats.
-        </div>
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-          <MetricTile
-            v-for="(m, i) in overview"
-            :key="i"
-            :label="m.label"
-            :value="m.value as any"
-            :trend="m.trend as any"
-          />
-        </div>
-      </div>
       </TerminalWindow>
     </ErrorBoundary>
 
     <!-- Trends -->
     <ErrorBoundary>
-      <TerminalWindow>
-        <template #title>
-        <TerminalHeader>
-          <template #title>
-            <TerminalTitle command="trends" />
-          </template>
-        </TerminalHeader>
-      </template>
-      <div class="p-3">
-        <div class="mb-3 flex items-center gap-2">
-          <TerminalButton
-            :variant="trendTab === 'comments' ? 'primary' : 'ghost'"
-            size="sm"
-            @click="trendTab = 'comments'"
-            aria-label="Show comments trend"
-          >Comments</TerminalButton>
-          <TerminalButton
-            :variant="trendTab === 'change' ? 'primary' : 'ghost'"
-            size="sm"
-            @click="trendTab = 'change'"
-            aria-label="Show change-request rate trend"
-          >Change Req</TerminalButton>
-        </div>
-        <div v-if="trends.isLoading" class="h-64 rounded border border-dashed border-cyber-border animate-pulse"></div>
-        <div v-else-if="trends.isError" class="text-sm text-red-600">Failed to load trends.</div>
-        <TrendChart
-          v-else
-          :type="currentTrend.type"
-          :labels="labels"
-          :datasets="currentTrend.datasets as any"
-          :title="currentTrend.title"
-          :description="currentTrend.description"
-          :reduced-motion="reducedMotion"
-          :aria-summary-id="'repo-trend-summary'"
-          :height="260"
-        >
-          <template #summary>
-            {{ currentTrend.title }}. Points: {{ labels.length }}.
-          </template>
-        </TrendChart>
-      </div>
-      </TerminalWindow>
+      <RepoTrendsPanel
+        :labels="labels as any"
+        :comments="commentsData as any"
+        :change-rate="changeRateData as any"
+        :loading="!!trends.isPending.value"
+        :error="trends.isError.value ? 'Failed to load trends.' : null"
+        :reduced-motion="reducedMotion"
+      />
     </ErrorBoundary>
 
     <!-- Filters + PR list -->
@@ -352,84 +293,41 @@ const {
         <div class="h-9 w-full rounded border border-dashed border-cyber-border"></div>
       </aside>
 
-      <section aria-label="Pull requests" class="lg:col-span-3 rounded border border-cyber-border bg-cyber-surface/40 p-4 space-y-3">
-        <template v-if="prList.isLoading">
-          <div v-for="i in 3" :key="i" class="h-16 rounded border border-dashed border-cyber-border animate-pulse"></div>
-        </template>
-
-        <template v-else-if="prList.isError">
-          <div class="text-sm text-red-600">Failed to load pull requests.</div>
-        </template>
-
-        <template v-else>
-          <!-- Selection toolbar -->
-          <div class="flex items-center justify-between text-xs text-cyber-muted" v-if="(sel.selectedPullRequestNumbers.value?.length || 0) > 0">
-            <div>
-              {{ sel.selectedPullRequestNumbers.value.length }} selected
-              <span v-if="prState !== 'all'" class="ml-2 opacity-80">(Some selected PRs may be hidden by filters)</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <TerminalButton size="sm" variant="ghost" aria-label="Select all visible PRs"
-                @click="
-                  sel.setSelectedPRNumbers([
-                    ...new Set([
-                      ...sel.selectedPullRequestNumbers.value,
-                      ...((prList.data?.value || []).map(p => p.number))
-                    ])
-                  ]);
-                  sel.syncToUrl({ replace: true });
-                "
-              >Select visible</TerminalButton>
-              <TerminalButton size="sm" variant="ghost" aria-label="Clear selected PRs"
-                @click="sel.clearSelection(); sel.setRepository(repoId as unknown as number); sel.syncToUrl({ replace: true })"
-              >Clear</TerminalButton>
-            </div>
-          </div>
-
-          <!-- PR list with selection checkboxes -->
-          <div
-            v-for="pr in prList.data?.value || []"
-            :key="pr.id"
-            class="rounded border border-cyber-border bg-cyber-surface/60 p-3"
-            :class="sel.selectedPullRequestNumbers.value.includes(pr.number) ? 'ring-2 ring-cyber-accent' : ''"
-          >
-            <div class="flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  class="h-4 w-4 accent-[var(--cyber-accent,#ea00d9)]"
-                  :aria-label="`Select PR #${pr.number}`"
-                  :checked="sel.selectedPullRequestNumbers.value.includes(pr.number)"
-                  @change="async (e) => {
-                    const target = e.target as HTMLInputElement | null
-                    if (target && target.checked) {
-                      await sel.addSelectedPRNumber(pr.number)
-                    } else {
-                      await sel.removeSelectedPRNumber(pr.number)
-                    }
-                    sel.syncToUrl({ replace: true })
-                  }"
-                />
-                <div class="font-medium">{{ pr.title }}</div>
-              </div>
-              <div class="text-xs text-cyber-muted">#{{ pr.number }} • {{ pr.state }}</div>
-            </div>
-            <div class="text-xs text-cyber-muted">
-              {{ pr.author_login }} • {{ pr.created_at ? new Date(pr.created_at).toLocaleDateString() : '' }}
-            </div>
-          </div>
-
-          <!-- Pagination controls -->
-          <div class="flex items-center justify-between pt-2">
-            <div class="text-xs text-cyber-muted">
-              Showing up to {{ prLimit }} {{ prState }} PRs
-            </div>
-            <div class="flex gap-2">
-              <TerminalButton size="sm" variant="ghost" :disabled="prLimit <= 25" @click="prLimit = Math.max(25, prLimit - 25)">Less</TerminalButton>
-              <TerminalButton size="sm" variant="ghost" @click="prLimit = prLimit + 25">More</TerminalButton>
-            </div>
-          </div>
-        </template>
+      <section class="lg:col-span-3">
+        <PRList
+          :prs="(prList.data?.value || []) as any"
+          :selected-numbers="sel.selectedPullRequestNumbers.value"
+          :page-size="prLimit"
+          :state-filter="prState"
+          :loading="!!prList.isPending.value"
+          :error="prList.isError.value ? 'Failed to load pull requests.' : null"
+          @update:selectedNumbers="async (nums: number[]) => {
+            // Diff current vs next and call store add/remove for each change
+            const prev = new Set(sel.selectedPullRequestNumbers.value)
+            const next = new Set(nums)
+            // removals
+            for (const n of prev) {
+              if (!next.has(n)) await sel.removeSelectedPRNumber(n)
+            }
+            // additions
+            for (const n of next) {
+              if (!prev.has(n)) await sel.addSelectedPRNumber(n)
+            }
+            sel.syncToUrl({ replace: true })
+          }"
+          @request:selectVisible="() => {
+            const visible = (prList.data?.value || []).map((p: any) => p.number)
+            sel.setSelectedPRNumbers([...new Set([ ...sel.selectedPullRequestNumbers.value, ...visible ])])
+            sel.syncToUrl({ replace: true })
+          }"
+          @request:clear="() => {
+            sel.clearSelection()
+            sel.setRepository(repoId as unknown as number)
+            sel.syncToUrl({ replace: true })
+          }"
+          @request:less="() => prLimit = Math.max(25, prLimit - 25)"
+          @request:more="() => prLimit = prLimit + 25"
+        />
       </section>
     </div>
   </section>
