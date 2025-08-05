@@ -167,6 +167,41 @@ export class DatabaseManager {
       console.log('Note: pat_validated_at column may already exist in users table');
     }
 
+    // Add active_selection_id to users table (if not exists)
+    try {
+      this.db.exec(`
+        ALTER TABLE users ADD COLUMN active_selection_id INTEGER REFERENCES selections(id);
+      `);
+    } catch (error) {
+      console.log('Note: active_selection_id column may already exist in users table');
+    }
+
+    // Create selections table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS selections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Create selection_items table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS selection_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        selection_id INTEGER NOT NULL,
+        repository_id INTEGER NOT NULL,
+        pr_number INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (selection_id) REFERENCES selections(id) ON DELETE CASCADE,
+        FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE,
+        UNIQUE (selection_id, repository_id, pr_number)
+      )
+    `);
+
     // Create indexes for better performance
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_pull_requests_repository_id ON pull_requests(repository_id);
@@ -178,6 +213,9 @@ export class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);
       CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
       CREATE INDEX IF NOT EXISTS idx_oauth_states_expires_at ON oauth_states(expires_at);
+      CREATE INDEX IF NOT EXISTS idx_selections_user_id ON selections(user_id);
+      CREATE INDEX IF NOT EXISTS idx_selection_items_selection_id ON selection_items(selection_id);
+      CREATE INDEX IF NOT EXISTS idx_selection_items_repo_pr ON selection_items(repository_id, pr_number);
     `);
 
     console.log('✅ Database migrations completed');

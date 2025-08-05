@@ -1,7 +1,7 @@
 # Task: Repository Selection & Repo View — UX Workshop and Implementation Plan
 
 Owner: Cline
-Status: New
+Status: In Progress
 Last Updated: 2025-08-05
 
 Goal
@@ -132,18 +132,34 @@ Keyboard
 Phase Breakdown
 
 Phase 1 (MVP)
-- Implement Repo Detail selection checkboxes and header.
-- Implement/extend selection store.
-- Implement global selection bar with Analyze + Clear actions (Manage optional).
-- Dashboard consumes selection (badge + scoping where feasible client-side).
+- Implement Repo Detail selection checkboxes and header. [pending]
+- Implement/extend selection store. [pending]
+- Implement global selection bar with Analyze + Clear actions (Manage optional). [pending]
+- Dashboard consumes selection (badge + scoping where feasible client-side). [pending]
+- Persist selection on server (active selection) with API. [done]
 
 Phase 2 (Usability)
-- Add Manage drawer with grouped selected PRs and remove buttons.
-- Persist selection to localStorage with a “restore selection?” prompt.
+- Add Manage drawer with grouped selected PRs and remove buttons. [pending]
+- Persist selection to localStorage with a “restore selection?” prompt. [pending]
 
 Phase 3 (Refinement)
-- “Select all matching filter” option with confirmation and paging strategy.
-- URL encoding for sharable selections (optional).
+- “Select all matching filter” option with confirmation and paging strategy. [pending]
+- URL encoding for sharable selections (optional). [pending]
+
+Progress
+
+Backend
+- Schema: Added tables selections, selection_items and users.active_selection_id with indexes. [done]
+- Service: Implemented SelectionService (ensure/get/clear active selection, add/remove items). [done]
+- Routes: Added /api/selections endpoints (active get/create/clear, add/remove items) behind requireAuth. [done]
+- Server: Wired /api/selections into backend/src/index.ts. [done]
+
+Next Frontend Tasks
+- Add selections API client (frontend/src/lib/api/selections.ts): active(), ensureActive(), addItems(), removeItems(), clear().
+- Wire selection store to call server endpoints with optimistic updates.
+- RepositoryDetail: checkbox column + header select -> calls add/remove items.
+- Global selection bar: Clear All -> DELETE /api/selections/active; Analyze -> navigate Dashboard.
+- App bootstrap: hydrate selection from GET /api/selections/active.
 
 Acceptance Criteria
 - User can select PRs in Repo Detail via checkboxes and see a live global count.
