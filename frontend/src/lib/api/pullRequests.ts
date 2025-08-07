@@ -49,4 +49,11 @@ export const pullRequestsApi = {
 
   statsByRepo: (repositoryId: number) =>
     http.get(`/api/pull-requests/repository/${repositoryId}/stats`) as Promise<PullRequestStats>,
+
+  authorsByRepo: (repositoryId: number, state?: 'open' | 'closed' | 'merged' | 'all') => {
+    const params = new URLSearchParams()
+    if (state && state !== 'all') params.set('state', state)
+    const qs = params.toString()
+    return http.get(`/api/pull-requests/repository/${repositoryId}/authors${qs ? `?${qs}` : ''}`) as Promise<{ authors: string[] }>
+  },
 };

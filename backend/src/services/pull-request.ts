@@ -20,6 +20,46 @@ export class PullRequestService {
     return new PullRequestService(user)
   }
 
+  /**
+   * Return distinct PR authors for a repository, optionally filtered by state.
+   * Authors with NULL/empty login are excluded. Results are sorted ASC.
+   */
+  async getAuthorsByRepository(
+    repositoryId: number,
+    filters: { state?: 'open' | 'closed' | 'merged' } = {}
+  ): Promise<string[]> {
+    try {
+      let query = `
+        SELECT DISTINCT author_login 
+        FROM pull_requests 
+        WHERE repository_id = ? 
+          AND author_login IS NOT NULL 
+          AND author_login <> ''
+      `
+      const params: unknown[] = [repositoryId]
+
+      if (filters.state) {
+        query += ` AND state = ?`
+        params.push(filters.state)
+      }
+
+      query += ` ORDER BY author_login ASC`
+
+      const stmt = this.db.prepare(query)
+      const rows = stmt.all(...params) as Array<{ author_login?: unknown }>
+      return rows
+        .map(r => typeof r.author_login === 'string' ? r.author_login : '')
+        .filter((v): v is string => !!v)
+    } catch (err) {
+      console.error('getAuthorsByRepository error', {
+        repositoryId,
+        state: filters?.state,
+        error: err instanceof Error ? err.message : err
+      })
+      return []
+    }
+  }
+
   async getPullRequestsByRepository(
     repositoryId: number, 
     filters: PullRequestFilters = {}
@@ -158,6 +198,7 @@ export class PullRequestService {
               lines_deleted: (githubPR as any).deletions || 0,
               files_changed: (githubPR as any).changed_files || 0,
               commits_count: (githubPR as any).commits || 0,
+              author_login: (githubPR as any)?.user?.login || null,
             })
             result.updated++
           } else {
@@ -174,7 +215,8 @@ export class PullRequestService {
               lines_deleted: (githubPR as any).deletions || 0,
               files_changed: (githubPR as any).changed_files || 0,
               commits_count: (githubPR as any).commits || 0,
-            })
+              author_login: (githubPR as any)?.user?.login || null,
+            } as any)
             result.created++
           }
         } catch (error) {
@@ -198,13 +240,13 @@ export class PullRequestService {
     return result || null
   }
 
-  private async createPullRequest(data: Omit<PullRequest, 'id'>): Promise<PullRequest> {
+  private async createPullRequest(data: Omit<PullRequest, 'id'> & { author_login?: string | null }): Promise<PullRequest> {
     const stmt = this.db.prepare(`
       INSERT INTO pull_requests (
         github_id, repository_id, number, title, state,
         created_at, merged_at, lines_added, lines_deleted,
-        files_changed, commits_count
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        files_changed, commits_count, author_login
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
     const result = stmt.run(
@@ -218,7 +260,8 @@ export class PullRequestService {
       data.lines_added,
       data.lines_deleted,
       data.files_changed,
-      data.commits_count
+      data.commits_count,
+      data.author_login || null
     )
 
     const createdPR = await this.getPullRequestById(result.lastInsertRowid as number)

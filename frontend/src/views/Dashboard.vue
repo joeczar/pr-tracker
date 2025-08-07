@@ -1,25 +1,52 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import TerminalWindow from '@/components/ui/terminal/TerminalWindow.vue'
-import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
-import TerminalHeader from '@/components/ui/terminal/TerminalHeader.vue'
-import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
-import MetricTile from '@/components/analytics/MetricTile.vue'
-import ProgressRadial from '@/components/analytics/ProgressRadial.vue'
-import TrendChart from '@/components/analytics/TrendChart.vue'
+import { ref, computed, onMounted } from 'vue'
+import { useSelectionStore } from '@/stores/selection'
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+import SelectionControls from '@/components/dashboard/SelectionControls.vue'
+import QuickMetricsSection from '@/components/dashboard/QuickMetricsSection.vue'
+import TrendsSection from '@/components/dashboard/TrendsSection.vue'
+import GoalsSection from '@/components/dashboard/GoalsSection.vue'
+import RecentActivitySection from '@/components/dashboard/RecentActivitySection.vue'
+// Note: Vite resolves .vue SFCs; TS plugin warnings can be ignored safely.
 
 /**
- * Mock dashboard data to enable UI composition prior to store wiring.
- * Replace with Pinia stores once backend endpoints are connected.
+ * Step 0 scaffolding (updated PR-centric):
+ * - Consume global selection store (repository + selected PRs from RepositoryDetail).
+ * - Remove local selector; use guided empty state when no selection.
+ * - Keep visuals for other sections as placeholders for now.
  */
-const reducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const reducedMotion =
+  typeof window !== 'undefined' &&
+  window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-const quickMetrics = ref([
-  { label: 'Total Comments (30d)', value: 482, delta: -12, trend: 'down' as const, helpText: 'vs prior 30d' },
-  { label: 'Avg Comments / PR', value: 2.7, delta: -8, trend: 'down' as const, helpText: 'vs prior 30d' },
-  { label: 'Change-request rate', value: '18%', delta: 3, trend: 'up' as const, helpText: 'of PRs', ariaDescription: 'Higher is worse' },
-  { label: 'Active Repos', value: 7, delta: 1, trend: 'up' as const, helpText: 'last 7 days' }
-])
+
+
+/**
+ * PR-centric selection: use global store instead of local selector.
+ * Fallback: hydrate from URL to be robust on direct navigation.
+ */
+const sel = useSelectionStore()
+onMounted(async () => {
+  // attempt hydration from URL and server on load
+  sel.hydrateFromUrl()
+  await sel.hydrateFromServer()
+})
+const selectedRepoId = computed<number | null>(() => sel.selectedRepositoryId.value)
+const selectedPrIds = computed<number[]>(() => sel.selectedPullRequestNumbers.value)
+const hasSelection = computed(() => sel.hasSelection.value)
+
+/**
+ * Step 1: Quick Metrics tiles
+ * - reviews metrics (30d)
+ * - pull requests metrics (30d)
+ * Tiles:
+ *  - Total Comments (30d): reviews.total_comments (if available) else derived
+ *  - Avg Comments / PR: reviews.avg_comments_per_pr
+ *  - Change-request rate: reviews.change_request_rate (0-1 or 0-100)
+ *  - Active Repos: repositories count from reposQuery
+ */
+/* Section-specific data now lives inside section components */
 
 const trendTab = ref<'comments' | 'change' | 'avg'>('comments')
 const labels = Array.from({ length: 14 }, (_, i) => `D-${13 - i}`)
@@ -60,111 +87,52 @@ const goals = ref([
 
 <template>
   <section aria-labelledby="dashboard-title" class="space-y-6">
-    <header class="flex items-center justify-between">
-      <h1 id="dashboard-title" class="text-xl font-semibold tracking-tight">Dashboard</h1>
-      <div class="text-xs text-slate-500">Skeleton view</div>
+    <header class="flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-3">
+        <h1 id="dashboard-title" class="text-xl font-semibold tracking-tight">Dashboard</h1>
+        <div class="text-xs text-slate-500">PR-centric</div>
+      </div>
+
+      <SelectionControls
+:selected-repo-id="selectedRepoId.value"        :selected-pr-ids="selectedPrIds.value"
+        :has-selection="hasSelection.value"
+        @clear="(sel.clearSelection(), sel.syncToUrl({ replace: true }))"
+        @review="() => { const q = selectedPrIds.map(id => `pr=${id}`).join('&'); if (selectedRepoId) { window.location.href = `/repositories/${selectedRepoId}?${q}` } }"
+      />
     </header>
 
-    <!-- Quick Stats row -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-      <MetricTile
-        v-for="(m, i) in quickMetrics"
-        :key="i"
-        :label="m.label"
-        :value="m.value"
-        :delta="m.delta as any"
-        :trend="m.trend as any"
-        :help-text="m.helpText"
-        :aria-description="(m as any).ariaDescription"
-      />
+    <!-- Guided empty state when no PRs selected -->
+    <div v-if="!hasSelection" class="text-sm text-slate-500 dark:text-slate-400">
+      Select PRs in the repository view to populate the dashboard.
+      <a href="/repositories" class="underline">Go to Repositories</a>
+      <template v-if="selectedRepoId">
+        or <a :href="`/repositories/${selectedRepoId.value}`" class="underline">Review current repository</a>
+      </template>.
     </div>
 
-    <!-- Trends -->
-    <TerminalWindow>
-      <template #title>
-        <TerminalHeader>
-          <template #title>
-            <TerminalTitle command="trends" />
-          </template>
-          <template #actions>
-            <div class="flex items-center gap-2">
-              <TerminalButton
-                :variant="trendTab === 'comments' ? 'primary' : 'ghost'"
-                size="sm"
-                @click="trendTab = 'comments'"
-                aria-label="Show Comments trend"
-              >Comments</TerminalButton>
-              <TerminalButton
-                :variant="trendTab === 'change' ? 'primary' : 'ghost'"
-                size="sm"
-                @click="trendTab = 'change'"
-                aria-label="Show Change-request rate trend"
-              >Change Req</TerminalButton>
-              <TerminalButton
-                :variant="trendTab === 'avg' ? 'primary' : 'ghost'"
-                size="sm"
-                @click="trendTab = 'avg'"
-                aria-label="Show Avg comments per PR trend"
-              >Avg/PR</TerminalButton>
-            </div>
-          </template>
-        </TerminalHeader>
-      </template>
+    <!-- Quick Metrics Section -->
+    <QuickMetricsSection
+      :has-selection="hasSelection.value"
+      :selected-repo-id="selectedRepoId.value"
+      :selected-pr-ids="selectedPrIds.value"
+    />
 
-      <TrendChart
-        :type="currentTrend.type"
-        :labels="labels"
-        :datasets="currentTrend.datasets as any"
-        :title="currentTrend.title"
-        :description="currentTrend.description"
-        :reduced-motion="reducedMotion"
-        :aria-summary-id="'trend-summary'"
-        :height="260"
-      >
-        <template #summary>
-          {{ currentTrend.title }}. Data points: {{ labels.length }} days.
-        </template>
-      </TrendChart>
-    </TerminalWindow>
+    <!-- Trends Section -->
+    <TrendsSection
+      :has-selection="hasSelection.value"
+      :selected-repo-id="selectedRepoId.value"
+      :selected-pr-ids="selectedPrIds.value"
+      :reduced-motion="reducedMotion"
+    />
 
-    <!-- Progress & Goals -->
-    <TerminalWindow>
-      <template #title>
-        <TerminalHeader>
-          <template #title>
-            <TerminalTitle command="goals" />
-          </template>
-        </TerminalHeader>
-      </template>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <ProgressRadial
-          v-for="(g, i) in goals"
-          :key="i"
-          :value="g.value"
-          :label="g.label"
-          :goal-label="g.goalLabel"
-          :reduced-motion="reducedMotion"
-        />
-      </div>
-    </TerminalWindow>
+    <!-- Goals Section -->
+    <GoalsSection :reduced-motion="reducedMotion" />
 
-    <!-- Recent Activity -->
-    <TerminalWindow>
-      <template #title>
-        <TerminalHeader>
-          <template #title>
-            <TerminalTitle command="recent-activity" />
-          </template>
-          <template #actions>
-            <TerminalButton size="sm" variant="secondary" aria-label="Refresh activity">Refresh</TerminalButton>
-          </template>
-        </TerminalHeader>
-      </template>
-      <div class="space-y-3">
-        <div class="h-12 rounded border border-dashed border-slate-300 dark:border-slate-700"></div>
-        <div class="h-12 rounded border border-dashed border-slate-300 dark:border-slate-700"></div>
-        <div class="h-12 rounded border border-dashed border-slate-300 dark:border-slate-700"></div>
-      </div>
-    </TerminalWindow>
+    <!-- Recent Activity Section -->
+    <RecentActivitySection
+      :has-selection="hasSelection.value"
+      :selected-repo-id="selectedRepoId.value"
+      :selected-pr-ids="selectedPrIds.value"
+    />
   </section>
 </template>

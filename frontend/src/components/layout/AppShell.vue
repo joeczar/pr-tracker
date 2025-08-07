@@ -11,6 +11,7 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
 import CommandPalette from '@/components/ui/command/CommandPalette.vue'
+import SelectionControls from '@/components/dashboard/SelectionControls.vue'
 import { useAuthStore } from '@/stores/auth'
 import { authApi as _authApi } from '@/lib/api/auth'
 
@@ -192,6 +193,8 @@ onBeforeUnmount(() => {
         <div class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
           <RouterView />
         </div>
+        <!-- Global selection controls bar -->
+        <SelectionControls />
       </main>
     </div>
 

@@ -15,12 +15,15 @@ import Badge from '@/components/ui/badge/Badge.vue'
  * shadcn-vue progress
  */
 import Progress from '@/components/ui/progress/Progress.vue'
+import { useSelectionStore } from '@/stores/selection'
+import { RouterLink } from 'vue-router'
 
 
 type RepoStatus = 'idle' | 'syncing' | 'error' | 'ok'
 type BadgeVariant = 'default' | 'secondary' | 'outline' | 'destructive'
 
 const props = defineProps<{
+  id: number
   owner?: string
   name: string
   description?: string
@@ -60,16 +63,27 @@ const statusVariant = computed<BadgeVariant>(() => {
       return 'outline'
   }
 })
+
+// Selection awareness
+const sel = useSelectionStore()
+const isSelectedRepo = computed(() => sel.selectedRepositoryId.value != null && Number(props.id) === Number(sel.selectedRepositoryId.value))
+const selectedPrsForRepo = computed(() => (isSelectedRepo.value ? sel.selectedPullRequestNumbers.value : []))
 </script>
 
 <template>
-  <Card class="p-4">
+  <Card class="p-4" :aria-label="`Repository card: ${repoFullName}`">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div class="space-y-1">
         <div class="flex items-center gap-3">
           <CardHeader class="p-0">
             <CardTitle class="text-lg font-mono font-semibold text-cyan-700 dark:text-cyan-300">
-              {{ repoFullName }}
+              <RouterLink
+                :to="`/repositories/${props.id}`"
+                class="hover:underline underline-offset-4"
+                :aria-label="`Open repository ${repoFullName}`"
+              >
+                {{ repoFullName }}
+              </RouterLink>
             </CardTitle>
           </CardHeader>
           <!-- Status badge -->
@@ -120,6 +134,21 @@ const statusVariant = computed<BadgeVariant>(() => {
 
     <div v-if="recent?.length" class="mt-4">
       <h4 class="text-sm font-mono text-slate-600 dark:text-slate-300 mb-2">Recent PRs</h4>
+      <!-- Selected PRs indicator -->
+      <div v-if="isSelectedRepo && selectedPrsForRepo.length" class="mb-2 flex flex-wrap items-center gap-1">
+        <span class="text-xs text-slate-600 dark:text-slate-300">Selected PRs:</span>
+          <RouterLink
+            v-for="pid in selectedPrsForRepo"
+            :key="'sel-'+pid"
+            class="inline-flex items-center rounded border px-2 py-0.5 text-xs font-mono hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            :class="'border-slate-300 dark:border-slate-700'"
+            :to="`/repositories/${props.id}?pr=${pid}`"
+            :aria-label="`Open repository ${owner ? owner + '/' + name : name} with PR ${pid} selected`"
+          >
+            #{{ pid }}
+          </RouterLink>
+      </div>
+
       <ul class="space-y-1" role="list">
         <li
           v-for="pr in recent"
@@ -130,6 +159,7 @@ const statusVariant = computed<BadgeVariant>(() => {
         >
           <div class="flex items-center gap-2">
             <span class="text-xs font-mono"
+              v-if="Number.isFinite(props.id)"
               :class="{
                 'text-emerald-600 dark:text-emerald-300': pr.state === 'merged',
                 'text-cyan-700 dark:text-cyan-300': pr.state === 'open' || pr.state === 'review',
@@ -138,10 +168,17 @@ const statusVariant = computed<BadgeVariant>(() => {
               }"
               aria-hidden="true"
             >#{{ pr.id }}</span>
-            <span class="text-sm font-mono text-slate-900 dark:text-slate-100">{{ pr.title }}</span>
+            <!-- Clickable PR to open repo detail with ?pr -->
+            <RouterLink
+              class="text-sm font-mono text-slate-900 dark:text-slate-100 hover:underline underline-offset-4"
+              :to="`/repositories/${props.id}?pr=${pr.id}`"
+              :aria-label="`Open PR ${pr.id} in ${owner ? owner + '/' + name : name}`"
+            >
+              {{ pr.title }}
+            </RouterLink>
           </div>
           <div class="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400 font-mono">
-            <span aria-label="Comments">💬 {{ pr.comments }}</span>
+            <span v-if="typeof pr.comments !== 'undefined'" aria-label="Comments">💬 {{ pr.comments }}</span>
             <span aria-label="Updated">{{ pr.updatedAt }}</span>
           </div>
         </li>

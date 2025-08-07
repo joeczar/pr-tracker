@@ -17,6 +17,7 @@ import { analyticsRoutes } from './routes/analytics.js';
 import { syncRoutes } from './routes/sync.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import authRoutes from './routes/auth.js';
+import selectionsRoutes from './routes/selections.js';
 
 const app = new Hono();
 
@@ -55,6 +56,7 @@ app.route('/api/pull-requests', pullRequestRoutes);
 app.route('/api/reviews', reviewRoutes);
 app.route('/api/analytics', analyticsRoutes);
 app.route('/api/sync', syncRoutes);
+app.route('/api/selections', selectionsRoutes);
 
 // 404 handler
 app.notFound((c) => {
