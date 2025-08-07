@@ -81,34 +81,34 @@ const prList = useQuery({
 
 // Compute selected PRs from the main PR list for better reactivity
 const selectedPRsFromList = computed(() => {
-  const allPRs = (prList.data?.value || []) as any[]
+  const allPRs = (prList.data?.value || []) as Array<{ number: number }>
   const selectedNumbers = sel.selectedPullRequestNumbers.value
-  return allPRs.filter((pr: any) => selectedNumbers.includes(pr.number))
+  return allPRs.filter((pr) => selectedNumbers.includes(pr.number))
 })
 
 // Fetch additional selected PRs that might not be in the main list (e.g., merged PRs when filtering by open)
 const additionalSelectedPRs = useQuery({
   queryKey: computed(() => ['additional-selected-prs', repoId.value, sel.selectedPullRequestNumbers.value]),
   queryFn: async () => {
-    if (!sel.selectedPullRequestNumbers.value.length) return []
-    const allPRs = (prList.data?.value || []) as any[]
-    const visiblePRNumbers = new Set(allPRs.map((pr: any) => pr.number))
+    if (!sel.selectedPullRequestNumbers.value.length) return [] as Array<{ number: number }>
+    const allPRs = (prList.data?.value || []) as Array<{ number: number }>
+    const visiblePRNumbers = new Set(allPRs.map((pr) => pr.number))
     const missingNumbers = sel.selectedPullRequestNumbers.value.filter(num => !visiblePRNumbers.has(num))
 
     if (missingNumbers.length === 0) return []
 
     // Fetch all PRs to find the missing selected ones
     const allPRsFromAPI = await pullRequestsApi.listByRepo(repoId.value, { limit: 1000 })
-    return allPRsFromAPI.filter((pr: any) => missingNumbers.includes(pr.number))
+    return (allPRsFromAPI as Array<{ number: number }>).filter((pr) => missingNumbers.includes(pr.number))
   },
   enabled: computed(() => Number.isFinite(repoId.value) && sel.selectedPullRequestNumbers.value.length > 0),
 })
 
 // Combine selected PRs from both sources; guard against stale additional data when empty
 const selectedPRs = computed(() => {
-  if (sel.selectedPullRequestNumbers.value.length === 0) return [] as any[]
+  if (sel.selectedPullRequestNumbers.value.length === 0) return [] as Array<{ number: number }>
   const fromList = selectedPRsFromList.value
-  const additional = (additionalSelectedPRs.data?.value || []) as any[]
+  const additional = (additionalSelectedPRs.data?.value || []) as Array<{ number: number }>
   return [...fromList, ...additional]
 })
 
@@ -159,17 +159,18 @@ const { mutate: syncNow, status: syncStatus } = useMutation({
       qc.invalidateQueries({ queryKey: qk.sync.history(repoId.value, 20) }),
     ])
     // toast success (placeholder)
-    ;(window as any).__toast?.success?.('Sync queued')
+    ;(window as unknown as { __toast?: { success?: (m: string) => void } }).__toast?.success?.('Sync queued')
   },
-  onError: (err: any) => {
-    const msg = err?.payload?.message || err?.message || 'Failed to queue sync'
-    ;(window as any).__toast?.error?.(msg)
+  onError: (err: unknown) => {
+    const e = err as { payload?: { message?: string }; message?: string } | undefined
+    const msg = e?.payload?.message || e?.message || 'Failed to queue sync'
+    ;(window as unknown as { __toast?: { error?: (m: string) => void } }).__toast?.error?.(msg)
   },
 })
 
 // Derived UI state for overview tiles
 const overview = computed(() => {
-  const stats = prStats.data.value as any
+  const stats = prStats.data.value as { total?: number; open?: number; merged?: number; closed?: number; merge_rate?: number } | undefined
   return [
     { label: 'Total PRs', value: stats?.total ?? '—', trend: 'flat' as const },
     { label: 'Open', value: stats?.open ?? '—', trend: 'up' as const },
