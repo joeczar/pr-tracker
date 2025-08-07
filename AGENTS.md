@@ -10,6 +10,11 @@ Build/Lint/Test
 - Test frontend unit single: cd frontend && pnpm vitest path/to.test.ts -t "name"
 - Test frontend e2e: cd frontend && pnpm playwright test [spec|--ui|--debug]
 
+MCP
+- Playwright MCP is configured for Cursor in `.cursor/mcp.json`.
+- Cursor will launch `npx mcp-server-playwright` automatically.
+- Set `PLAYWRIGHT_BROWSERS_PATH=0` to download browsers in project.
+
 Code Style
 - TypeScript strict, prefer explicit types; shared types in shared/types; zod for validation
 - Imports: path-based within package; keep side-effect-free; group: std, external, internal; no unused imports
