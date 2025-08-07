@@ -104,8 +104,9 @@ const additionalSelectedPRs = useQuery({
   enabled: computed(() => Number.isFinite(repoId.value) && sel.selectedPullRequestNumbers.value.length > 0),
 })
 
-// Combine selected PRs from both sources
+// Combine selected PRs from both sources; guard against stale additional data when empty
 const selectedPRs = computed(() => {
+  if (sel.selectedPullRequestNumbers.value.length === 0) return [] as any[]
   const fromList = selectedPRsFromList.value
   const additional = (additionalSelectedPRs.data?.value || []) as any[]
   return [...fromList, ...additional]
@@ -120,19 +121,19 @@ const selectedNumbers = computed(() => sel.selectedPullRequestNumbers.value)
  * so watch the query result instead.
  */
 /**
- * Keep selection in sync with deep-link and data loading.
- * - If deep-linked PRs exist, ensure filters allow visibility (use 'all' and a larger limit)
- * - Write all deep-linked PR ids into selection
+ * Apply deep-linked PR ids on first load only if local selection is empty.
  */
+const appliedDeepLink = ref(false)
 watch(
   () => prList.data.value,
   () => {
-    if (deepLinkedPrs.value.length > 0) {
+    if (appliedDeepLink.value) return
+    if (deepLinkedPrs.value.length > 0 && sel.selectedPullRequestNumbers.value.length === 0) {
       if (prState.value !== 'all') prState.value = 'all'
       if (prLimit.value < 100) prLimit.value = 100
       sel.setSelectedPRNumbers(deepLinkedPrs.value)
-      // Optionally keep URL tidy with normalized pr params
       sel.syncToUrl({ replace: true })
+      appliedDeepLink.value = true
     }
   }
 )
@@ -192,7 +193,7 @@ const {
 } = useQuery({
   queryKey: computed(() => qk.sync.history(repoId.value, historyLimit.value)),
   queryFn: async () => {
-    try { await fetch('/auth/status', { credentials: 'include' }).catch(() => {}) } catch {}
+    try { await fetch('/auth/status', { credentials: 'include' }).catch(() => {}) } catch (_e) { /* ignore */ }
     return syncApi.repoHistory(repoId.value, historyLimit.value)
   },
   enabled: computed(() => Number.isFinite(repoId.value) && historyLimit.value > 0),
@@ -265,11 +266,12 @@ const {
         :loading="!!additionalSelectedPRs.isPending.value"
         @deselect="async (prNumber: number) => {
           await sel.removeSelectedPRNumber(prNumber)
+          await sel.hydrateFromServer()
           sel.syncToUrl({ replace: true })
         }"
-        @clear="() => {
-          sel.clearSelection()
-          sel.setRepository(repoId as unknown as number)
+        @clear="async () => {
+          await sel.clearRepositorySelection(repoId as unknown as number)
+          await sel.hydrateFromServer()
           sel.syncToUrl({ replace: true })
         }"
       />
@@ -286,20 +288,20 @@ const {
         :state-filter="prState"
         :loading="!!prList.isPending.value"
         :error="prList.isError.value ? 'Failed to load pull requests.' : null"
-        @update:selectedNumbers="(nums: number[]) => {
-          // Update selection immediately (local-first)
-          sel.setSelectedPRNumbers(nums)
-          sel.setRepository(repoId as unknown as number)
+        @update:selectedNumbers="async (nums: number[]) => {
+          await sel.setSelectedPRNumbersPersisted(repoId as unknown as number, nums)
           sel.syncToUrl({ replace: true })
         }"
-        @request:selectVisible="() => {
+        @request:selectVisible="async () => {
           const visible = (prList.data?.value || []).map((p: any) => p.number)
-          sel.setSelectedPRNumbers([...new Set([ ...sel.selectedPullRequestNumbers.value, ...visible ])])
+          const current = sel.selectedPullRequestNumbers.value || []
+          const next = Array.from(new Set([ ...current, ...visible ]))
+          await sel.setSelectedPRNumbersPersisted(repoId as unknown as number, next)
           sel.syncToUrl({ replace: true })
         }"
-        @request:clear="() => {
-          sel.clearSelection()
-          sel.setRepository(repoId as unknown as number)
+        @request:clear="async () => {
+          await sel.clearRepositorySelection(repoId as unknown as number)
+          await sel.hydrateFromServer()
           sel.syncToUrl({ replace: true })
         }"
         @request:less="() => prLimit = Math.max(25, prLimit - 25)"

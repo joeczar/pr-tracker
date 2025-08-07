@@ -28,6 +28,81 @@ function setSelectedPRNumbers(numbers: number[]) {
   selectedPullRequestNumbers.value = uniq
 }
 
+/**
+ * Bulk replace the selection for a repository and persist diffs to the server.
+ * Optimistic UI: local-first, then background sync.
+ */
+async function setSelectedPRNumbersPersisted(repoId: number, numbers: number[]) {
+  if (!Number.isFinite(repoId)) {
+    // Fall back to local-only if repo invalid
+    setSelectedPRNumbers(numbers)
+    return
+  }
+
+  // Ensure repo context aligns
+  setRepository(repoId)
+
+  // Compute diffs vs current
+  const current = new Set(selectedPullRequestNumbers.value)
+  const next = new Set((numbers || []).map((n) => Number(n)).filter((n) => Number.isFinite(n)))
+
+  const toAdd: number[] = []
+  const toRemove: number[] = []
+  for (const n of next) {
+    if (!current.has(n)) toAdd.push(n)
+  }
+  for (const n of current) {
+    if (!next.has(n)) toRemove.push(n)
+  }
+
+  // Optimistic update
+  selectedPullRequestNumbers.value = Array.from(next)
+
+  // Persist in background
+  const addPayload = toAdd.map((n) => ({ repository_id: repoId, pr_number: n }))
+  const removePayload = toRemove.map((n) => ({ repository_id: repoId, pr_number: n }))
+
+  try {
+    if (addPayload.length) {
+      await selectionsApi.addItems(addPayload)
+    }
+  } catch (error) {
+    console.warn('Failed to persist added selection items:', error)
+  }
+  try {
+    if (removePayload.length) {
+      await selectionsApi.removeItems(removePayload)
+    }
+  } catch (error) {
+    console.warn('Failed to persist removed selection items:', error)
+  }
+}
+
+/**
+ * Clear selection ONLY for the given repository, persist to server.
+ * Does NOT clear the global active selection nor repo context.
+ */
+async function clearRepositorySelection(repoId: number) {
+  if (!Number.isFinite(repoId)) return
+  // Build payload from current local state
+  const payload = (selectedPullRequestNumbers.value || [])
+    .map((n) => Number(n))
+    .filter((n) => Number.isFinite(n))
+    .map((n) => ({ repository_id: repoId, pr_number: n }))
+
+  // Optimistic: clear local selection
+  selectedPullRequestNumbers.value = []
+
+  if (payload.length === 0) return
+
+  try {
+    await selectionsApi.removeItems(payload)
+  } catch (error) {
+    console.warn('Failed to persist repo-scoped clear selection:', error)
+    // Keep local cleared state for UX; hydration on next enter will reconcile.
+  }
+}
+
 async function addSelectedPRNumber(prNumber: number) {
   if (!Number.isFinite(prNumber)) return
   const set = new Set(selectedPullRequestNumbers.value)
@@ -65,16 +140,17 @@ async function removeSelectedPRNumber(prNumber: number) {
   }
 }
 
+/**
+ * Global clear for account-wide reset. Prefer clearRepositorySelection(repoId) in repo UI.
+ */
 async function clearSelection() {
   // Clear local state immediately (local-first)
-  selectedRepositoryId.value = null
   selectedPullRequestNumbers.value = []
 
-  // Sync to server in background (don't block UI)
+  // Keep repository context; this is a global reset but UI is repo-scoped.
   selectionsApi.clearActive()
     .catch((error) => {
-      console.warn('Failed to sync clear selection to server:', error)
-      // Keep local state - don't rollback for better UX
+      console.warn('Failed to sync global clear selection to server:', error)
     })
 }
 
@@ -166,6 +242,8 @@ export function useSelectionStore() {
     // actions
     setRepository,
     setSelectedPRNumbers,
+    setSelectedPRNumbersPersisted,
+    clearRepositorySelection,
     addSelectedPRNumber,
     removeSelectedPRNumber,
     clearSelection,

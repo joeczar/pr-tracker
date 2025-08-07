@@ -94,9 +94,8 @@ const goals = ref([
       </div>
 
       <SelectionControls
-        :selected-repo-id="selectedRepoId"
-        :selected-pr-ids="selectedPrIds"
-        :has-selection="hasSelection"
+:selected-repo-id="selectedRepoId.value"        :selected-pr-ids="selectedPrIds.value"
+        :has-selection="hasSelection.value"
         @clear="(sel.clearSelection(), sel.syncToUrl({ replace: true }))"
         @review="() => { const q = selectedPrIds.map(id => `pr=${id}`).join('&'); if (selectedRepoId) { window.location.href = `/repositories/${selectedRepoId}?${q}` } }"
       />
@@ -107,22 +106,22 @@ const goals = ref([
       Select PRs in the repository view to populate the dashboard.
       <a href="/repositories" class="underline">Go to Repositories</a>
       <template v-if="selectedRepoId">
-        or <a :href="`/repositories/${selectedRepoId}`" class="underline">Review current repository</a>
+        or <a :href="`/repositories/${selectedRepoId.value}`" class="underline">Review current repository</a>
       </template>.
     </div>
 
     <!-- Quick Metrics Section -->
     <QuickMetricsSection
-      :has-selection="hasSelection"
-      :selected-repo-id="selectedRepoId"
-      :selected-pr-ids="selectedPrIds"
+      :has-selection="hasSelection.value"
+      :selected-repo-id="selectedRepoId.value"
+      :selected-pr-ids="selectedPrIds.value"
     />
 
     <!-- Trends Section -->
     <TrendsSection
-      :has-selection="hasSelection"
-      :selected-repo-id="selectedRepoId"
-      :selected-pr-ids="selectedPrIds"
+      :has-selection="hasSelection.value"
+      :selected-repo-id="selectedRepoId.value"
+      :selected-pr-ids="selectedPrIds.value"
       :reduced-motion="reducedMotion"
     />
 
@@ -131,9 +130,9 @@ const goals = ref([
 
     <!-- Recent Activity Section -->
     <RecentActivitySection
-      :has-selection="hasSelection"
-      :selected-repo-id="selectedRepoId"
-      :selected-pr-ids="selectedPrIds"
+      :has-selection="hasSelection.value"
+      :selected-repo-id="selectedRepoId.value"
+      :selected-pr-ids="selectedPrIds.value"
     />
   </section>
 </template>

@@ -11,7 +11,7 @@ import Badge from '@/components/ui/badge/Badge.vue'
 import Button from '@/components/ui/button/Button.vue'
 import Fuse from 'fuse.js'
 import { pullRequestsApi } from '@/lib/api/pullRequests'
-import { onMounted, watchEffect } from 'vue'
+import { onMounted } from 'vue'
 
 type PR = {
   id: number
@@ -292,8 +292,11 @@ function more() {
       <div
         v-for="pr in filtered"
         :key="pr.id"
-        class="rounded border border-cyber-border bg-cyber-surface/60 p-3"
-        :class="selectedNumbers.includes(pr.number) ? 'ring-2 ring-cyber-accent' : ''"
+        class="rounded border bg-cyber-surface/60 p-3"
+        :class="selectedNumbers.includes(pr.number) ? 'ring-2 ring-cyber-accent border-cyber-accent/50 bg-cyber-accent/5' : 'border-cyber-border'"
+        :aria-selected="selectedNumbers.includes(pr.number)"
+        :data-selected="selectedNumbers.includes(pr.number) ? 'true' : 'false'"
+        :data-pr-number="pr.number"
       >
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-2">
@@ -302,6 +305,7 @@ function more() {
               type="checkbox"
               :checked="selectedNumbers.includes(pr.number)"
               :aria-label="`Select PR #${pr.number}`"
+              :data-testid="`pr-checkbox-${pr.number}`"
               class="h-4 w-4 accent-[var(--cyber-accent,#ea00d9)] rounded-sm border border-cyber-border focus-visible:ring-[var(--cyber-accent,#ea00d9)]"
               @change="(e: Event) => {
                 const checked = (e.target as HTMLInputElement).checked
