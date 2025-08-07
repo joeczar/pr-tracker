@@ -18,7 +18,7 @@ const props = defineProps<{
 
 const DAYS = 14
 const trendTab = ref<'comments' | 'change' | 'avg'>('comments')
-const enabledHasRepo = computed(() => Number.isFinite(props.selectedRepoId as any))
+const enabledHasRepo = computed(() => Number.isFinite(props.selectedRepoId as number))
 
 // Query live analytics trends
 const trendsQuery = useQuery({
@@ -30,7 +30,7 @@ const trendsQuery = useQuery({
 })
 
 const labels = computed(() => {
-  const data = (trendsQuery.data as any)?.value
+  const data = (trendsQuery.data as unknown as { value?: Record<string, unknown> })?.value
   if (Array.isArray(data?.days) && data.days.length) return data.days
   // Fallback to simple D- labels if API lacks explicit days
   return Array.from({ length: DAYS }, (_, i) => `D-${DAYS - 1 - i}`)
@@ -40,7 +40,7 @@ const labels = computed(() => {
 function arr(len = DAYS, fill = 0) {
   return Array.from({ length: len }, () => fill)
 }
-const base = computed(() => (trendsQuery.data as any)?.value ?? {})
+const base = computed(() => (trendsQuery.data as unknown as { value?: Record<string, unknown> })?.value ?? {})
 const commentsSeries = computed<number[]>(() => {
   // prefer daily total comments if provided, else zeros
   const series = base.value?.daily_comments ?? base.value?.comments ?? null
@@ -67,10 +67,10 @@ const changeRateSeries = computed<number[]>(() => {
   return Array.isArray(series) ? series : arr()
 })
 
-const pending = computed(() => !!(trendsQuery.isPending as any) && enabledHasRepo.value && props.hasSelection)
-const error = computed(() => !!(trendsQuery.isError as any))
+const pending = computed(() => Boolean(trendsQuery.isPending) && Boolean(enabledHasRepo.value) && props.hasSelection)
+const error = computed(() => Boolean(trendsQuery.isError))
 const hasAny = computed(() => {
-  const data = (trendsQuery.data as any)?.value
+  const data = (trendsQuery.data as unknown as { value?: { labels?: string[]; comments?: number[] } })?.value
   return !!data
 })
 const empty = computed(() => {

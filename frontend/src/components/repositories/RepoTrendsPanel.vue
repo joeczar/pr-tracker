@@ -72,7 +72,7 @@ const current = computed(() => {
         v-else
         :type="current.type"
         :labels="labels"
-        :datasets="current.datasets as any"
+        :datasets="current.datasets as unknown as { label: string; data: number[] }[]"
         :title="current.title"
         :description="current.description"
         :reduced-motion="!!reducedMotion"

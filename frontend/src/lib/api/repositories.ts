@@ -47,9 +47,9 @@ export const repositoriesApi = {
 
           // Transform stats to match RepositoryStats interface
           const stats: RepositoryStats | undefined = statsResponse ? {
-            prs: statsResponse.total || 0,
-            avgCommentsPerPR: metricsResponse?.avg_comments_per_pr || 0,
-            changeRequestRate: metricsResponse ? Math.round((metricsResponse.avg_reviews_per_pr || 0) * 10) : 0, // Rough approximation
+            prs: (statsResponse as { total?: number })?.total || 0,
+            avgCommentsPerPR: (metricsResponse as { avg_comments_per_pr?: number } | null | undefined)?.avg_comments_per_pr || 0,
+            changeRequestRate: metricsResponse ? Math.round(((metricsResponse as { avg_reviews_per_pr?: number } | null | undefined)?.avg_reviews_per_pr || 0) * 10) : 0, // Rough approximation
             lastSync: new Date().toISOString().split('T')[0] // TODO: Get actual sync time from sync history
           } : {
             // Provide default stats when no data is available (likely needs sync)
@@ -61,8 +61,8 @@ export const repositoriesApi = {
 
           // Transform recent PRs to match RecentPR interface
           const recent: RecentPR[] = Array.isArray(recentPRsResponse)
-            ? recentPRsResponse.slice(0, 3).map((pr: any) => ({
-                id: pr.number || pr.id,
+            ? recentPRsResponse.slice(0, 3).map((pr: { id?: number|string; number?: number|string; title?: string; state?: string; updated_at?: string }) => ({
+                id: pr.number ?? pr.id ?? 'unknown',
                 title: pr.title || 'Untitled PR',
                 state: pr.state === 'merged' ? 'merged' :
                        pr.state === 'closed' ? 'closed' : 'open',
