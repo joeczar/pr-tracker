@@ -67,7 +67,7 @@ function navigateToRepoDetail() {
       </div>
 
         <SelectionControls
-        :selected-repo-id="selectedRepoId as number"
+        :selected-repo-id="selectedRepoId"
         :selected-pr-ids="selectedPrIds"
         :has-selection="hasSelection"
         @clear="(sel.clearSelection(), sel.syncToUrl({ replace: true }))"
@@ -87,14 +87,14 @@ function navigateToRepoDetail() {
     <!-- Quick Metrics Section -->
     <QuickMetricsSection
       :has-selection="hasSelection"
-      :selected-repo-id="selectedRepoId as number"
+      :selected-repo-id="selectedRepoId"
       :selected-pr-ids="selectedPrIds"
     />
 
     <!-- Trends Section -->
     <TrendsSection
       :has-selection="hasSelection"
-      :selected-repo-id="selectedRepoId as number"
+      :selected-repo-id="selectedRepoId"
       :selected-pr-ids="selectedPrIds"
       :reduced-motion="reducedMotion"
     />
@@ -105,7 +105,7 @@ function navigateToRepoDetail() {
     <!-- Recent Activity Section -->
     <RecentActivitySection
       :has-selection="hasSelection"
-      :selected-repo-id="selectedRepoId as number"
+      :selected-repo-id="selectedRepoId"
       :selected-pr-ids="selectedPrIds"
     />
   </section>

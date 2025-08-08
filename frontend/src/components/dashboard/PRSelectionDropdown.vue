@@ -34,24 +34,53 @@ const { data: repository } = useQuery({
   enabled: computed(() => repositoryId.value != null),
 })
 
-// Fetch selected PRs details when we have selections
-const { data: selectedPRs, isLoading: isLoadingPRs } = useQuery({
-  queryKey: ['repository-prs-selected', repositoryId, sel.selectedPullRequestNumbers],
+// First query: Get recent PRs (fast query)
+const { data: recentPRs, isLoading: isLoadingRecent } = useQuery({
+  queryKey: ['repository-prs-recent', repositoryId],
   queryFn: async (): Promise<PullRequest[]> => {
-    if (!repositoryId.value || sel.selectedPullRequestNumbers.value.length === 0) return []
-    
-    try {
-      // Fetch all PRs for the repository and filter to selected ones
-      const allPRs = await pullRequestsApi.listByRepo(repositoryId.value, { limit: 100 })
-      const selectedNumbers = new Set(sel.selectedPullRequestNumbers.value)
-      return allPRs.filter(pr => selectedNumbers.has(pr.number))
-    } catch (error) {
-      console.warn('Failed to fetch selected PR details:', error)
-      return []
-    }
+    if (!repositoryId.value) return []
+    return await pullRequestsApi.listByRepo(repositoryId.value, { limit: 100 })
   },
   enabled: computed(() => hasSelection.value),
 })
+
+// Second query: Fetch missing selected PRs that aren't in recent list
+const { data: additionalPRs, isLoading: isLoadingAdditional } = useQuery({
+  queryKey: ['repository-prs-additional', repositoryId, sel.selectedPullRequestNumbers],
+  queryFn: async (): Promise<PullRequest[]> => {
+    if (!sel.selectedPullRequestNumbers.value.length) return []
+    
+    const recent = recentPRs.value || []
+    const visiblePRNumbers = new Set(recent.map(pr => pr.number))
+    const missingNumbers = sel.selectedPullRequestNumbers.value.filter(num => !visiblePRNumbers.has(num))
+
+    if (missingNumbers.length === 0) return []
+
+    // Fetch all PRs to find the missing selected ones
+    try {
+      const allPRs = await pullRequestsApi.listByRepo(repositoryId.value!, { limit: 1000 })
+      return allPRs.filter(pr => missingNumbers.includes(pr.number))
+    } catch (error) {
+      console.warn('Failed to fetch additional selected PRs:', error)
+      return []
+    }
+  },
+  enabled: computed(() => hasSelection.value && !!recentPRs.value),
+})
+
+// Combined selected PRs from both sources
+const selectedPRs = computed(() => {
+  if (!sel.selectedPullRequestNumbers.value.length) return []
+  
+  const recent = recentPRs.value || []
+  const additional = additionalPRs.value || []
+  const combined = [...recent, ...additional]
+  
+  const selectedNumbers = new Set(sel.selectedPullRequestNumbers.value)
+  return combined.filter(pr => selectedNumbers.has(pr.number))
+})
+
+const isLoadingPRs = computed(() => isLoadingRecent.value || isLoadingAdditional.value)
 
 const dropdownLabel = computed(() => {
   if (!hasSelection.value) {
