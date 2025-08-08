@@ -13,14 +13,14 @@ type HistoryItem = {
   job_id?: string
 }
 
-const props = defineProps<{
+const _props = defineProps<{
   items: HistoryItem[]
   loading?: boolean
   error?: string | null
   limit: number
 }>()
 
-const emit = defineEmits<{
+const _emit = defineEmits<{
   (e: 'update:limit', value: number): void
   (e: 'refresh'): void
 }>()

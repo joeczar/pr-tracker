@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
 
-const props = defineProps<{
+const _props = defineProps<{
   selectedCount: number
   filterState: 'open' | 'closed' | 'merged' | 'all'
   showFilterHint?: boolean
 }>()
 
-const emit = defineEmits<{
+const _emit = defineEmits<{
   (e: 'selectVisible'): void
   (e: 'clear'): void
 }>()

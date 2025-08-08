@@ -33,6 +33,16 @@ const current = computed(() => {
     datasets: [{ label: 'Change %', data: props.changeRate, backgroundColor: 'rgba(234,0,217,0.15)', borderColor: '#ea00d9' }]
   }
 })
+
+type ChartDataset = { label: string; data: number[]; backgroundColor?: string; borderColor?: string }
+const datasetsNormalized = computed<ChartDataset[]>(() =>
+  current.value.datasets.map((d: { label: string; data: number[]; backgroundColor?: string; borderColor?: string }) => ({
+    label: d.label,
+    data: d.data as number[],
+    backgroundColor: d.backgroundColor,
+    borderColor: d.borderColor,
+  }))
+)
 </script>
 
 <template>
@@ -72,7 +82,7 @@ const current = computed(() => {
         v-else
         :type="current.type"
         :labels="labels"
-        :datasets="current.datasets as any"
+        :datasets="datasetsNormalized"
         :title="current.title"
         :description="current.description"
         :reduced-motion="!!reducedMotion"

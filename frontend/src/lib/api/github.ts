@@ -4,7 +4,7 @@ export type GitHubRateLimit = {
   resources: {
     core: { limit: number; remaining: number; reset: number; used: number };
     search?: { limit: number; remaining: number; reset: number; used: number };
-    [k: string]: any;
+    [k: string]: unknown;
   };
   rate: { limit: number; remaining: number; reset: number; used: number };
 };
@@ -53,7 +53,7 @@ export type GitHubPullFile = {
 
 
 export const githubApi = {
-  test: () => http.get('/api/github/test') as Promise<{ success: boolean; user?: any }>,
+  test: () => http.get('/api/github/test') as Promise<{ success: boolean; user?: { login?: string; name?: string } }>,
 
   rateLimit: () => http.get('/api/github/rate-limit') as Promise<GitHubRateLimit>,
 

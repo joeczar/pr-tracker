@@ -43,9 +43,10 @@ async function loadOrgsIfNeeded(force = false) {
     const res = await githubApi.listOrganizations()
     orgs.value = res.organizations ?? []
     console.debug('[repo-picker] organizations loaded:', orgs.value.length)
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const err = e as { message?: string } | { status?: number; response?: { status?: number }; payload?: { message?: string } } | undefined
     console.error('Failed to load organizations', e)
-    orgsError.value = e?.message ?? 'Failed to load organizations'
+    orgsError.value = (err as { message?: string })?.message ?? 'Failed to load organizations'
   } finally {
     loadingOrgs.value = false
   }
@@ -106,17 +107,18 @@ async function loadRepos(reset = false) {
     }
     repos.value = [...repos.value, ...items]
     repoPage.value += 1
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const err = e as { status?: number; response?: { status?: number; data?: { message?: string } }; payload?: { message?: string }; message?: string } | undefined
     console.error('Failed to load repositories', e)
     // Normalize error for user-friendly messaging
-    const status = e?.status ?? e?.response?.status
-    const payloadMsg = e?.payload?.message ?? e?.response?.data?.message
-    if (status === 403 && /rate limit/i.test(String(payloadMsg ?? e?.message ?? ''))) {
+    const status = err?.status ?? err?.response?.status
+    const payloadMsg = err?.payload?.message ?? err?.response?.data?.message
+    if (status === 403 && /rate limit/i.test(String(payloadMsg ?? err?.message ?? ''))) {
       reposError.value = 'GitHub rate limit reached. Please wait a minute and try again.'
     } else if (status === 401) {
       reposError.value = 'Authentication required. Please re-login and try again.'
     } else {
-      reposError.value = payloadMsg ?? e?.message ?? 'Failed to load repositories'
+      reposError.value = payloadMsg ?? err?.message ?? 'Failed to load repositories'
     }
     hasMoreRepos.value = false
   } finally {
@@ -171,17 +173,18 @@ async function loadPulls(reset = false) {
     }
     pulls.value = [...pulls.value, ...batch]
     pullsPage.value += 1
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const err = e as { status?: number; response?: { status?: number; data?: { message?: string } }; payload?: { message?: string }; message?: string } | undefined
     console.error('Failed to load pull requests', e)
     // Normalize error for user-friendly messaging
-    const status = e?.status ?? e?.response?.status
-    const payloadMsg = e?.payload?.message ?? e?.response?.data?.message
-    if (status === 403 && /rate limit/i.test(String(payloadMsg ?? e?.message ?? ''))) {
+    const status = err?.status ?? err?.response?.status
+    const payloadMsg = err?.payload?.message ?? err?.response?.data?.message
+    if (status === 403 && /rate limit/i.test(String(payloadMsg ?? err?.message ?? ''))) {
       pullsError.value = 'GitHub rate limit reached. Please wait a minute and try again.'
     } else if (status === 401) {
       pullsError.value = 'Authentication required. Please re-login and try again.'
     } else {
-      pullsError.value = payloadMsg ?? e?.message ?? 'Failed to load pull requests'
+      pullsError.value = payloadMsg ?? err?.message ?? 'Failed to load pull requests'
     }
     hasMorePulls.value = false
   } finally {
@@ -206,7 +209,7 @@ async function preloadTrackedRepos() {
     const repos = await repositoriesApi.list().catch(() => [])
     const names = new Set<string>()
     for (const r of repos) {
-      const fullName = (r as any).full_name || (r.owner && r.name ? `${(r as any).owner}/${(r as any).name}` : null)
+      const fullName = (r as { full_name?: string; owner?: string; name?: string }).full_name || (r.owner && r.name ? `${r.owner}/${r.name}` : null)
       if (fullName) names.add(fullName)
     }
     trackedRepoNames.value = names
@@ -264,9 +267,10 @@ async function submit() {
     // On success, optimistically mark as tracked so button disables if user returns
     trackedRepoNames.value.add(`${owner}/${name}`)
     isTrackedRepo.value = true
-  } catch (e: any) {
-    const status = e?.status ?? e?.response?.status
-    const msg = e?.payload?.error ?? e?.response?.data?.error ?? e?.message
+  } catch (e: unknown) {
+    const err = e as { status?: number; response?: { status?: number; data?: { error?: string } }; payload?: { error?: string }; message?: string } | undefined
+    const status = err?.status ?? err?.response?.status
+    const msg = err?.payload?.error ?? err?.response?.data?.error ?? err?.message
     if (status === 409 || /already.*tracked/i.test(String(msg ?? ''))) {
       addError.value = msg || 'Repository is already tracked.'
       isTrackedRepo.value = true

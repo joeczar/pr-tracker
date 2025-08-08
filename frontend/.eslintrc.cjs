@@ -18,9 +18,17 @@ module.exports = {
       env: {
         node: true
       }
+    },
+    {
+      files: ['tests/**/*', 'e2e/**/*'],
+      rules: {
+        '@typescript-eslint/no-explicit-any': 'off'
+      }
     }
   ],
   rules: {
+    // Disallow explicit any; prefer proper typing
+    '@typescript-eslint/no-explicit-any': 'error',
     // Allow unused variables that start with underscore
     '@typescript-eslint/no-unused-vars': [
       'error',

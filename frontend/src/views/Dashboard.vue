@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useSelectionStore } from '@/stores/selection'
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import SelectionControls from '@/components/dashboard/SelectionControls.vue'
@@ -35,6 +35,13 @@ onMounted(async () => {
 const selectedRepoId = computed<number | null>(() => sel.selectedRepositoryId.value)
 const selectedPrIds = computed<number[]>(() => sel.selectedPullRequestNumbers.value)
 const hasSelection = computed(() => sel.hasSelection.value)
+function navigateToRepoDetail() {
+  const q = selectedPrIds.value.map((id) => `pr=${id}`).join('&')
+  const id = selectedRepoId.value
+  if (id) {
+    window.location.href = `/repositories/${id}?${q}`
+  }
+}
 
 /**
  * Step 1: Quick Metrics tiles
@@ -48,41 +55,7 @@ const hasSelection = computed(() => sel.hasSelection.value)
  */
 /* Section-specific data now lives inside section components */
 
-const trendTab = ref<'comments' | 'change' | 'avg'>('comments')
-const labels = Array.from({ length: 14 }, (_, i) => `D-${13 - i}`)
-const commentsData = Array.from({ length: 14 }, () => Math.floor(10 + Math.random() * 40))
-const changeRateData = Array.from({ length: 14 }, () => Math.round(8 + Math.random() * 14))
-const avgCommentsData = Array.from({ length: 14 }, () => +(1.5 + Math.random() * 2.5).toFixed(1))
-
-const currentTrend = computed(() => {
-  if (trendTab.value === 'comments') {
-    return {
-      title: 'Comment Volume (last 14 days)',
-      description: 'Daily total review comments across tracked repositories.',
-      datasets: [{ label: 'Comments', data: commentsData }],
-      type: 'line' as const
-    }
-  }
-  if (trendTab.value === 'change') {
-    return {
-      title: 'Change-request Rate (last 14 days)',
-      description: 'Percent of PRs receiving “changes requested”.',
-      datasets: [{ label: 'Change %', data: changeRateData, backgroundColor: 'rgba(234,0,217,0.15)', borderColor: '#ea00d9' }],
-      type: 'bar' as const
-    }
-  }
-  return {
-    title: 'Avg Comments per PR (last 14 days)',
-    description: 'Rolling per-day average comments per PR.',
-    datasets: [{ label: 'Avg/PR', data: avgCommentsData, backgroundColor: 'rgba(10,189,198,0.15)', borderColor: '#0abdc6' }],
-    type: 'line' as const
-  }
-})
-
-const goals = ref([
-  { label: 'Smaller PRs', value: 78, goalLabel: '< 3 comments/PR avg' },
-  { label: 'Faster Reviews', value: 61, goalLabel: '< 24h time-to-first-review' }
-])
+// Placeholder demo data removed (unused variables cleanup)
 </script>
 
 <template>
@@ -93,11 +66,12 @@ const goals = ref([
         <div class="text-xs text-slate-500">PR-centric</div>
       </div>
 
-      <SelectionControls
-:selected-repo-id="selectedRepoId.value"        :selected-pr-ids="selectedPrIds.value"
-        :has-selection="hasSelection.value"
+        <SelectionControls
+        :selected-repo-id="selectedRepoId"
+        :selected-pr-ids="selectedPrIds"
+        :has-selection="hasSelection"
         @clear="(sel.clearSelection(), sel.syncToUrl({ replace: true }))"
-        @review="() => { const q = selectedPrIds.map(id => `pr=${id}`).join('&'); if (selectedRepoId) { window.location.href = `/repositories/${selectedRepoId}?${q}` } }"
+        @review="navigateToRepoDetail"
       />
     </header>
 
@@ -106,22 +80,22 @@ const goals = ref([
       Select PRs in the repository view to populate the dashboard.
       <a href="/repositories" class="underline">Go to Repositories</a>
       <template v-if="selectedRepoId">
-        or <a :href="`/repositories/${selectedRepoId.value}`" class="underline">Review current repository</a>
+        or <a :href="`/repositories/${selectedRepoId}`" class="underline">Review current repository</a>
       </template>.
     </div>
 
     <!-- Quick Metrics Section -->
     <QuickMetricsSection
-      :has-selection="hasSelection.value"
-      :selected-repo-id="selectedRepoId.value"
-      :selected-pr-ids="selectedPrIds.value"
+      :has-selection="hasSelection"
+      :selected-repo-id="selectedRepoId"
+      :selected-pr-ids="selectedPrIds"
     />
 
     <!-- Trends Section -->
     <TrendsSection
-      :has-selection="hasSelection.value"
-      :selected-repo-id="selectedRepoId.value"
-      :selected-pr-ids="selectedPrIds.value"
+      :has-selection="hasSelection"
+      :selected-repo-id="selectedRepoId"
+      :selected-pr-ids="selectedPrIds"
       :reduced-motion="reducedMotion"
     />
 
@@ -130,9 +104,9 @@ const goals = ref([
 
     <!-- Recent Activity Section -->
     <RecentActivitySection
-      :has-selection="hasSelection.value"
-      :selected-repo-id="selectedRepoId.value"
-      :selected-pr-ids="selectedPrIds.value"
+      :has-selection="hasSelection"
+      :selected-repo-id="selectedRepoId"
+      :selected-pr-ids="selectedPrIds"
     />
   </section>
 </template>

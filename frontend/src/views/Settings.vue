@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import Button from '@/components/ui/button/Button.vue'
-import Separator from '@/components/ui/separator/Separator.vue'
 import TerminalWindow from '@/components/ui/terminal/TerminalWindow.vue'
 import TerminalHeader from '@/components/ui/terminal/TerminalHeader.vue'
 import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
-import { ref, computed, onMounted, watch } from 'vue'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import { ref, onMounted } from 'vue'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import GitHubSettingsModal from '@/components/settings/GitHubSettingsModal.vue'
 import { qk } from '@/lib/api/queryKeys'
 import { githubApi } from '@/lib/api/github'
@@ -16,17 +15,17 @@ type PatStatus = {
   status?: 'valid' | 'invalid' | 'none';
   validated_at?: string | null;
 }
-import { repositoriesApi } from '@/lib/api/repositories'
+// import { repositoriesApi } from '@/lib/api/repositories'
 import ErrorBoundary from '@/components/error/ErrorBoundary.vue'
 
-type GitHubRepo = {
-  id: number
-  name: string
-  full_name: string
-  owner: { login: string }
-  private: boolean
-  description?: string
-}
+// type GitHubRepo = {
+//   id: number
+//   name: string
+//   full_name: string
+//   owner: { login: string }
+//   private: boolean
+//   description?: string
+// }
 
 const qc = useQueryClient()
 
@@ -67,7 +66,7 @@ if (typeof window !== 'undefined' && window.matchMedia) {
 }
 
 // GitHub connection test
-const testQuery = useQuery({
+useQuery({
   queryKey: qk.github.test(),
   queryFn: () => githubApi.test(),
   staleTime: import.meta.env.MODE === 'test' ? 60_000 : 30_000,
@@ -78,17 +77,17 @@ const testQuery = useQuery({
 })
 
 // In test mode, override query state with cached data
-const testQueryState = import.meta.env.MODE === 'test'
-  ? computed(() => {
-      const cachedData = qc.getQueryData(qk.github.test())
-      return {
-        data: { value: cachedData },
-        isLoading: false,
-        isError: !cachedData,
-        error: null
-      }
-    })
-  : testQuery
+// const testQueryState = import.meta.env.MODE === 'test'
+//   ? computed(() => {
+//       const cachedData = qc.getQueryData(qk.github.test())
+//       return {
+//         data: { value: cachedData },
+//         isLoading: false,
+//         isError: !cachedData,
+//         error: null
+//       }
+//     })
+//   : testQuery
 
 
 const patModalOpen = ref(false)
@@ -113,7 +112,7 @@ function openPatModal(expandGuide = false) {
 
 function onPatUpdated() {
   qc.invalidateQueries({ queryKey: ['github', 'pat', 'validate'] })
-  ;(window as any).__toast?.success?.('GitHub PAT updated')
+  ;(window as unknown as { __toast?: { success?: (m: string) => void } }).__toast?.success?.('GitHub PAT updated')
 }
 
 async function onValidateNow() {
@@ -121,19 +120,20 @@ async function onValidateNow() {
     const res = await patStatusQuery.refetch()
     const data = res.data as unknown as PatStatus | undefined
     if (!data) {
-      ;(window as any).__toast?.warning?.('No response from validation')
+      ;(window as unknown as { __toast?: { warning?: (m: string) => void } }).__toast?.warning?.('No response from validation')
       return
     }
     if (data.valid) {
       const who = data.pat_user?.login ? ` as ${data.pat_user.login}` : ''
-      ;(window as any).__toast?.success?.(`PAT is valid${who}`)
+      ;(window as unknown as { __toast?: { success?: (m: string) => void } }).__toast?.success?.(`PAT is valid${who}`)
     } else {
       const msg = data.message || 'Stored PAT is invalid or missing'
-      ;(window as any).__toast?.error?.(msg)
+      ;(window as unknown as { __toast?: { error?: (m: string) => void } }).__toast?.error?.(msg)
     }
-  } catch (err: any) {
-    const msg = err?.message || 'Failed to validate PAT'
-    ;(window as any).__toast?.error?.(msg)
+  } catch (err: unknown) {
+    const e = err as { message?: string } | undefined
+    const msg = e?.message || 'Failed to validate PAT'
+    ;(window as unknown as { __toast?: { error?: (m: string) => void } }).__toast?.error?.(msg)
   }
 }
 

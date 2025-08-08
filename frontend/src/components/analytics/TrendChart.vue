@@ -10,8 +10,8 @@ import CardContent from '@/components/ui/card/CardContent.vue'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 
 // Lazy-load chart.js and vue-chartjs to keep bundle lean
-const ChartComp = ref<any>(null)
-const chartModule = ref<any>(null)
+const ChartComp = ref<unknown>(null)
+const chartModule = ref<unknown>(null)
 
 type XY = { x: string | number | Date; y: number }
 type Dataset = {
@@ -61,14 +61,17 @@ function prefersReducedMotion() {
   return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
 }
 
-function cyberThemeDefaults(Chart: any) {
+function cyberThemeDefaults(Chart: { defaults: { color?: unknown; font?: { family?: string; size?: number } | undefined; scales?: unknown } }) {
   // Set minimal, local defaults to avoid global side effects
   const gridColor = "rgba(10, 189, 198, 0.2)" // #0abdc6 at 0.2
   const borderColor = "#00ff9f"
   const tickColor = "#9ae8d6"
   const fontFamily = `Fira Code, Cascadia Code, Monaco, monospace`
 
-  Chart.defaults.color = tickColor
+  ;(Chart.defaults as unknown as { color?: string }).color = tickColor
+  if (!Chart.defaults.font) {
+    Chart.defaults.font = {} as { family?: string; size?: number }
+  }
   Chart.defaults.font.family = fontFamily
   Chart.defaults.font.size = 12
   Chart.defaults.scales = Chart.defaults.scales || {}
@@ -126,7 +129,7 @@ const normalizedData = computed(() => {
       labels: props.labels,
       datasets: props.datasets.map((d, i) => ({
         label: d.label ?? `Series ${i + 1}`,
-        data: d.data as any,
+        data: d.data as XY[] | number[],
         borderColor: d.borderColor ?? "#00ff9f",
         backgroundColor: d.backgroundColor ?? "rgba(0,255,159,0.1)",
         tension: d.tension ?? 0.25,
@@ -137,7 +140,7 @@ const normalizedData = computed(() => {
   }
   // If datasets contain XY, map labels from x
   const first = props.datasets[0]
-  if (first && Array.isArray(first.data) && typeof (first.data as any)[0] === "object") {
+  if (first && Array.isArray(first.data) && typeof (first.data as XY[])[0] === 'object') {
     const labels = (first.data as XY[]).map((p) => p.x)
     return {
       labels,
@@ -255,7 +258,7 @@ onMounted(async () => {
                   :key="c"
                   class="border-b p-2 border-slate-200 dark:border-[var(--cyber-border,#10223f)]"
                 >
-                  {{ Array.isArray(ds.data) ? (ds.data as any)[r] : '' }}
+                  {{ Array.isArray(ds.data) ? (ds.data as XY[] | number[])[r] : '' }}
                 </td>
               </tr>
             </tbody>

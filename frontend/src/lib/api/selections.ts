@@ -23,11 +23,11 @@ export interface ActiveSelectionResponse {
 
 export const selectionsApi = {
   getActive: async (): Promise<ActiveSelectionResponse> => {
-    return http.get('/api/selections/active');
+    return http.get('/api/selections/active') as Promise<ActiveSelectionResponse>;
   },
 
   ensureActive: async (): Promise<ActiveSelectionResponse> => {
-    return http.post('/api/selections/active');
+    return http.post('/api/selections/active') as Promise<ActiveSelectionResponse>;
   },
 
   addItems: async (items: Array<{ repository_id: number; pr_number: number }>): Promise<{
@@ -35,7 +35,11 @@ export const selectionsApi = {
     selection: Selection | null;
     items: SelectionItem[];
   }> => {
-    return http.post('/api/selections/active/items', items);
+    return http.post('/api/selections/active/items', items) as Promise<{
+      added: number;
+      selection: Selection | null;
+      items: SelectionItem[];
+    }>;
   },
 
   removeItems: async (items: Array<{ repository_id: number; pr_number: number }>): Promise<{
@@ -44,10 +48,14 @@ export const selectionsApi = {
     items: SelectionItem[];
   }> => {
     // Some environments may not allow DELETE with body; backend expects JSON body. Our http.ts supports JSON body via init.json.
-    return http.delete('/api/selections/active/items', { json: items });
+    return http.delete('/api/selections/active/items', { json: items }) as Promise<{
+      removed: number;
+      selection: Selection | null;
+      items: SelectionItem[];
+    }>;
   },
 
   clearActive: async (): Promise<{ success: boolean }> => {
-    return http.delete('/api/selections/active');
+    return http.delete('/api/selections/active') as Promise<{ success: boolean }>;
   },
 };

@@ -34,7 +34,7 @@ const search = ref('')
 const showAddInline = ref(false)
 const showDelete = ref(false)
 const toDelete = ref<{ id?: number; owner: string; name: string } | null>(null)
-const { toast } = useToast?.() ?? { toast: (args: any) => console.log('[toast]', args) }
+const { toast } = useToast?.() ?? { toast: (args: unknown) => console.log('[toast]', args) }
 const router = useRouter()
 
 const qc = useQueryClient()
@@ -44,9 +44,10 @@ const { data, isLoading, isError, error } = useQuery({
   queryKey: qk.repositories.list(),
   queryFn: () => repositoriesApi.listWithDetails(),
   staleTime: 30_000,
-  retry: (failureCount, err: any) => {
+  retry: (failureCount, err: unknown) => {
     // avoid retrying on 401
-    if (err?.status === 401) return false
+    const status = (err as { status?: number } | undefined)?.status
+    if (status === 401) return false
     return failureCount < 2
   },
 })
@@ -59,8 +60,9 @@ const createRepo = useMutation({
     showAddInline.value = false
     toast?.({ title: 'Repository added' })
   },
-  onError: (e: any) => {
-    const msg = e?.payload?.message || e?.message || 'Failed to add repository'
+  onError: (e: unknown) => {
+    const err = e as { payload?: { message?: string }; message?: string } | undefined
+    const msg = err?.payload?.message || err?.message || 'Failed to add repository'
     toast?.({ title: 'Add failed', description: msg })
   },
 })
@@ -73,8 +75,9 @@ const deleteRepo = useMutation({
     toDelete.value = null
     showDelete.value = false
   },
-  onError: (e: any) => {
-    const msg = e?.payload?.message || e?.message || 'Failed to delete repository'
+  onError: (e: unknown) => {
+    const err = e as { payload?: { message?: string }; message?: string } | undefined
+    const msg = err?.payload?.message || err?.message || 'Failed to delete repository'
     toast?.({ title: 'Delete failed', description: msg })
   },
 })
@@ -86,8 +89,9 @@ const syncRepoMutation = useMutation({
     qc.invalidateQueries({ queryKey: qk.repositories.list() })
     toast?.({ title: `Sync started for ${variables.owner}/${variables.name}` })
   },
-  onError: (e: any, variables) => {
-    const msg = e?.payload?.message || e?.message || 'Failed to sync repository'
+  onError: (e: unknown, variables) => {
+    const err = e as { payload?: { message?: string }; message?: string } | undefined
+    const msg = err?.payload?.message || err?.message || 'Failed to sync repository'
     toast?.({ title: `Sync failed for ${variables.owner}/${variables.name}`, description: msg })
   },
 })
@@ -107,12 +111,12 @@ function handleAddSubmit(payload: { owner: string; name: string; url?: string; p
   createRepo.mutate(
     { owner: payload.owner, name: payload.name },
     {
-      onSuccess: (created: any) => {
+      onSuccess: (created: unknown) => {
         // default onSuccess from mutation still runs (toast, list invalidate, close dialog)
         // Deep-link to repo detail when a PR number was selected in the picker
         if (payload.prNumber != null) {
           // Navigate using numeric id if available, otherwise fallback to owner/name
-          const id = created?.id ?? `${payload.owner}/${payload.name}`
+          const id = (created as { id?: number })?.id ?? `${payload.owner}/${payload.name}`
           router.push({ name: 'repository-detail', params: { id }, query: { pr: String(payload.prNumber) } })
         }
       },

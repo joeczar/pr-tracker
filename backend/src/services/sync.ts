@@ -21,6 +21,8 @@ interface SyncJob {
 export class SyncService {
   private db = DatabaseManager.getInstance().getDatabase()
   private userService = new UserService()
+  private githubService = new GitHubService()
+  private repositoryService = new RepositoryService()
   
   private activeJobs = new Map<string, SyncJob>()
   private rateLimitInfo = {
@@ -73,14 +75,49 @@ export class SyncService {
 
   private async updateRateLimitInfo(): Promise<void> {
     try {
-      const rateLimit = await this.githubService.getRateLimit()
+      // Check if any users exist in the database
+      const userCount = this.db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number }
+      if (userCount.count === 0) {
+        console.debug('Rate limit check skipped - no authenticated users available')
+        return
+      }
+
+      // Get the first user for rate limit checking
+      const userRecord = this.db.prepare('SELECT * FROM users LIMIT 1').get() as any
+      if (!userRecord) {
+        console.debug('Rate limit check skipped - no users found')
+        return
+      }
+
+      // Create user object and GitHub service
+      const user = {
+        id: userRecord.id,
+        github_id: userRecord.github_id,
+        login: userRecord.login,
+        email: userRecord.email,
+        name: userRecord.name,
+        avatar_url: userRecord.avatar_url,
+        access_token: userRecord.access_token,
+        refresh_token: userRecord.refresh_token,
+        token_expires_at: userRecord.token_expires_at,
+        scopes: userRecord.scopes,
+        created_at: userRecord.created_at,
+        updated_at: userRecord.updated_at
+      }
+
+      const userGitHubService = GitHubService.forUser(user)
+      const rateLimit = await userGitHubService.getRateLimit()
+      
       this.rateLimitInfo = {
         remaining: rateLimit.rate.remaining,
         resetTime: new Date(rateLimit.rate.reset * 1000),
         lastCheck: new Date()
       }
+      
+      console.debug(`Rate limit updated: ${rateLimit.rate.remaining}/${rateLimit.rate.limit} remaining`)
     } catch (error) {
       console.warn('Failed to fetch rate limit from GitHub:', error)
+      // Don't update rateLimitInfo on error to keep existing state
     }
   }
 

@@ -6,12 +6,12 @@ export interface FetchJsonInit extends RequestInit {
   json?: unknown; // convenience to set JSON body
 }
 
-const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
+const API_BASE = (import.meta as unknown as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL || 'http://localhost:3000';
 
 export class HttpError extends Error {
   status: number;
-  payload: any | null;
-  constructor(message: string, status: number, payload: any | null) {
+  payload: unknown | null;
+  constructor(message: string, status: number, payload: unknown | null) {
     super(message);
     this.name = 'HttpError';
     this.status = status;
@@ -22,7 +22,7 @@ export class HttpError extends Error {
 /**
  * Convert a Response to JSON safely, returning null for empty bodies.
  */
-async function safeJson(res: Response): Promise<any | null> {
+async function safeJson(res: Response): Promise<unknown | null> {
   const text = await res.text();
   if (!text) return null;
   try {
@@ -35,10 +35,11 @@ async function safeJson(res: Response): Promise<any | null> {
 /**
  * Normalizes error payload shape from backend { error, message?, details? }
  */
-function extractErrorMessage(payload: any, res: Response): string {
+function extractErrorMessage(payload: unknown, res: Response): string {
   if (!payload) return res.statusText;
   if (typeof payload === 'string') return payload;
-  return payload.message || payload.error || res.statusText;
+  const obj = payload as { message?: string; error?: string };
+  return obj.message || obj.error || res.statusText;
 }
 
 export async function fetchJson(path: string, init: FetchJsonInit = {}) {

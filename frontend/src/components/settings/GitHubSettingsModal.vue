@@ -81,8 +81,9 @@ const storePAT = async () => {
         isOpen.value = false
       }
     }, 2000)
-  } catch (err: any) {
-    error.value = err?.message || 'Failed to store Personal Access Token'
+  } catch (err: unknown) {
+    const e = err as { message?: string } | undefined
+    error.value = e?.message || 'Failed to store Personal Access Token'
   } finally {
     loading.value = false
   }
@@ -106,8 +107,9 @@ const removePAT = async () => {
         isOpen.value = false
       }
     }, 2000)
-  } catch (err: any) {
-    error.value = err?.message || 'Failed to remove Personal Access Token'
+  } catch (err: unknown) {
+    const e = err as { message?: string } | undefined
+    error.value = e?.message || 'Failed to remove Personal Access Token'
   } finally {
     loading.value = false
   }

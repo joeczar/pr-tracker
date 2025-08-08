@@ -39,13 +39,13 @@ export const pullRequestsApi = {
     const qs = days != null ? `?days=${days}` : '';
     return http.get(
       `/api/pull-requests/repository/${repositoryId}/metrics${qs}`
-    ) as Promise<any>;
+    ) as Promise<{ avg_review_time_days?: number; avg_comments_per_pr?: number }>;
   },
 
   get: (id: number) => http.get(`/api/pull-requests/${id}`) as Promise<PullRequest>,
 
   syncRepo: (repositoryId: number) =>
-    http.post(`/api/pull-requests/repository/${repositoryId}/sync`) as Promise<any>,
+    http.post(`/api/pull-requests/repository/${repositoryId}/sync`) as Promise<{ success?: boolean }>,
 
   statsByRepo: (repositoryId: number) =>
     http.get(`/api/pull-requests/repository/${repositoryId}/stats`) as Promise<PullRequestStats>,

@@ -15,7 +15,7 @@ const selectedRepositoryId = ref<number | null>(null)
 const selectedPullRequestNumbers = ref<number[]>([])
 
 function setRepository(id: number | null) {
-  selectedRepositoryId.value = Number.isFinite(id as any) ? (id as number) : null
+  selectedRepositoryId.value = Number.isFinite(id as number) ? (id as number) : null
   // If repository changes, clear PR selection (cannot assume same PR ids are valid)
   if (id == null) {
     selectedPullRequestNumbers.value = []
@@ -113,7 +113,7 @@ async function addSelectedPRNumber(prNumber: number) {
   selectedPullRequestNumbers.value = Array.from(set)
 
   // Sync to server in background (don't block UI)
-  if (Number.isFinite(selectedRepositoryId.value as any)) {
+  if (Number.isFinite(selectedRepositoryId.value as number)) {
     selectionsApi.addItems([{ repository_id: selectedRepositoryId.value as number, pr_number: prNumber }])
       .catch((error) => {
         console.warn('Failed to sync selection to server:', error)
@@ -131,7 +131,7 @@ async function removeSelectedPRNumber(prNumber: number) {
   selectedPullRequestNumbers.value = Array.from(set)
 
   // Sync to server in background (don't block UI)
-  if (Number.isFinite(selectedRepositoryId.value as any)) {
+  if (Number.isFinite(selectedRepositoryId.value as number)) {
     selectionsApi.removeItems([{ repository_id: selectedRepositoryId.value as number, pr_number: prNumber }])
       .catch((error) => {
         console.warn('Failed to sync deselection to server:', error)
@@ -223,7 +223,7 @@ async function hydrateFromServer() {
   try {
     const res = await selectionsApi.getActive()
     if (!res?.items) return
-    if (!Number.isFinite(selectedRepositoryId.value as any)) return
+    if (!Number.isFinite(selectedRepositoryId.value as number)) return
     const nums = res.items
       .filter((it) => it.repository_id === (selectedRepositoryId.value as number))
       .map((it) => it.pr_number)

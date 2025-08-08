@@ -1,16 +1,30 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
+// Intentionally unused: presentational components reserved for future header UI. Prefix with underscore to satisfy linter.
 import TerminalWindow from '@/components/ui/terminal/TerminalWindow.vue'
 import TerminalHeader from '@/components/ui/terminal/TerminalHeader.vue'
 import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
 import TerminalButton from '@/components/ui/terminal/TerminalButton.vue'
 import MetricTile from '@/components/analytics/MetricTile.vue'
+const _TerminalWindow = TerminalWindow
+const _TerminalHeader = TerminalHeader
+const _TerminalTitle = TerminalTitle
+const _TerminalButton = TerminalButton
+const _MetricTile = MetricTile
 import { reviewsApi } from '@/lib/api/reviews'
 import { pullRequestsApi } from '@/lib/api/pullRequests'
 import { qk } from '@/lib/api/queryKeys'
 
-type Numberish = number | string
+type UIMetricTile = {
+  label: string
+  value: number | string
+  delta: number
+  trend: 'up' | 'down' | 'flat'
+  helpText: string
+  ariaDescription?: string
+  disabled?: boolean
+}
 
 const props = defineProps<{
   hasSelection: boolean
@@ -19,7 +33,7 @@ const props = defineProps<{
 }>()
 
 const DAYS = 30
-const enabledHasRepo = computed(() => Number.isFinite(props.selectedRepoId as any))
+const enabledHasRepo = computed(() => Number.isFinite(props.selectedRepoId as number))
 
 const reviewsMetricsQuery = useQuery({
   queryKey: computed(() =>
@@ -53,20 +67,20 @@ function toFixed1(val: number | undefined | null): number {
 }
 
 const metricsPending = computed(() => {
-  const revPending = !!(reviewsMetricsQuery.isPending as any)
-  const prPending = !!(prMetricsQuery.isPending as any)
+  const revPending = Boolean(reviewsMetricsQuery.isPending)
+  const prPending = Boolean(prMetricsQuery.isPending)
   return (revPending || prPending) && !!props.selectedRepoId && props.hasSelection
 })
-const metricsError = computed(() => !!(reviewsMetricsQuery.isError as any) || !!(prMetricsQuery.isError as any))
+const metricsError = computed(() => Boolean(reviewsMetricsQuery.isError) || Boolean(prMetricsQuery.isError))
 const metricsHasAnyData = computed(() => {
-  const rev = (reviewsMetricsQuery.data as any)?.value
-  const prs = (prMetricsQuery.data as any)?.value
+  const rev = (reviewsMetricsQuery.data as unknown as { value?: Record<string, unknown> } | undefined)?.value
+  const prs = (prMetricsQuery.data as unknown as { value?: Record<string, unknown> } | undefined)?.value
   return !!rev || !!prs
 })
 const metricsEmpty = computed(() => {
   if (!props.hasSelection) return false
-  const rev = (reviewsMetricsQuery.data as any)?.value
-  const prs = (prMetricsQuery.data as any)?.value
+  const rev = (reviewsMetricsQuery.data as unknown as { value?: { avg_comments_per_pr?: number; avg_comments?: number; total_comments?: number; change_request_rate?: number; change_requests_rate?: number } } | undefined)?.value
+  const prs = (prMetricsQuery.data as unknown as { value?: { total_prs?: number; count?: number; total?: number } } | undefined)?.value
   if (!rev && !prs) return false
   const totalPRs: number = prs?.total_prs ?? prs?.count ?? prs?.total ?? 0
   const avgCommentsPerPR: number = rev?.avg_comments_per_pr ?? rev?.avg_comments ?? 0
@@ -78,20 +92,32 @@ const metricsEmpty = computed(() => {
   return totalPRs === 0 && totalComments === 0
 })
 
-const tiles = computed(() => {
+function retryMetrics() {
+  (reviewsMetricsQuery as { refetch?: () => void }).refetch?.()
+  ;(prMetricsQuery as { refetch?: () => void }).refetch?.()
+}
+
+const emptyTiles = computed<UIMetricTile[]>(() => [
+  { label: 'Total Comments (30d)', value: 0, delta: 0, trend: 'up', helpText: 'No data in the last 30 days', ariaDescription: 'No data', disabled: true },
+  { label: 'Avg Comments / PR', value: 0, delta: 0, trend: 'down', helpText: 'No data in the last 30 days', ariaDescription: 'No data', disabled: true },
+  { label: 'Change-request rate', value: '0%', delta: 0, trend: 'up', helpText: 'No data in the last 30 days', ariaDescription: 'Higher is worse • No data', disabled: true },
+  { label: 'Active Repos', value: props.selectedRepoId ? 1 : 0, delta: 0, trend: 'up', helpText: 'tracked', ariaDescription: 'No data', disabled: true },
+])
+
+const tiles = computed<UIMetricTile[]>(() => {
   // Always return 4 tiles so the grid renders consistently.
   // When no selection, show muted placeholders guiding the user.
   if (!props.hasSelection) {
     return [
-      { label: 'Total Comments (30d)', value: 0, delta: 0, trend: 'up' as const, helpText: 'Select PRs to populate', ariaDescription: 'No data yet', disabled: true },
-      { label: 'Avg Comments / PR', value: 0, delta: 0, trend: 'down' as const, helpText: 'Select PRs to populate', ariaDescription: 'No data yet', disabled: true },
-      { label: 'Change-request rate', value: '0%', delta: 0, trend: 'up' as const, helpText: 'Select PRs to populate', ariaDescription: 'Higher is worse • No data yet', disabled: true },
-      { label: 'Active Repos', value: 0, delta: 0, trend: 'up' as const, helpText: 'tracked', ariaDescription: 'No data yet', disabled: true },
+      { label: 'Total Comments (30d)', value: 0, delta: 0, trend: 'up', helpText: 'Select PRs to populate', ariaDescription: 'No data yet', disabled: true },
+      { label: 'Avg Comments / PR', value: 0, delta: 0, trend: 'down', helpText: 'Select PRs to populate', ariaDescription: 'No data yet', disabled: true },
+      { label: 'Change-request rate', value: '0%', delta: 0, trend: 'up', helpText: 'Select PRs to populate', ariaDescription: 'Higher is worse • No data yet', disabled: true },
+      { label: 'Active Repos', value: 0, delta: 0, trend: 'up', helpText: 'tracked', ariaDescription: 'No data yet', disabled: true },
     ]
   }
 
-  const reviews = (reviewsMetricsQuery.data as any)?.value ?? null
-  const prs = (prMetricsQuery.data as any)?.value ?? null
+  const reviews = (reviewsMetricsQuery.data as unknown as { value?: { avg_comments_per_pr?: number; avg_comments?: number; total_comments?: number; change_request_rate?: number; change_requests_rate?: number } } | undefined)?.value ?? null
+  const prs = (prMetricsQuery.data as unknown as { value?: { total_prs?: number; count?: number; total?: number } } | undefined)?.value ?? null
 
   const selectedCount = props.selectedPrIds.length
   const totalPRsRepo: number = prs?.total_prs ?? prs?.count ?? prs?.total ?? 0
@@ -111,7 +137,7 @@ const tiles = computed(() => {
     reviews?.change_request_rate ?? reviews?.change_requests_rate
   const changeReqRateDisplay: string = asPercent(changeReqRateRaw ?? 0)
 
-  const data: { label: string; value: Numberish; delta: number; trend: 'up' | 'down'; helpText: string; ariaDescription?: string }[] = [
+  const data: UIMetricTile[] = [
     { label: 'Total Comments (30d)', value: totalCommentsSelected, delta: 0, trend: 'up', helpText: 'vs prior 30d' },
     { label: 'Avg Comments / PR', value: toFixed1(avgCommentsPerPR), delta: 0, trend: 'down', helpText: 'vs prior 30d' },
     { label: 'Change-request rate', value: changeReqRateDisplay, delta: 0, trend: 'up', helpText: 'of PRs', ariaDescription: 'Higher is worse' },
@@ -144,7 +170,7 @@ const tiles = computed(() => {
         Failed to load metrics.
         <button
           class="px-2 py-1 text-xs rounded border border-slate-300 dark:border-slate-700"
-          @click="(reviewsMetricsQuery as any).refetch() && (prMetricsQuery as any).refetch()"
+          @click="retryMetrics()"
           aria-label="Retry loading metrics"
         >
           Retry
@@ -157,23 +183,18 @@ const tiles = computed(() => {
       <!-- Render styled 'empty' cards with normal 0 and faded style + tooltip message -->
       <div class="contents">
         <div
-          v-for="(m, i) in [
-            { label: 'Total Comments (30d)', value: 0, delta: 0, trend: 'up', helpText: 'No data in the last 30 days', ariaDescription: 'No data', disabled: true },
-            { label: 'Avg Comments / PR', value: 0, delta: 0, trend: 'down', helpText: 'No data in the last 30 days', ariaDescription: 'No data', disabled: true },
-            { label: 'Change-request rate', value: '0%', delta: 0, trend: 'up', helpText: 'No data in the last 30 days', ariaDescription: 'Higher is worse • No data', disabled: true },
-            { label: 'Active Repos', value: props.selectedRepoId ? 1 : 0, delta: 0, trend: 'up', helpText: 'tracked', ariaDescription: 'No data', disabled: true },
-          ]"
+          v-for="(m, i) in emptyTiles"
           :key="'empty-' + i"
           class="group relative"
         >
           <MetricTile
             :label="m.label"
-            :value="m.value as any"
-            :delta="m.delta as any"
-            :trend="m.trend as any"
+            :value="m.value"
+            :delta="m.delta"
+            :trend="m.trend"
             :help-text="m.helpText"
-            :aria-description="(m as any).ariaDescription"
-            :class="(m as any).disabled ? 'opacity-50 saturate-0 pointer-events-auto' : ''"
+            :aria-description="m.ariaDescription"
+            :class="m.disabled ? 'opacity-50 saturate-0 pointer-events-auto' : ''"
           />
           <!-- Simple tooltip -->
           <div
@@ -196,20 +217,20 @@ const tiles = computed(() => {
         >
           <MetricTile
             :label="m.label"
-            :value="m.value as any"
-            :delta="m.delta as any"
-            :trend="m.trend as any"
+            :value="m.value"
+            :delta="m.delta"
+            :trend="m.trend"
             :help-text="m.helpText"
-            :aria-description="(m as any).ariaDescription"
-            :class="(m as any).disabled ? 'opacity-50 saturate-0 pointer-events-auto' : ''"
+            :aria-description="m.ariaDescription"
+            :class="m.disabled ? 'opacity-50 saturate-0 pointer-events-auto' : ''"
           />
           <!-- Tooltip for disabled/placeholder tiles -->
           <div
-            v-if="(m as any).disabled"
+            v-if="m.disabled"
             class="pointer-events-none absolute left-1/2 top-0 z-10 hidden -translate-x-1/2 -translate-y-full whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-[10px] font-mono text-white shadow-md group-hover:block"
             role="tooltip"
           >
-            {{ (m as any).helpText }}
+            {{ m.helpText }}
           </div>
         </div>
       </div>

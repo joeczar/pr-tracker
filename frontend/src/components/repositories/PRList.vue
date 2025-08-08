@@ -78,8 +78,9 @@ async function fetchAuthors() {
     if (selectedAuthors.value.length && !authors.value.includes(selectedAuthors.value[0])) {
       selectedAuthors.value = []
     }
-  } catch (e: any) {
-    authorsError.value = e?.message || 'Failed to load authors'
+  } catch (e: unknown) {
+    const err = e as { message?: string } | undefined
+    authorsError.value = err?.message || 'Failed to load authors'
   } finally {
     authorsLoading.value = false
   }
@@ -105,7 +106,7 @@ const filtered = computed(() => {
       { name: 'number', weight: 0.1 }
     ]
   })
-  return fuse.search(q.value).map((r: any) => r.item)
+  return fuse.search(q.value).map((r) => r.item as PR)
 })
 
 function toggle(pr: PR, checked: boolean) {

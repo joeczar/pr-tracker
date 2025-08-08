@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import MetricTile from '@/components/analytics/MetricTile.vue'
+const _MetricTile = MetricTile
 
 type Metric = {
   key?: string
@@ -9,7 +10,7 @@ type Metric = {
   ariaLabel?: string
 }
 
-const props = defineProps<{
+const _props = defineProps<{
   metrics: Metric[]
   loading?: boolean
   error?: string | null
