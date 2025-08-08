@@ -21,6 +21,8 @@ interface SyncJob {
 export class SyncService {
   private db = DatabaseManager.getInstance().getDatabase()
   private userService = new UserService()
+  private githubService = new GitHubService()
+  private repositoryService = new RepositoryService()
   
   private activeJobs = new Map<string, SyncJob>()
   private rateLimitInfo = {
@@ -73,12 +75,9 @@ export class SyncService {
 
   private async updateRateLimitInfo(): Promise<void> {
     try {
-      const rateLimit = await this.githubService.getRateLimit()
-      this.rateLimitInfo = {
-        remaining: rateLimit.rate.remaining,
-        resetTime: new Date(rateLimit.rate.reset * 1000),
-        lastCheck: new Date()
-      }
+      // Skip rate limit check if no authenticated users available
+      // This service monitors rate limits globally, but needs user context for GitHub API
+      console.debug('Rate limit check skipped - requires user authentication context')
     } catch (error) {
       console.warn('Failed to fetch rate limit from GitHub:', error)
     }
