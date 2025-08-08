@@ -18,6 +18,12 @@ module.exports = {
       env: {
         node: true
       }
+    },
+    {
+      files: ['tests/**/*', 'e2e/**/*'],
+      rules: {
+        '@typescript-eslint/no-explicit-any': 'off'
+      }
     }
   ],
   rules: {

@@ -38,7 +38,8 @@ async function safeJson(res: Response): Promise<unknown | null> {
 function extractErrorMessage(payload: unknown, res: Response): string {
   if (!payload) return res.statusText;
   if (typeof payload === 'string') return payload;
-  return payload.message || payload.error || res.statusText;
+  const obj = payload as { message?: string; error?: string };
+  return obj.message || obj.error || res.statusText;
 }
 
 export async function fetchJson(path: string, init: FetchJsonInit = {}) {

@@ -200,6 +200,27 @@ const {
   enabled: computed(() => Number.isFinite(repoId.value) && historyLimit.value > 0),
 })
 
+// Normalize sync history for template binding
+const syncHistoryItems = computed(() => {
+  const rows = (syncHistory.value as Array<{
+    id: string; status: string; type?: string; started_at?: string; finished_at?: string; job_id?: string
+  }> | undefined) ?? []
+  return rows.map((it) => ({
+    id: Number(it.id),
+    status: it.status,
+    type: it.type,
+    started_at: it.started_at,
+    finished_at: it.finished_at,
+    job_id: it.job_id,
+  }))
+})
+
+const historyErrorText = computed<string | null>(() => {
+  if (!historyError.value) return null
+  const err = historyErr.value as unknown as { message?: string } | undefined
+  return err?.message || 'Unknown error'
+})
+
 </script>
 
 <template>
@@ -207,9 +228,9 @@ const {
     <!-- Sync History Panel -->
     <ErrorBoundary>
       <RepoSyncHistory
-        :items="(((syncHistory as unknown) as { id: string; status: string; type?: string; started_at?: string; finished_at?: string; job_id?: string }[]) || []).map(it => ({ id: Number(it.id), status: it.status, type: it.type, started_at: it.started_at, finished_at: it.finished_at, job_id: it.job_id }))"
+        :items="syncHistoryItems"
         :loading="!!historyLoading"
-        :error="historyError ? ((historyErr as any)?.message || 'Unknown error') : null"
+        :error="historyErrorText"
         :limit="historyLimit"
         @update:limit="(v: number) => { historyLimit = v; refetchHistory() }"
         @refresh="() => refetchHistory()"

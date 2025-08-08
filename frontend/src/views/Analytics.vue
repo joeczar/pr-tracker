@@ -49,6 +49,18 @@ const compareMutation = useMutation({
   mutationFn: () => analyticsApi.compare({ repository_ids: compareIds.value, days: days.value }),
 })
 
+// Normalize trend chart inputs to avoid TS casts in template
+const trendLabels = computed<(string | number | Date)[]>(() => {
+  const v = (trendsQuery.data as unknown as { value?: { labels?: Array<string | number | Date> } } | undefined)?.value
+  return v?.labels ?? []
+})
+const trendDatasets = computed(() => {
+  const v = (trendsQuery.data as unknown as { value?: { comments?: number[] } } | undefined)?.value
+  return [
+    { label: 'Comments', data: v?.comments ?? [] }
+  ]
+})
+
 // Stub: pretend-fetch analytics for a given timeframe
 async function fetchAnalytics(_tf: Timeframe) {
   loading.value = true
@@ -144,8 +156,8 @@ watch(timeframe, (tf) => {
               <TrendChart
                 v-else
                 :type="'line'"
-                :labels="(trendsQuery.data?.value as any)?.labels || []"
-                :datasets="[{ label: 'Comments', data: (trendsQuery.data?.value as any)?.comments || [] }]"
+                :labels="trendLabels"
+                :datasets="trendDatasets"
                 :title="'Comments over time'"
                 :description="'Daily review comments for this repository.'"
                 :reduced-motion="false"

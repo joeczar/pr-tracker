@@ -13,9 +13,10 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 30_000, // 30s
       refetchOnWindowFocus: false,
-      retry: (failureCount: number, error: any) => {
+      retry: (failureCount: number, error: unknown) => {
         // Do not auto-retry unauthorized
-        if (error?.status === 401) return false;
+        const status = (error as { status?: number } | undefined)?.status;
+        if (status === 401) return false;
         return failureCount < 2;
       },
     },

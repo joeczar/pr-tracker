@@ -6,7 +6,7 @@ import TerminalTitle from '@/components/ui/terminal/TerminalTitle.vue'
 import ProgressRadial from '@/components/analytics/ProgressRadial.vue'
 import { useSelectionStore } from '@/stores/selection'
 
-const props = defineProps<{
+const _props = defineProps<{
   reducedMotion: boolean
 }>()
 
@@ -48,7 +48,7 @@ const emptyGoals = computed(() => ([
               :value="g.value"
               :label="g.label"
               :goal-label="g.goalLabel"
-              :reduced-motion="reducedMotion"
+              :reduced-motion="_props.reducedMotion"
               aria-description="No data yet"
             />
             <div
@@ -72,7 +72,7 @@ const emptyGoals = computed(() => ([
             :value="g.value"
             :label="g.label"
             :goal-label="g.goalLabel"
-            :reduced-motion="reducedMotion"
+            :reduced-motion="_props.reducedMotion"
           />
         </div>
       </template>

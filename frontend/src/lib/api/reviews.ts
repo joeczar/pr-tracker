@@ -15,11 +15,11 @@ export const reviewsApi = {
 
   metricsByRepo: (repositoryId: number, days?: number) => {
     const qs = days != null ? `?days=${days}` : '';
-    return http.get(`/api/reviews/repository/${repositoryId}/metrics${qs}`) as Promise<any>;
+    return http.get(`/api/reviews/repository/${repositoryId}/metrics${qs}`) as Promise<{ avg_comments_per_pr?: number; total_comments?: number; change_request_rate?: number }>;
   },
 
   get: (id: number) => http.get(`/api/reviews/${id}`) as Promise<Review>,
 
   syncForPullRequest: (pullRequestId: number) =>
-    http.post(`/api/reviews/pull-request/${pullRequestId}/sync`) as Promise<any>,
+    http.post(`/api/reviews/pull-request/${pullRequestId}/sync`) as Promise<{ success?: boolean }>,
 };

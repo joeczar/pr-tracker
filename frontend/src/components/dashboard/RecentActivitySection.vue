@@ -18,7 +18,7 @@ const emit = defineEmits<{
   (e: 'refresh'): void
 }>()
 
-const enabledHasRepo = computed(() => Number.isFinite(props.selectedRepoId as any))
+const enabledHasRepo = computed(() => Number.isFinite(props.selectedRepoId as number))
 
 // Fetch a larger set to ensure selected PRs are included, or fetch all PRs if selection is small
 const LIMIT = computed(() => props.selectedPrIds.length > 0 ? Math.max(100, props.selectedPrIds.length * 2) : 50)
@@ -29,9 +29,9 @@ const prListQuery = useQuery({
   enabled: enabledHasRepo,
 })
 
-const pending = computed(() => !!(prListQuery.isPending as any))
-const error = computed(() => !!(prListQuery.isError as any))
-const items = computed<any[]>(() => (prListQuery.data?.value as any[]) || [])
+const pending = computed(() => Boolean(prListQuery.isPending))
+const error = computed(() => Boolean(prListQuery.isError))
+const items = computed(() => (prListQuery.data?.value as Array<{ id: number; number: number; title: string; state: string; updatedAt?: string; updated_at?: string }> | undefined) || [])
 const filtered = computed(() => {
   if (!props.hasSelection) return []
   const sel = new Set(props.selectedPrIds)
@@ -41,7 +41,7 @@ const isEmptySelection = computed(() => props.hasSelection && props.selectedPrId
 const isEmptyFiltered = computed(() => props.hasSelection && props.selectedPrIds.length > 0 && filtered.value.length === 0 && !pending.value && !error.value)
 
 function refresh() {
-  (prListQuery as any).refetch?.()
+  (prListQuery as { refetch?: () => void }).refetch?.()
   emit('refresh')
 }
 </script>
@@ -108,7 +108,7 @@ function refresh() {
         <div class="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400 font-mono">
           <span aria-label="State">{{ pr.state }}</span>
           <span aria-label="Updated">
-            {{ pr.updatedAt || pr.updated_at ? new Date(pr.updatedAt || pr.updated_at).toLocaleString() : 'Unknown' }}
+            {{ (pr.updatedAt || pr.updated_at) ? new Date((pr.updatedAt || pr.updated_at) as string).toLocaleString() : 'Unknown' }}
           </span>
         </div>
       </li>
