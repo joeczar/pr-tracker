@@ -100,8 +100,9 @@ authRoutes.get('/github/callback', async (c) => {
     setCookie(c, sessionCookieName, session.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Strict',
-      maxAge: parseInt(process.env.SESSION_MAX_AGE || '2592000') // 30 days
+      sameSite: 'Lax', // Changed from 'Strict' to 'Lax' for cross-origin compatibility
+      maxAge: parseInt(process.env.SESSION_MAX_AGE || '2592000'), // 30 days
+      domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost' // Explicit domain for localhost
     });
 
     // Get redirect URL and clean up

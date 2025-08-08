@@ -2,7 +2,6 @@
 import { computed, onMounted } from 'vue'
 import { useSelectionStore } from '@/stores/selection'
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import SelectionControls from '@/components/dashboard/SelectionControls.vue'
 import QuickMetricsSection from '@/components/dashboard/QuickMetricsSection.vue'
 import TrendsSection from '@/components/dashboard/TrendsSection.vue'
 import GoalsSection from '@/components/dashboard/GoalsSection.vue'
@@ -35,13 +34,6 @@ onMounted(async () => {
 const selectedRepoId = computed<number | null>(() => sel.selectedRepositoryId.value)
 const selectedPrIds = computed<number[]>(() => sel.selectedPullRequestNumbers.value)
 const hasSelection = computed(() => sel.hasSelection.value)
-function navigateToRepoDetail() {
-  const q = selectedPrIds.value.map((id) => `pr=${id}`).join('&')
-  const id = selectedRepoId.value
-  if (id) {
-    window.location.href = `/repositories/${id}?${q}`
-  }
-}
 
 /**
  * Step 1: Quick Metrics tiles
@@ -66,13 +58,6 @@ function navigateToRepoDetail() {
         <div class="text-xs text-slate-500">PR-centric</div>
       </div>
 
-        <SelectionControls
-        :selected-repo-id="selectedRepoId"
-        :selected-pr-ids="selectedPrIds"
-        :has-selection="hasSelection"
-        @clear="(sel.clearSelection(), sel.syncToUrl({ replace: true }))"
-        @review="navigateToRepoDetail"
-      />
     </header>
 
     <!-- Guided empty state when no PRs selected -->

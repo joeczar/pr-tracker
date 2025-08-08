@@ -227,10 +227,14 @@ export class SyncService {
         throw new Error(`Repository ${job.repositoryId} not found`)
       }
 
-      // Get the user who owns this repository
-      const user = await this.userService.getUserByLogin(repository.owner)
+      // Get the user associated with this repository via user_id
+      if (!('user_id' in repository) || !repository.user_id) {
+        throw new Error(`Repository ${job.repositoryId} has no associated user_id`)
+      }
+
+      const user = await this.userService.getUserById(repository.user_id)
       if (!user) {
-        throw new Error(`User ${repository.owner} not found`)
+        throw new Error(`User ${repository.user_id} not found`)
       }
 
       // Create user-specific services
