@@ -101,7 +101,7 @@ authRoutes.get('/github/callback', async (c) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'Lax', // Changed from 'Strict' to 'Lax' for cross-origin compatibility
-      maxAge: parseInt(process.env.SESSION_MAX_AGE || '2592000'), // 30 days
+      maxAge: parseInt(process.env.SESSION_MAX_AGE || '2592000', 10), // 30 days
       domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost' // Explicit domain for localhost
     });
 
