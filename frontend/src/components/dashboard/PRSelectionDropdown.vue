@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/vue-query'
 
 import { useSelectionStore } from '@/stores/selection'
 import { pullRequestsApi, type PullRequest } from '@/lib/api/pullRequests'
-import { repositoriesApi, type Repository } from '@/lib/api/repositories'
+import { repositoriesApi } from '@/lib/api/repositories'
 
 import {
   DropdownMenu,

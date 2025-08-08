@@ -35,7 +35,11 @@ describe('Auth Routes', () => {
     const location = res.headers.get('Location')
     expect(location).toContain('https://github.com/login/oauth/authorize')
     expect(location).toContain('client_id=test-client-id')
-    expect(location).toContain('scope=repo+user%3Aemail+read%3Auser')
+    // Allow additional scopes (e.g., read:org); assert required scopes are present
+    expect(location).toContain('scope=')
+    expect(location).toContain('repo')
+    expect(location).toContain('user%3Aemail')
+    expect(location).toContain('read%3Auser')
   })
 
   test('should return authentication status for unauthenticated user', async () => {
